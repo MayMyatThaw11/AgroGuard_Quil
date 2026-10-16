@@ -1,0 +1,177 @@
+import base64
+import io
+import zipfile
+from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
+
+from agriquill import live, onboard, store
+from agriquill.api.main import create_app
+from agriquill.config import get_settings
+
+client = TestClient(create_app())
+BASE = "/api/v1/agriquill"
+FARM = "cust_farm"
+SQUARE = [[95.59, 16.728], [95.591, 16.728], [95.591, 16.729], [95.59, 16.729], [95.59, 16.728]]
+ADMIN = {"X-AgriQuill-Write-Token": "admin-code"}
+ANN = {"X-AgriQuill-Write-Token": "code-a"}
+CREW = {"X-AgriQuill-Write-Token": "code-c"}
+USERS = (
+    "Admin:admin-code:crew,manager; Ann:code-a:crew,manager:cust_farm; Cid:code-c:crew:cust_farm"
+)
+COORDS = " ".join(f"{lon},{lat},0" for lon, lat in SQUARE)
+KML = (
+    '<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2">'
+    "<Document><Placemark><name>North field</name><Polygon><outerBoundaryIs><LinearRing>"
+    f"<coordinates>{COORDS}</coordinates></LinearRing></outerBoundaryIs></Polygon>"
+    "</Placemark></Document></kml>"
+)
+FIELDS = (
+    "field,crop,variety,planted,stage,area,area_unit\n"
+    "North field,rice_lowland,Paw San Hmwe,2026-08-01,Tillering,2.9,acre\n"
+    "South plot,rice_fish,,2026-08-05,,,\n"
+)
+
+
+@pytest.fixture(autouse=True)
+def isolated(tmp_path: Path) -> Iterator[None]:
+    settings = get_settings()
+    saved = settings.data_dir, settings.ledger_path
+    store.close_all()
+    settings.data_dir = str(tmp_path / "data")
+    settings.ledger_path = str(tmp_path / "data" / "ledger.jsonl")
+    settings.users = SecretStr(USERS)
+    yield
+    store.close_all()
+    settings.data_dir, settings.ledger_path = saved
+
+
+def body(**extra: Any) -> dict[str, Any]:
+    return {
+        "name": "Ko Aung's farm",
+        "country": "MM",
+        "registered_by": "Ann",
+        "boundaries": {"filename": "Farm.KML", "text": KML},
+        "fields_csv": FIELDS,
+        **extra,
+    }
+
+
+def onboard_farm(payload: dict[str, Any], farm_id: str = FARM, headers: dict[str, str] = ANN):
+    return client.post(f"{BASE}/farms/{farm_id}/onboard", json=payload, headers=headers)
+
+
+def test_onboard_registers_the_farm_and_imports_its_sheets():
+    when = (datetime.now(UTC) - timedelta(days=3)).strftime("%Y-%m-%dT%H:%M")
+    day = (datetime.now(UTC) - timedelta(days=2)).date().isoformat()
+    readings = (
+        f"field,observed_at,water_depth_cm\nNorth field,{when},5.0\n"
+        f"North field,{day},4.0\nNowhere,{when},1.0\n"
+    )
+    inputs = f"field,date,product,kind\nNorth field,{day},Neem oil,spray\n"
+    response = onboard_farm(
+        body(readings_csv=readings, inputs_csv=inputs, utc_offset="+06:30", standard="ASOA_ORGANIC")
+    )
+    assert response.status_code == 200, response.text
+    out = response.json()
+    assert out["farm_id"] == FARM and out["verdict"]["is_valid"] is True
+    assert out["to_verify"] >= 1
+    assert out["readings"]["stored"] == 2 and out["readings"]["assumed_time"] == 1
+    assert out["readings"]["rejected"] == [
+        {"line": 4, "reason": "field 'Nowhere' is not in the contract"}
+    ]
+    assert out["inputs"]["stored"] == 1
+    spec = live.load(FARM)[1]["contract"]
+    assert [p["id"] for p in spec["parcels"]] == ["North-field", "South-plot"]
+    assert spec["farm"]["standard"] == "ASOA_ORGANIC"
+    listed = client.get(f"{BASE}/contracts", headers=ANN).json()["contracts"]
+    assert FARM in [c["farm_id"] for c in listed]
+
+
+def test_onboard_reads_a_kmz_sent_as_base64():
+    packed = io.BytesIO()
+    with zipfile.ZipFile(packed, "w") as archive:
+        archive.writestr("doc.kml", KML)
+    kmz = {"filename": "farm.kmz", "base64": base64.b64encode(packed.getvalue()).decode()}
+    response = onboard_farm(body(boundaries=kmz, fields_csv=None))
+    assert response.status_code == 200, response.text
+    assert response.json()["readings"] is None and response.json()["inputs"] is None
+    parcels = live.load(FARM)[1]["contract"]["parcels"]
+    assert [p["id"] for p in parcels] == ["North-field"]
+
+
+def test_onboard_turns_away_oversize_and_bad_files():
+    big = "field\n" + "x\n" * 5001
+    assert onboard_farm(body(readings_csv=big)).status_code == 413
+    huge = {"filename": "farm.geojson", "text": " " * (2 * 1024 * 1024 + 1)}
+    too_big = onboard_farm(body(boundaries=huge))
+    assert too_big.status_code == 413 and "2 MB" in too_big.json()["detail"]
+    for broken in ('{"type": "Polygon", "coordinates": 5}', "{not json", "[1, 2]"):
+        bad = onboard_farm(body(boundaries={"filename": "farm.geojson", "text": broken}))
+        assert bad.status_code == 422, broken
+        assert isinstance(bad.json()["detail"], str)
+    not_zip = {"filename": "farm.kmz", "base64": base64.b64encode(b"plain text").decode()}
+    assert onboard_farm(body(boundaries=not_zip)).status_code == 422
+    assert onboard_farm(body(boundaries={"filename": "farm.shp", "text": KML})).status_code == 422
+    assert onboard_farm(body(boundaries=None, fields_csv="")).status_code == 422
+    assert live.load(FARM) is None
+
+
+def test_onboard_needs_a_manager_with_access_to_the_farm():
+    other = onboard_farm(body(), farm_id="other_farm")
+    assert other.status_code == 403 and "other_farm" in other.json()["detail"]
+    crew = onboard_farm(body(registered_by="Cid"), headers=CREW)
+    assert crew.status_code == 403
+    someone_else = onboard_farm(body(registered_by="Admin"))
+    assert someone_else.status_code == 403
+    assert client.post(f"{BASE}/farms/{FARM}/onboard", json=body()).status_code == 401
+    assert onboard_farm(body(registered_by="Admin"), "x", ADMIN).status_code == 422
+    assert live.load(FARM) is None
+
+
+def test_onboard_writes_assets_into_the_contract():
+    assets = [
+        {"id": "P-01", "kind": "pump", "label": "Intake pump", "serves": ["North-field"]},
+        {"id": "D-01", "kind": "drone", "label": "Drone", "serves": []},
+    ]
+    response = onboard_farm(body(assets=assets))
+    assert response.status_code == 200, response.text
+    found = live.load(FARM)[1]["contract"]["assets"]
+    assert [(a["id"], a["kind"], a["serves"]) for a in found] == [
+        ("P-01", "pump", ["North-field"]),
+        ("D-01", "drone", []),
+    ]
+    stray = [{"id": "P-02", "kind": "pump", "label": "Pump", "serves": ["Nowhere"]}]
+    bad = onboard_farm(body(assets=stray))
+    assert bad.status_code == 422 and "Nowhere" in bad.json()["detail"]
+    tractor = [{"id": "T-01", "kind": "tractor", "label": "Tractor", "serves": []}]
+    assert onboard_farm(body(assets=tractor)).status_code == 422
+
+
+def test_kmz_with_an_oversize_kml_is_refused(tmp_path: Path):
+    kmz = tmp_path / "big.kmz"
+    with zipfile.ZipFile(kmz, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("doc.kml", " " * (onboard.MAX_KML_BYTES + 1))
+    with pytest.raises(ValueError, match="larger than 10 MB"):
+        onboard.read_boundaries(kmz)
+
+
+def test_assets_in_build_contract_use_the_demo_syntax():
+    rings = {"North-field": onboard._ring(SQUARE)}
+    text, _ = onboard.build_contract(
+        FARM,
+        "Farm",
+        "MM",
+        [],
+        rings,
+        "test",
+        None,
+        [{"id": "S-01", "kind": "sluice", "label": 'Outlet "east"', "serves": ["North-field"]}],
+    )
+    assert "asset S-01 { kind: sluice label: \"Outlet 'east'\" serves: [North-field] }" in text
+    assert live.register(FARM, text, "tester")["is_valid"] is True

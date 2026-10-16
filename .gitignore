@@ -1,0 +1,43 @@
+# Root safety net for both published folders (AgroGuard-Unified/,
+# platform-gateway/) — each also carries its own nested .gitignore for its
+# own tooling; these are the patterns that must never be committed from
+# either one.
+
+# Dependencies / environments — never commit these, recreate them locally
+# (see each folder's README for exact setup steps)
+node_modules/
+.venv/
+.venv-agriquill/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Build output
+dist/
+build/
+
+# Secrets / machine-specific local config — only *.env.example /
+# keys.env.example templates are tracked
+.env
+.env.*
+keys.env
+!.env.example
+!keys.env.example
+
+# Local data / logs (not source)
+.tmp/
+.runlogs/
+*.log
+
+# AgriQill runtime data stores — local state, not source (see
+# AgroGuard-Unified/docs/RECONCILIATION.md)
+backend/agriquill/data/*.sqlite
+backend/agriquill/data/*.sqlite-shm
+backend/agriquill/data/*.sqlite-wal
+backend/agriquill/data/*.jsonl
+backend/agriquill/data/*.jsonl.lock
+
+# OS / editor
+.DS_Store
+Thumbs.db

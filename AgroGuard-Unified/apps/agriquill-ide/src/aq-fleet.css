@@ -1,0 +1,236 @@
+.aq-fleet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aq-space-5);
+  height: 100%;
+  min-height: 560px;
+  padding: var(--aq-space-5);
+  background: linear-gradient(180deg, var(--aq-water-100), var(--aq-surface-app) 220px);
+}
+
+.aq-fleet-body {
+  display: flex;
+  flex: 1;
+  gap: var(--aq-space-5);
+  min-height: 0;
+}
+
+.aq-side {
+  display: flex;
+  align-items: flex-start;
+  min-height: 0;
+}
+
+.aq-side > .aq-panel {
+  align-self: stretch;
+}
+
+.aq-fleet-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.aq-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--aq-space-4);
+}
+
+.aq-kpi {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: var(--aq-radius-md);
+  background: var(--aq-surface-card);
+  box-shadow: var(--aq-shadow-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.aq-kpi.is-static {
+  cursor: default;
+}
+
+.aq-kpi .aq-stat {
+  background: transparent;
+}
+
+.aq-kpi[aria-pressed="true"] {
+  background: var(--aq-surface-selected);
+  box-shadow: 0 0 0 1.5px var(--aq-leaf-500);
+}
+
+.aq-kpi:focus-visible {
+  outline: 2px solid var(--aq-focus-ring);
+  outline-offset: 2px;
+}
+
+.aq-kpi-dot {
+  position: absolute;
+  top: 11px;
+  right: 10px;
+}
+
+.aq-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aq-space-8);
+  padding: var(--aq-space-6);
+}
+
+.aq-search {
+  margin-top: var(--aq-space-5);
+}
+
+.aq-chip-group {
+  margin-top: var(--aq-space-4);
+}
+
+.aq-pane {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.aq-pane-pad {
+  padding: var(--aq-space-5);
+}
+
+.aq-pane-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--aq-space-4) var(--aq-space-7);
+  padding: var(--aq-space-5) var(--aq-space-6);
+  border-bottom: 1px solid var(--aq-border-subtle);
+}
+
+.aq-pane-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--aq-space-8);
+  min-height: 0;
+  padding: var(--aq-space-6) var(--aq-space-6) var(--aq-space-8);
+  overflow-y: auto;
+}
+
+.aq-mosaic-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aq-space-4);
+}
+
+.aq-mosaic {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.aq-mosaic-canvas {
+  display: block;
+  cursor: pointer;
+}
+
+.aq-tooltip {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -100%);
+  padding: 5px 8px;
+  border-radius: var(--aq-radius-sm);
+  background: var(--aq-stone-900);
+  color: var(--aq-text-on-accent);
+  font: 500 11px/1.25 var(--aq-font-sans);
+  box-shadow: var(--aq-shadow-md);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.aq-muted {
+  color: var(--aq-text-muted);
+}
+
+.aq-strong-alert {
+  color: var(--aq-clay-700);
+  font-weight: 600;
+}
+
+.aq-detail-title {
+  margin-top: var(--aq-space-3);
+}
+
+.aq-detail-actions {
+  display: flex;
+  gap: var(--aq-space-3);
+  margin-top: var(--aq-space-5);
+}
+
+.aq-detail-actions .aq-btn-primary {
+  flex: 1;
+}
+
+.aq-queue {
+  margin: var(--aq-space-3) calc(-1 * var(--aq-space-2)) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aq-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aq-space-2);
+  width: 100%;
+  padding: var(--aq-space-4);
+  border: 0;
+  border-radius: var(--aq-radius-md);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: var(--aq-type-body);
+  color: var(--aq-text-body);
+}
+
+.aq-row:hover {
+  background: var(--aq-surface-hover);
+}
+
+.aq-row[aria-pressed="true"] {
+  background: var(--aq-surface-selected);
+}
+
+.aq-row:focus-visible {
+  outline: 2px solid var(--aq-focus-ring);
+  outline-offset: 2px;
+}
+
+.aq-row-top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--aq-space-4);
+}
+
+@container aq (max-width: 1100px) {
+  .aq-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container aq (max-width: 760px) {
+  .aq-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .aq-fleet-body {
+    flex-direction: column;
+  }
+
+  .aq-fleet-main {
+    min-height: 420px;
+  }
+}

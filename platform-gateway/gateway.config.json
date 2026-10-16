@@ -1,0 +1,22 @@
+{
+  "gateway": { "host": "127.0.0.1", "port": 4000 },
+  "apps": {
+    "agroguard": {
+      "label": "AgroGuard",
+      "description": "Sensor monitoring, crop health scoring, alerts, NDVI, crop suggestion, disease detection and AI chat.",
+      "projectDir": "../AgriBackend/Agriculture",
+      "url": "http://localhost:5173/",
+      "fingerprint": "name=\"application-name\" content=\"AgroGuard\"",
+      "apiUrl": "http://127.0.0.1:8000/api/v1/health"
+    },
+    "agriquill": {
+      "label": "AgriQill IDE",
+      "description": "Farm contracts, live water planner, twin rehearsal, ledger, field app and pitch story.",
+      "projectDir": "../agroquill/Agriqill",
+      "url": "http://localhost:3000/",
+      "fingerprint": "<title>AgriQill IDE</title>",
+      "apiPort": 8010,
+      "apiUrl": "http://127.0.0.1:8010/api/v1/agriquill/health"
+    }
+  }
+}

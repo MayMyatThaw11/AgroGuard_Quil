@@ -1,0 +1,22 @@
+.aq-root {
+  --aq-pulse-from: rgba(37, 99, 235, 0.45);
+  --aq-pulse-to: rgba(37, 99, 235, 0);
+  --aq-attrib-bg: rgba(255, 255, 255, 0.82);
+  --aq-on-dark: rgba(255, 255, 255, 0.82);
+  --aq-on-dark-faint: rgba(255, 255, 255, 0.7);
+  --aq-map-sea: #a9dbd8;
+  --aq-map-space: radial-gradient(120% 90% at 50% 45%, #eef6f4 0%, #cfe3e6 45%, #8fb3bd 100%);
+  --aq-top-h: 48px;
+  --aq-status-h: 28px;
+  --aq-fm-left-w: 284px;
+  --aq-fm-right-w: 360px;
+  --aq-fm-gutter: 10px;
+  --aq-space-7: 14px;
+  --aq-fm-ramp-default: linear-gradient(90deg, var(--aq-water-300), var(--aq-water-500));
+  --aq-z-hud: 30;
+  --aq-z-bar: 40;
+  --aq-z-banner: 44;
+  --aq-z-tip: 50;
+  --aq-z-toast: 60;
+  --aq-z-boot: 90;
+}

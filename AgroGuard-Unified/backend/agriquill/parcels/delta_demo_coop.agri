@@ -1,0 +1,126 @@
+// Agronomic contract for the Delta Demo Cooperative, Maubin, Ayeyarwady.
+// Written once by the buyer's agronomist; the scheduler computes the daily plan.
+// Paddy boundaries are OpenStreetMap farmland ways (ODbL, (c) OpenStreetMap contributors),
+// fetched 2026-10-14. Crop, stage and planting dates are example records for the demo.
+// Thresholds marked TO VERIFY by the verifier need a local source before field use.
+
+farm farm_ayeyarwady_demo {
+    name: "Delta Demo Cooperative"
+    country: MM
+    location: [16.72834, 95.59059]
+    standard: ASOA_ORGANIC
+
+    hydrology {
+        regime: AWD_SAFE
+        trigger_irrig_below: -15 cm
+        flowering_lock_depth: 3 cm .. 5 cm
+        reflood_depth: 5 cm
+        percolation: 3 mm/day
+    }
+
+    actuation_gates {
+        max_wind_speed: 5.5 m/s
+        valid_delta_t: 2.0 C .. 8.0 C
+        max_rain_6h_post: 10.0 mm
+    }
+
+    yield_logic {
+        max_canopy_nitrogen: 85 kg/ha
+        min_marginal_roi: 1.5x
+    }
+
+    sensors {
+        wind: "ws-01"
+    }
+
+    schedule {
+        crew: 2
+        irrigate: 3 h
+        drain: 2 h
+        spray: 2 h
+        scout: 1 h
+        harvest: 8 h
+    }
+}
+parcel PD-01 {
+    osm: "way/652768658"
+    area: 0.35 ha
+    crop_id: rice_lowland
+    stage: Ripening
+    planted: "2026-06-24"
+    boundary: [[16.730844, 95.597508], [16.730959, 95.598255], [16.730581, 95.598427], [16.730507, 95.59829], [16.730552, 95.59765], [16.730844, 95.597508]]
+    sensors { water_depth: "PD-01-tube" }
+}
+
+parcel PD-02 {
+    osm: "way/652768631"
+    area: 0.31 ha
+    crop_id: rice_lowland
+    stage: Tillering
+    planted: "2026-09-06"
+    boundary: [[16.730828, 95.594315], [16.730408, 95.594273], [16.730287, 95.594635], [16.730219, 95.594839], [16.730704, 95.594891], [16.730828, 95.594315]]
+    sensors { water_depth: "PD-02-tube" }
+}
+
+parcel PD-03 {
+    osm: "way/652768636"
+    area: 0.63 ha
+    crop_id: rice_lowland
+    stage: "Panicle Initiation"
+    planted: "2026-08-19"
+    boundary: [[16.729465, 95.594134], [16.728789, 95.59411], [16.728756, 95.594908], [16.729463, 95.594882], [16.729465, 95.594134]]
+    sensors { water_depth: "PD-03-tube" }
+}
+
+parcel PD-04 {
+    osm: "way/652768644"
+    area: 0.3 ha
+    crop_id: rice_fish
+    stage: Tillering
+    planted: "2026-08-31"
+    boundary: [[16.729235, 95.595826], [16.729227, 95.596157], [16.728627, 95.596285], [16.728627, 95.595766], [16.729235, 95.595826]]
+    sensors { water_depth: "PD-04-tube" }
+}
+
+parcel PD-05 {
+    osm: "way/652736428"
+    area: 1.88 ha
+    crop_id: rice_lowland
+    stage: Ripening
+    planted: "2026-06-28"
+    boundary: [[16.728329, 95.584193], [16.728422, 95.584596], [16.728278, 95.584639], [16.728155, 95.584623], [16.728036, 95.584585], [16.727723, 95.584762], [16.727518, 95.584885], [16.727502, 95.585025], [16.727338, 95.585138], [16.72706, 95.585288], [16.72685, 95.585298], [16.72668, 95.585304], [16.726675, 95.585443], [16.726526, 95.585438], [16.726495, 95.584086], [16.728329, 95.584193]]
+    sensors { water_depth: "PD-05-tube" }
+}
+
+parcel PD-06 {
+    osm: "way/652736388"
+    area: 1.89 ha
+    crop_id: rice_lowland
+    stage: Flowering
+    planted: "2026-08-03"
+    boundary: [[16.727319, 95.59051], [16.72699, 95.590483], [16.726852, 95.591154], [16.726769, 95.591915], [16.726805, 95.592017], [16.727622, 95.592012], [16.728157, 95.59124], [16.727925, 95.591154], [16.728049, 95.590607], [16.727319, 95.59051]]
+    sensors { water_depth: "PD-06-tube" }
+}
+
+parcel PD-07 {
+    osm: "way/652736435"
+    area: 0.42 ha
+    crop_id: rice_shrimp
+    stage: Ripening
+    planted: "2026-07-06"
+    boundary: [[16.726192, 95.584751], [16.726161, 95.585454], [16.725668, 95.585449], [16.725699, 95.584719], [16.726192, 95.584751]]
+    sensors { water_depth: "PD-07-tube" }
+}
+
+// Mixed farming. Herd sizes are example records; the cooperative replaces them with its own counts.
+herd FISH-04 { kind: fish species: "Nile tilapia" count: 300 paddy: PD-04 min_water: 10 cm min_oxygen: 3 mg/L }
+herd SHRIMP-07 { kind: shrimp species: "Black tiger shrimp" count: 2000 paddy: PD-07 min_water: 15 cm min_oxygen: 4 mg/L }
+herd DUCK-06 { kind: ducks count: 150 paddy: PD-06 }
+
+asset P-01 { kind: pump label: "Intake pump" serves: [PD-01, PD-02, PD-03, PD-04, PD-05, PD-06, PD-07] }
+asset G-03 { kind: gate label: "Paddy inlet" serves: [PD-02, PD-03] }
+asset S-01 { kind: sluice label: "Outlet" serves: [PD-04, PD-07] }
+asset S-02 { kind: sluice label: "Inlet sluice" serves: [PD-06, PD-07] }
+asset D-01 { kind: drone label: "Drone" }
+asset T-01 { kind: tractor label: "Tractor" }
+asset R-02 { kind: robot label: "Field robot" }

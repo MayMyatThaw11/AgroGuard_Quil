@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.venv/
+.venv-agriquill/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Build output
+dist/
+build/
+
+# Env files with real secrets — only *.env.example files are tracked
+.env
+.env.*
+!.env.example
+!keys.env.example
+
+# Local data / logs
+.tmp/
+.runlogs/
+*.sqlite-shm
+*.sqlite-wal
+*.lock
+
+# Runtime data stores (local state, not source — see docs/RECONCILIATION.md)
+backend/agriquill/data/*.sqlite
+backend/agriquill/data/*.jsonl
+
+# OS / editor
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+{
+  "name": "agriculture-platform-gateway",
+  "private": true,
+  "type": "module",
+  "description": "Shared landing page that links to the existing AgroGuard and AgriQill IDE applications.",
+  "scripts": {
+    "start": "node server.mjs",
+    "start:all": "node start-all.mjs",
+    "verify": "node verify.mjs"
+  }
+}

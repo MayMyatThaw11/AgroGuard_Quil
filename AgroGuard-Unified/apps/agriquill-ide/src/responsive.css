@@ -1,0 +1,58 @@
+
+/* ------------------------------------------------------------------ *
+ * Responsive
+ *
+ * Order matters: these are declared last so they win over the base
+ * component layer without needing !important.
+ * ------------------------------------------------------------------ */
+
+/* 1440: the breadcrumb and command bar compete for the same row. Drop the
+   breadcrumb first, since the active file is already named in the editor tab. */
+@media (max-width: 1440px) {
+  .brand-block .brand-crumb { display: none; }
+}
+
+/* 1280: the header actions wrap into two lines and collide with the centre
+   controls. Actions move to a single compact row and labels shorten. */
+@media (max-width: 1320px) {
+  .brand-block { gap: var(--space-2); }
+  .header-search { flex: 1 1 auto; min-width: 0; }
+  .header-search .header-search-label { display: none; }
+  .header-actions { gap: var(--space-1); }
+  .header-actions .header-action-label { display: none; }
+  .header-actions > * { flex-shrink: 0; }
+}
+
+/* Below 1280 the advisor column is the first thing to go: it is a read-only
+   companion, while the editor and the map are the primary task. The dock keeps
+   its scrubber but sheds the phenology chip, which is also duplicated in the
+   Problems and Inspector tabs. */
+@media (max-width: 1279px) {
+  .advisor-column { display: none; }
+  .advisor-drawer { display: flex; }
+  .dock-stage { display: none; }
+}
+
+@media (max-width: 1100px) {
+  .scene-toolbar-sliders { gap: var(--space-2); }
+  .scene-slider { min-width: 108px; }
+}
+
+/* The workflow strip sheds its meta chips before the breadcrumb: the active
+   file is already named in the editor tab and the scenario stays in the
+   status bar. Toggles remain reachable at any width. */
+@media (max-width: 1100px) {
+  .workspace-strip-meta { display: none; }
+  .workspace-strip-file { max-width: 200px; }
+}
+
+/* The dock bar cannot fit four tab labels beside a full scrubber on one row.
+   Rather than wrap (which pushed the scrubber into the tab strip and clipped
+   the labels), the tab strip scrolls on its own and the scrubber keeps a
+   fixed width. Scrolling keeps every control reachable at any width. */
+@media (max-width: 980px) {
+  .dock-tabs { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .dock-tabs::-webkit-scrollbar { display: none; }
+  .dock-scrubber { flex: 0 1 auto; min-width: 0; }
+  .dock-range { width: 116px; }
+}

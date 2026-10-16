@@ -1,0 +1,130 @@
+.aq-aside {
+  display: grid;
+  gap: var(--aq-space-5);
+}
+
+.aq-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--aq-space-3);
+  margin-top: var(--aq-space-6);
+}
+
+.aq-stat {
+  padding: 9px 10px 10px;
+  border-radius: var(--aq-radius-md);
+  background: var(--aq-surface-tile);
+}
+
+.aq-stat-label {
+  font: var(--aq-type-caption);
+  color: var(--aq-text-muted);
+}
+
+.aq-stat-value {
+  margin-top: var(--aq-space-2);
+  font: var(--aq-type-value);
+  color: var(--aq-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.aq-stat-unit {
+  margin-left: var(--aq-space-2);
+  font: var(--aq-type-meta);
+  color: var(--aq-text-muted);
+}
+
+.aq-stat.is-changed {
+  box-shadow: 0 0 0 1.5px var(--aq-leaf-500);
+  background: var(--aq-surface-selected);
+}
+
+.aq-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: var(--aq-space-6);
+}
+
+.aq-chart-axis {
+  stroke: var(--aq-border-subtle);
+}
+
+.aq-chart-safe {
+  stroke: var(--aq-clay-500);
+  stroke-dasharray: 2 3;
+}
+
+.aq-chart-reflood {
+  stroke: var(--aq-water-500);
+  stroke-dasharray: 4 3;
+}
+
+.aq-chart-draft {
+  stroke: var(--aq-stone-900);
+}
+
+.aq-chart-text {
+  fill: var(--aq-text-muted);
+  font: var(--aq-type-caption);
+}
+
+.aq-list {
+  display: grid;
+  gap: var(--aq-space-3);
+  margin: var(--aq-space-6) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aq-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--aq-space-4);
+  font: var(--aq-type-meta);
+}
+
+.aq-card-pad .aq-hint {
+  margin-top: var(--aq-space-4);
+}
+
+.aq-list-value {
+  color: var(--aq-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.aq-savebar {
+  position: sticky;
+  bottom: var(--aq-space-5);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--aq-space-5);
+  padding: var(--aq-space-4) var(--aq-space-5);
+}
+
+.aq-alert {
+  display: flex;
+  gap: var(--aq-space-4);
+  align-items: flex-start;
+  padding: var(--aq-space-5) var(--aq-space-6);
+  border-radius: var(--aq-radius-md);
+  background: var(--aq-surface-sunken);
+  font: var(--aq-type-meta);
+  color: var(--aq-text-body);
+}
+
+.aq-alert.is-success {
+  background: var(--aq-accent-tint);
+  color: var(--aq-accent-ink);
+}
+
+.aq-alert.is-warning {
+  background: var(--aq-grain-100);
+  color: var(--aq-grain-700);
+}
+
+.aq-alert.is-error {
+  background: var(--aq-clay-100);
+  color: var(--aq-clay-700);
+}

@@ -1,0 +1,44 @@
+// AgriQill declarative script (.agri)
+// Illustrative demo script. Not a validated agronomic prescription.
+// Standard below is what the linter and compiler gate against.
+
+farm "Myanmar Agro-Enterprise" {
+    region: "AYEYARWADY_DELTA"
+    standard: "ASEAN_ORGANIC_ASOA"
+    coordinates: [16.9825, 95.8812]
+}
+
+parcel field_01_paddy {
+    area: 12.5 ha
+    crop: "Paw San Yin (ASOA Organic)"
+    soil: soilgrids_profile("depth:0-60cm")
+
+    initial_conditions {
+        matric_potential: -18.5 kPa
+        water_table_depth: 0.05 m
+        organic_carbon: 2.2 %
+    }
+
+    management_rules {
+        // Alternate Wetting and Drying. The threshold is a design target,
+        // not a locally calibrated value (see docs/agriquill/OPEN_QUESTIONS.md).
+        water_regime: AlternateWettingDrying {
+            perched_threshold: -0.15 m
+            reflood_depth: 0.05 m
+            water_savings_target: 34 %
+        }
+
+        // Prohibited under ASOA. Rotate to AzollaBioCompost to clear the block.
+        fertigation {
+            source: "AzollaBioCompost"
+            max_nitrogen_rate: 65.0 kg_N/ha
+        }
+
+        // Physical actuation is gated by the safety verifier and requires
+        // authenticated human approval before any downlink is emitted.
+        actuation_bind {
+            valve: mcp_device("lorawan_valve_01")
+            safety_interlock: abort_on_wind(ceiling_ms: 5.5)
+        }
+    }
+}
