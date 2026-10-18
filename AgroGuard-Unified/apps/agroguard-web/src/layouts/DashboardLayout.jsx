@@ -6,12 +6,21 @@ import Sidebar from '../components/Sidebar.jsx'
 function DashboardLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const location = useLocation()
-  // Farm Simulation fills the whole area beside the sidebar, edge to edge.
-  const fullBleed = location.pathname === '/farm-simulation'
+  // Farm Simulation has its own toolbars, so it takes the whole screen with no
+  // AgroGuard sidebar; its page carries a "Back to dashboard" bar instead.
+  const fullScreen = location.pathname === '/farm-simulation'
 
   useEffect(() => {
     setMobileSidebarOpen(false)
   }, [location.pathname])
+
+  if (fullScreen) {
+    return (
+      <main className="h-screen">
+        <Outlet />
+      </main>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-myanglow-sage/35 via-white to-myanglow-soft/25 text-slate-900">
@@ -39,7 +48,7 @@ function DashboardLayout() {
           <Menu size={20} />
         </button>
 
-        <main className={fullBleed ? 'h-screen pt-16 lg:pt-0' : 'px-4 pb-6 pt-20 sm:px-6 lg:px-8 lg:py-6'}>
+        <main className="px-4 pb-6 pt-20 sm:px-6 lg:px-8 lg:py-6">
           <Outlet />
         </main>
       </div>

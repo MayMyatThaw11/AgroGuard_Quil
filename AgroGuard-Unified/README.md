@@ -204,8 +204,9 @@ and must not be committed.
 1. The AgroGuard landing page and its **Sign in / Sign up** popup (email and
    password) are unchanged. Signing in opens the dashboard.
 2. The sidebar has a new **Farm Simulation** item (Burmese: လယ်ယာ စမ်းသပ်စနစ်),
-   at `/farm-simulation`. It opens in the same tab and fills the space next
-   to the AgroGuard sidebar.
+   at `/farm-simulation`. It opens in the same tab and takes the whole
+   screen: the AgroGuard sidebar is hidden there, and a thin bar on top has a
+   **Back to dashboard** link.
 3. Farm Simulation first shows AgriQill's original entry screen: a live,
    slowly moving map of the demo cooperative on the left (with farm, weather
    and record-chain facts), and on the right the introduction ("Farm work,
@@ -249,8 +250,8 @@ and must not be committed.
   zustand, TanStack Query, FullCalendar, luxon, …) and TypeScript.
 - **Two pages, one build.** `farmsim/index.html` is a second Vite entry
   (`build.rollupOptions.input` in `vite.config.js`). The `/farm-simulation`
-  route (`src/pages/FarmSimulationPage.jsx`) shows that page in a frame next
-  to the sidebar. The frame keeps Farm Simulation's dark 3D workspace CSS,
+  route (`src/pages/FarmSimulationPage.jsx`) shows that page in a frame
+  under its "Back to dashboard" bar. The frame keeps Farm Simulation's dark 3D workspace CSS,
   its Tailwind reset and its keyboard shortcuts from changing AgroGuard's
   pages, and keeps its URL options working: `/farm-simulation?farm=<id>`,
   `?story` (guided demo) and `?field` (field app) are passed through.
@@ -277,12 +278,12 @@ and must not be committed.
 | `…/farm-simulation/components/ActivityBar.tsx` | "Spatial" renamed **3D Farm** and moved to the top |
 | `…/farm-simulation/components/ops/OpsInspector.tsx`, `OpsCrewTimeline.tsx` | "Planner offline" hint now says `npm run start` / backend on :8010 instead of the standalone `npm run dev:full` |
 | `apps/agroguard-web/farmsim/index.html` | New: Farm Simulation page (title "Farm Simulation · AgroGuard") |
-| `apps/agroguard-web/src/pages/FarmSimulationPage.jsx` | New: `/farm-simulation` route |
+| `apps/agroguard-web/src/pages/FarmSimulationPage.jsx` | New: `/farm-simulation` route, with a thin **Back to dashboard** bar on top |
 | `apps/agroguard-web/src/App.jsx` | Adds the `/farm-simulation` route inside the dashboard layout |
 | `apps/agroguard-web/src/components/Sidebar.jsx` | Adds the **Farm Simulation** item; removes the "Open AgriQill IDE" link |
 | `apps/agroguard-web/src/api.js` | Removes `AGRIQUILL_IDE_URL` (`VITE_AGRIQUILL_IDE_URL`), which only that link used |
-| `apps/agroguard-web/src/layouts/DashboardLayout.jsx` | Farm Simulation fills the area beside the sidebar, edge to edge |
-| `apps/agroguard-web/src/contexts/LanguageContext.jsx` | English and Burmese labels for Farm Simulation |
+| `apps/agroguard-web/src/layouts/DashboardLayout.jsx` | Hides the AgroGuard sidebar on the Farm Simulation route so it takes the whole screen |
+| `apps/agroguard-web/src/contexts/LanguageContext.jsx` | English and Burmese labels for Farm Simulation and its Back to dashboard link |
 | `apps/agroguard-web/vite.config.js`, `vite.farm-simulation.js` | Second page entry, Farm Simulation proxy rules, mock API, ES workers |
 | `apps/agroguard-web/package.json`, `package-lock.json`, `tsconfig.farm-simulation.json` | Farm Simulation packages, TypeScript, new scripts |
 | `apps/agroguard-web/public/assets/fonts`, `public/templates` | Fonts and CSV templates Farm Simulation uses |
