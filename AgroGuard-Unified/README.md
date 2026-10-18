@@ -206,12 +206,16 @@ and must not be committed.
 2. The sidebar has a new **Farm Simulation** item (Burmese: လယ်ယာ စမ်းသပ်စနစ်),
    at `/farm-simulation`. It opens in the same tab and takes the whole
    screen: the AgroGuard sidebar is hidden there, and a thin bar on top has a
-   **Back to dashboard** link.
+   **Back to dashboard** link. Below the menu, the sidebar also has a
+   **Sign out** button. It returns to the landing page and also forgets the
+   Farm Simulation name and code.
 3. Farm Simulation first shows AgriQill's original entry screen: a live,
    slowly moving map of the demo cooperative on the left (with farm, weather
    and record-chain facts), and on the right the introduction ("Farm work,
    checked before it happens"), the **Your name** and **Access code** boxes,
-   and the "Try the demo farm" guided tour link.
+   and the "Try the demo farm" guided tour link (read-only, no code needed).
+   On shorter screens the column tightens its spacing, and hides the three
+   proof points below 760 px of height, so that link stays in view.
 4. After signing in it opens on the **3D Farm** view (terrain, paddies, bunds,
    canals, robots, sensors, animals, structures, camera controls, ML brain).
    Every other AgriQill tool is still in the left toolbar: Farm map (globe →
@@ -280,10 +284,11 @@ and must not be committed.
 | `apps/agroguard-web/farmsim/index.html` | New: Farm Simulation page (title "Farm Simulation · AgroGuard") |
 | `apps/agroguard-web/src/pages/FarmSimulationPage.jsx` | New: `/farm-simulation` route, with a thin **Back to dashboard** bar on top |
 | `apps/agroguard-web/src/App.jsx` | Adds the `/farm-simulation` route inside the dashboard layout |
-| `apps/agroguard-web/src/components/Sidebar.jsx` | Adds the **Farm Simulation** item; removes the "Open AgriQill IDE" link |
+| `apps/agroguard-web/src/components/Sidebar.jsx` | Adds the **Farm Simulation** item and a **Sign out** button; removes the "Open AgriQill IDE" link |
+| `…/farm-simulation/signin.css` | Entry screen scrolls on its own and tightens on short screens, so **Try the demo farm** isn't cut off |
 | `apps/agroguard-web/src/api.js` | Removes `AGRIQUILL_IDE_URL` (`VITE_AGRIQUILL_IDE_URL`), which only that link used |
 | `apps/agroguard-web/src/layouts/DashboardLayout.jsx` | Hides the AgroGuard sidebar on the Farm Simulation route so it takes the whole screen |
-| `apps/agroguard-web/src/contexts/LanguageContext.jsx` | English and Burmese labels for Farm Simulation and its Back to dashboard link |
+| `apps/agroguard-web/src/contexts/LanguageContext.jsx` | English and Burmese labels for Farm Simulation, Back to dashboard and Sign out |
 | `apps/agroguard-web/vite.config.js`, `vite.farm-simulation.js` | Second page entry, Farm Simulation proxy rules, mock API, ES workers |
 | `apps/agroguard-web/package.json`, `package-lock.json`, `tsconfig.farm-simulation.json` | Farm Simulation packages, TypeScript, new scripts |
 | `apps/agroguard-web/public/assets/fonts`, `public/templates` | Fonts and CSV templates Farm Simulation uses |

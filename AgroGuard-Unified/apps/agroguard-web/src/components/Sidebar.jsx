@@ -1,5 +1,5 @@
-import { Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 
 const navItems = [
@@ -14,8 +14,24 @@ const navItems = [
   { key: 'nav.farmSimulation', icon: Box, path: '/farm-simulation' },
 ]
 
+// Farm Simulation remembers its own name + access code sign-in under these
+// keys (src/features/farm-simulation/lib/api.ts and session.ts), so signing
+// out of AgroGuard signs out of Farm Simulation too.
+const FARM_SIM_SESSION_KEYS = ['agriquill.accessCode', 'agriquill.reporter']
+
 function Sidebar({ mobileSidebarOpen, onClose }) {
   const { language, setLanguage, t } = useLanguage()
+  const navigate = useNavigate()
+
+  function signOut() {
+    try {
+      FARM_SIM_SESSION_KEYS.forEach((key) => localStorage.removeItem(key))
+    } catch {
+      // Storage blocked: there is nothing saved to clear.
+    }
+    onClose()
+    navigate('/')
+  }
 
   return (
     <aside
@@ -65,6 +81,20 @@ function Sidebar({ mobileSidebarOpen, onClose }) {
           )
         })}
       </nav>
+
+      <div className="shrink-0 border-t border-myanglow-sage/70 px-4 py-3">
+        <button
+          id="sign-out"
+          type="button"
+          onClick={signOut}
+          className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-red-50 hover:text-red-700"
+        >
+          <LogOut size={18} />
+          {/* App.css sets "button { font: inherit }", which outranks the button's
+              own text-sm, so the label sets its size like the links above. */}
+          <span className="text-sm font-medium">{t('nav.signOut')}</span>
+        </button>
+      </div>
 
       <div className="flex shrink-0 justify-center border-t border-myanglow-sage/70 px-4 py-3">
         <div className="inline-flex w-fit max-w-full items-center gap-1 rounded-xl border border-myanglow-sage bg-white p-1">
