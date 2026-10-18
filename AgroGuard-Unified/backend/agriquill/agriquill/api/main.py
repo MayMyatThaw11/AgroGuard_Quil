@@ -38,7 +38,7 @@ from .. import (
     telemetry,
     twin,
 )
-from ..config import get_settings
+from ..config import Settings, get_settings
 from ..data import (
     chirps,
     ecocrop,
@@ -87,6 +87,11 @@ def parse_users(raw: str) -> list[User]:
     return users
 
 
+def _user_entries(settings: Settings) -> str:
+    entries = [s.get_secret_value() for s in (settings.users, settings.builtin_user) if s]
+    return ";".join(entries)
+
+
 def _same(given: str | None, expected: str) -> bool:
     return given is not None and hmac.compare_digest(given.encode(), expected.encode())
 
@@ -96,9 +101,11 @@ def _reader(
 ) -> Caller | None:
     settings = get_settings()
     try:
-        users = parse_users(settings.users.get_secret_value()) if settings.users else []
+        users = parse_users(_user_entries(settings))
     except ValueError as exc:
-        raise HTTPException(status_code=500, detail="AGRIQUILL_USERS is malformed") from exc
+        raise HTTPException(
+            status_code=500, detail="AGRIQUILL_USERS or AGRIQUILL_BUILTIN_USER is malformed"
+        ) from exc
     for name, code, roles, farms in users:
         if _same(token, code):
             return Caller(name, roles, farms)
@@ -201,7 +208,7 @@ async def health() -> dict[str, str]:
 @router.get("/auth/me")
 async def auth_me(caller: Caller = _CALLER) -> dict[str, Any]:
     settings = get_settings()
-    required = settings.write_token is not None or bool(settings.users)
+    required = settings.write_token is not None or bool(_user_entries(settings))
     farms = sorted(caller.farms) if caller.farms is not None else None
     return {
         "name": caller.name,

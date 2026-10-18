@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     actuation_pin: SecretStr | None = None
     write_token: SecretStr | None = None
     users: SecretStr | None = None
+    # Built-in Farm Simulation sign-in (name:code:roles[:farms]), always accepted
+    # alongside AGRIQUILL_USERS. Override with AGRIQUILL_BUILTIN_USER, or set it
+    # empty to turn it off.
+    builtin_user: SecretStr | None = SecretStr("Farm Manager:FARMSIM-2026:manager,crew:*")
     public_farms: str = "farm_ayeyarwady_demo"
     nasa_power_endpoint: str = "https://power.larc.nasa.gov/api/temporal/daily/point"
     chirps_base: str = "https://data.chc.ucsb.edu/products/CHIRPS-2.0"

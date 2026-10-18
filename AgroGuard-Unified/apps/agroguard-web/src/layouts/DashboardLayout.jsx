@@ -6,6 +6,8 @@ import Sidebar from '../components/Sidebar.jsx'
 function DashboardLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const location = useLocation()
+  // Farm Simulation fills the whole area beside the sidebar, edge to edge.
+  const fullBleed = location.pathname === '/farm-simulation'
 
   useEffect(() => {
     setMobileSidebarOpen(false)
@@ -37,7 +39,7 @@ function DashboardLayout() {
           <Menu size={20} />
         </button>
 
-        <main className="px-4 pb-6 pt-20 sm:px-6 lg:px-8 lg:py-6">
+        <main className={fullBleed ? 'h-screen pt-16 lg:pt-0' : 'px-4 pb-6 pt-20 sm:px-6 lg:px-8 lg:py-6'}>
           <Outlet />
         </main>
       </div>

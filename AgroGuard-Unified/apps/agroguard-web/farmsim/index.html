@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f1311" />
+    <title>Farm Simulation · AgroGuard</title>
+    <meta name="description" content="AgroGuard Farm Simulation: 3D farm models, DSL Editor, Simulation Replay, and ASEAN Presets" />
+    <meta property="og:title" content="Farm Simulation" />
+    <meta property="og:description" content="AgroGuard Farm Simulation: 3D farm models, DSL Editor, Simulation Replay, and ASEAN Presets" />
+    <script>
+      // Applies the stored theme before first paint so a light-mode user never
+      // sees a dark flash. Mirrors src/features/farm-simulation/lib/useTheme.ts THEME_BOOTSTRAP.
+      (function () {
+        try {
+          var k = 'agriquill.theme';
+          var s = localStorage.getItem(k);
+          if (s !== 'light' && s !== 'dark') {
+            s = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          }
+          document.documentElement.dataset.theme = s;
+          document.querySelector('meta[name="theme-color"]').setAttribute(
+            'content',
+            s === 'dark' ? '#0f1311' : '#ffffff'
+          );
+        } catch (e) {
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/features/farm-simulation/main.tsx"></script>
+  </body>
+</html>

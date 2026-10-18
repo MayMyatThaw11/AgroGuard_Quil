@@ -1,0 +1,233 @@
+#root .aq-root,
+#root .aq-root * {
+  transition-duration: var(--aq-dur-fast);
+  transition-timing-function: var(--aq-ease);
+}
+
+.aq-root {
+  container: aq / inline-size;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--aq-surface-app);
+  color: var(--aq-text-body);
+  font: var(--aq-type-body);
+  letter-spacing: var(--aq-ls-tight);
+}
+
+.aq-page {
+  display: grid;
+  gap: var(--aq-space-5);
+  min-height: 100%;
+  padding: var(--aq-space-5);
+  align-content: start;
+}
+
+.aq-card {
+  border: 1px solid var(--aq-border-subtle);
+  border-radius: var(--aq-radius-lg);
+  background: var(--aq-surface-card);
+  box-shadow: var(--aq-shadow-md);
+}
+
+.aq-card-pad {
+  padding: var(--aq-space-6);
+}
+
+.aq-header {
+  display: flex;
+  align-items: center;
+  gap: var(--aq-space-6);
+  padding: var(--aq-space-4) var(--aq-space-5);
+}
+
+.aq-icon-tile {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--aq-radius-md);
+  background: var(--aq-leaf-500);
+  color: var(--aq-text-on-accent);
+  flex: none;
+}
+
+.aq-header-copy {
+  min-width: 0;
+}
+
+.aq-title {
+  margin: 0;
+  font: var(--aq-type-title);
+  color: var(--aq-text-strong);
+}
+
+.aq-meta {
+  margin: var(--aq-space-1) 0 0;
+  font: var(--aq-type-meta);
+  color: var(--aq-text-muted);
+}
+
+.aq-spacer {
+  flex: 1;
+}
+
+.aq-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--aq-space-4);
+  flex-wrap: wrap;
+}
+
+.aq-eyebrow {
+  margin: 0;
+  font: var(--aq-type-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: var(--aq-ls-eyebrow);
+  color: var(--aq-text-muted);
+}
+
+.aq-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) 300px;
+  gap: var(--aq-space-5);
+  align-items: start;
+}
+
+.aq-nav {
+  display: grid;
+  gap: var(--aq-space-2);
+  padding: var(--aq-space-4);
+}
+
+.aq-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aq-space-4);
+  min-height: 34px;
+  padding: 0 var(--aq-space-5);
+  border: 0;
+  border-radius: var(--aq-radius-md);
+  background: transparent;
+  color: var(--aq-text-body);
+  font: var(--aq-type-label);
+  text-align: left;
+  cursor: pointer;
+}
+
+.aq-tab:hover {
+  background: var(--aq-surface-hover);
+}
+
+.aq-tab[aria-selected="true"] {
+  background: var(--aq-surface-selected);
+  color: var(--aq-text-strong);
+}
+
+.aq-tab-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--aq-space-3);
+  border-radius: var(--aq-radius-pill);
+  background: var(--aq-accent);
+  color: var(--aq-text-on-accent);
+  font: 600 11px/18px var(--aq-font-sans);
+  text-align: center;
+}
+
+.aq-form {
+  display: grid;
+  gap: var(--aq-space-6);
+  padding: var(--aq-space-8);
+}
+
+.aq-blurb {
+  margin: var(--aq-space-3) 0 0;
+  font: var(--aq-type-meta);
+  color: var(--aq-text-muted);
+}
+
+.aq-fields {
+  display: grid;
+  gap: 0;
+}
+
+.aq-field {
+  display: grid;
+  gap: var(--aq-space-4);
+  padding: var(--aq-space-6) 0;
+  border-top: 1px solid var(--aq-border-subtle);
+}
+
+.aq-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aq-space-4);
+}
+
+.aq-field-label {
+  display: flex;
+  align-items: center;
+  gap: var(--aq-space-3);
+  font: var(--aq-type-label);
+  color: var(--aq-text-strong);
+}
+
+.aq-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--aq-accent);
+}
+
+.aq-field-controls {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: var(--aq-space-8);
+  align-items: center;
+}
+
+.aq-hint {
+  margin: 0;
+  font: var(--aq-type-caption);
+  color: var(--aq-text-muted);
+}
+
+.aq-hint.is-error {
+  color: var(--aq-clay-700);
+}
+
+.aq-hint.is-warning {
+  color: var(--aq-grain-700);
+}
+
+@container aq (max-width: 1100px) {
+  .aq-layout {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+
+  .aq-aside {
+    grid-column: 1 / -1;
+  }
+}
+
+@container aq (max-width: 720px) {
+  .aq-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aq-nav {
+    grid-auto-flow: column;
+    overflow-x: auto;
+  }
+
+  .aq-field-controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--aq-space-4);
+  }
+
+  .aq-header {
+    flex-wrap: wrap;
+  }
+}

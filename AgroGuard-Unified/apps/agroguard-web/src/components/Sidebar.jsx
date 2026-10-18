@@ -1,4 +1,4 @@
-import { Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, ExternalLink } from 'lucide-react'
+import { Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, ExternalLink, Box } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { AGRIQUILL_IDE_URL } from '../api.js'
@@ -12,6 +12,7 @@ const navItems = [
   { key: 'nav.chat', icon: Bot, path: '/ai-chat' },
   { key: 'nav.iot', icon: RadioTower, path: '/iot-simulation' },
   { key: 'nav.updates', icon: HeartPulse, path: '/health-updates' },
+  { key: 'nav.farmSimulation', icon: Box, path: '/farm-simulation' },
 ]
 
 function Sidebar({ mobileSidebarOpen, onClose }) {

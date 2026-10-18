@@ -1,0 +1,138 @@
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/assets/fonts/PlusJakartaSans-Variable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("/assets/fonts/JetBrainsMono-Variable.woff2") format("woff2");
+}
+
+.aq-root {
+  --aq-leaf-100: #e2f4e8;
+  --aq-leaf-200: #c4e9d1;
+  --aq-leaf-500: #17aa51;
+  --aq-leaf-600: #12963f;
+  --aq-leaf-700: #137a38;
+  --aq-mint-100: #e9f7f1;
+  --aq-mint-200: #d8f2e9;
+  --aq-mint-300: #b6e5d4;
+  --aq-leaf-400: #4dbf7a;
+  --aq-leaf-800: #135f30;
+  --aq-soil-300: #e0ae86;
+  --aq-soil-500: #bc6c2f;
+  --aq-grain-300: #f0c56a;
+  --aq-sky-500: #2563eb;
+  --aq-status-active: #1caa3e;
+  --aq-water-100: #e6f4f4;
+  --aq-water-300: #97d3d1;
+  --aq-water-500: #0b9fa9;
+  --aq-water-600: #08808a;
+  --aq-sea-light: #a6dbd8;
+  --aq-sea-deep: #86c9c6;
+  --aq-grain-100: #fbf1dc;
+  --aq-grain-500: #d77a11;
+  --aq-grain-700: #94520a;
+  --aq-clay-100: #fdeceb;
+  --aq-clay-500: #e5322d;
+  --aq-clay-600: #cc2a26;
+  --aq-clay-700: #b3241f;
+  --aq-stone-0: #ffffff;
+  --aq-stone-25: #fafbfa;
+  --aq-stone-50: #f4f6f3;
+  --aq-stone-100: #eef1ee;
+  --aq-stone-150: #e6ebe7;
+  --aq-stone-200: #dbe2dd;
+  --aq-stone-300: #c3ccc6;
+  --aq-stone-400: #9aa39d;
+  --aq-stone-500: #6f7a74;
+  --aq-stone-600: #535d57;
+  --aq-stone-700: #3a423d;
+  --aq-stone-800: #232a25;
+  --aq-stone-900: #141a16;
+
+  --aq-text-strong: var(--aq-stone-900);
+  --aq-text-body: var(--aq-stone-700);
+  --aq-text-muted: var(--aq-stone-500);
+  --aq-text-faint: var(--aq-stone-400);
+  --aq-text-on-accent: #ffffff;
+  --aq-accent: var(--aq-leaf-500);
+  --aq-accent-hover: var(--aq-leaf-600);
+  --aq-accent-press: var(--aq-leaf-700);
+  --aq-accent-tint: var(--aq-leaf-100);
+  --aq-accent-ink: var(--aq-leaf-700);
+
+  --aq-surface-app: var(--aq-stone-50);
+  --aq-surface-card: var(--aq-stone-0);
+  --aq-surface-sunken: var(--aq-stone-100);
+  --aq-surface-tile: rgba(232, 238, 236, 0.72);
+  --aq-surface-selected: var(--aq-mint-200);
+  --aq-surface-hover: rgba(20, 26, 22, 0.04);
+  --aq-surface-glass: rgba(255, 255, 255, 0.88);
+  --aq-glass-border: rgba(255, 255, 255, 0.7);
+  --aq-glass-pill: rgba(255, 255, 255, 0.82);
+  --aq-blur-glass: saturate(1.2) blur(12px);
+  --aq-scrim: rgba(20, 32, 26, 0.28);
+  --aq-border-subtle: var(--aq-stone-150);
+  --aq-border-default: var(--aq-stone-200);
+  --aq-border-strong: var(--aq-stone-300);
+  --aq-track: #dfe9e8;
+  --aq-focus-ring: rgba(23, 170, 81, 0.35);
+  --aq-error-ring: rgba(229, 50, 45, 0.18);
+
+  --aq-font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --aq-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --aq-type-title: 700 17px/1.3 var(--aq-font-sans);
+  --aq-type-heading: 600 15px/1.3 var(--aq-font-sans);
+  --aq-type-body: 400 13px/1.45 var(--aq-font-sans);
+  --aq-type-label: 600 13px/1.3 var(--aq-font-sans);
+  --aq-type-meta: 400 12px/1.3 var(--aq-font-sans);
+  --aq-type-caption: 400 11px/1.3 var(--aq-font-sans);
+  --aq-type-eyebrow: 600 11px/1 var(--aq-font-sans);
+  --aq-type-value: 700 15px/1.1 var(--aq-font-sans);
+  --aq-type-mono: 500 12px/1.2 var(--aq-font-mono);
+  --aq-ls-tight: -0.01em;
+  --aq-ls-eyebrow: 0.06em;
+
+  --aq-radius-xs: 4px;
+  --aq-radius-sm: 6px;
+  --aq-radius-md: 8px;
+  --aq-radius-lg: 12px;
+  --aq-radius-xl: 16px;
+  --aq-radius-pill: 999px;
+
+  --aq-space-1: 2px;
+  --aq-space-2: 4px;
+  --aq-space-3: 6px;
+  --aq-space-4: 8px;
+  --aq-space-5: 10px;
+  --aq-space-6: 12px;
+  --aq-space-8: 16px;
+  --aq-space-10: 20px;
+  --aq-space-12: 24px;
+  --aq-control-h: 28px;
+  --aq-control-h-sm: 22px;
+  --aq-control-h-lg: 34px;
+  --aq-input-h: 32px;
+
+  --aq-shadow-xs: 0 1px 1px rgba(20, 40, 30, 0.05);
+  --aq-shadow-sm: 0 1px 2px rgba(20, 40, 30, 0.06), 0 1px 1px rgba(20, 40, 30, 0.04);
+  --aq-shadow-md: 0 4px 14px -4px rgba(20, 50, 40, 0.14), 0 1px 2px rgba(20, 40, 30, 0.06);
+  --aq-shadow-lg: 0 14px 36px -10px rgba(20, 50, 40, 0.22), 0 2px 6px rgba(20, 40, 30, 0.06);
+  --aq-shadow-thumb: 0 1px 2px rgba(0, 0, 0, 0.2);
+
+  --aq-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --aq-dur-fast: 120ms;
+  --aq-dur-base: 180ms;
+  --aq-dur-slow: 280ms;
+}
+
+.aq-mono {
+  font-family: var(--aq-font-mono);
+}
