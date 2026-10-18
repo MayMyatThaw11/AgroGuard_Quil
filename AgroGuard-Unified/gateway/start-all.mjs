@@ -1,10 +1,11 @@
-// Starts both applications (frontend + backend each) plus the landing page.
-// Unlike the pre-merge two-repo layout, AgroGuard's frontend and backend now
-// live in separate top-level directories (apps/agroguard-web,
-// backend/agroguard), so each needs its own process instead of one combined
-// root "npm run dev". AgriQill's API runs on :8010 (not its :8000 default)
-// because AgroGuard's frontend proxy is fixed to :8000; AGRIQUILL_API_TARGET
-// carries that to AgriQill's Vite proxy.
+// Starts AgroGuard's frontend, both backends and the landing page.
+// AgroGuard's frontend and backend live in separate top-level directories
+// (apps/agroguard-web, backend/agroguard), so each needs its own process.
+// Farm Simulation (formerly the separate AgriQill IDE) is a page inside
+// AgroGuard's frontend, so it has no frontend process of its own; only its
+// API runs here, on :8010 (not its :8000 default) because AgroGuard's API
+// already uses :8000. AGRIQUILL_API_TARGET carries that port to AgroGuard's
+// Vite proxy (see apps/agroguard-web/vite.farm-simulation.js).
 import { existsSync } from 'node:fs'
 import { spawn, spawnSync } from 'node:child_process'
 import { connect } from 'node:net'
@@ -74,7 +75,7 @@ function portOpen(port, host = '127.0.0.1') {
 // ports — otherwise one child dies with a raw EADDRINUSE stack trace and
 // takes the rest down with it. Vite's "localhost" may bind IPv6 only, so
 // check both loopback addresses.
-const OWN_PORTS = { 5173: 'agroguard-web', 8000: 'agroguard-api', [apps.agriquill.apiPort]: 'agriquill-api', 3000: 'agriquill-ide', 4000: 'gateway' }
+const OWN_PORTS = { 5173: 'agroguard-web', 8000: 'agroguard-api', [apps.agriquill.apiPort]: 'agriquill-api', 4000: 'gateway' }
 const busy = []
 for (const [port, name] of Object.entries(OWN_PORTS)) {
   if ((await portOpen(Number(port))) || (await portOpen(Number(port), '::1'))) busy.push(`${port} (${name})`)
@@ -102,6 +103,7 @@ const processes = [
   {
     name: 'agroguard-web',
     command: 'npm', args: ['run', 'dev'], cwd: apps.agroguard.frontendDir, shell: win,
+    env: { AGRIQUILL_API_TARGET: agriquillApiTarget },
   },
   {
     name: 'agroguard-api',
@@ -114,11 +116,6 @@ const processes = [
     command: agriquillPython,
     args: ['-m', 'uvicorn', 'agriquill.api.main:app', '--host', '127.0.0.1', '--port', String(apps.agriquill.apiPort)],
     cwd: apps.agriquill.backendDir,
-  },
-  {
-    name: 'agriquill-ide',
-    command: 'npm', args: ['run', 'dev'], cwd: apps.agriquill.frontendDir, shell: win,
-    env: { AGRIQUILL_API_TARGET: agriquillApiTarget },
   },
   { name: 'gateway', command: process.execPath, args: [join(here, 'server.mjs')], cwd: here },
 ]

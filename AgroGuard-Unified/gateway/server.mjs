@@ -1,7 +1,8 @@
 // Entry point for the shared agricultural platform. AgroGuard's own landing
-// page is the one true entry point (it carries the "Open AgriQill IDE"
-// action); this just forwards to it and exposes /apps.json and /status.json
-// for diagnostics. It does not proxy, rewrite or otherwise change either app.
+// page is the one true entry point (Farm Simulation, formerly the separate
+// AgriQill IDE, is a page inside it); this just forwards to it and exposes
+// /apps.json and /status.json for diagnostics. It does not proxy, rewrite or
+// otherwise change the app.
 import { createServer } from 'node:http'
 import { loadConfig, probe } from './config.mjs'
 
@@ -21,7 +22,7 @@ async function status() {
   const entries = await Promise.all(
     Object.entries(config.apps).map(async ([id, app]) => [
       id,
-      { ui: await probe(app.url, app.fingerprint), api: await probe(app.apiUrl) },
+      { ui: app.url ? await probe(app.url, app.fingerprint) : null, api: await probe(app.apiUrl) },
     ]),
   )
   return Object.fromEntries(entries)

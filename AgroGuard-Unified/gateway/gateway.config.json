@@ -9,15 +9,14 @@
       "url": "http://localhost:5173/",
       "fingerprint": "name=\"application-name\" content=\"AgroGuard\"",
       "apiUrl": "http://127.0.0.1:8000/api/v1/health",
-      "diseaseApiUrl": "http://127.0.0.1:8001/api/v1/health"
+      "diseaseApiUrl": "http://127.0.0.1:8001/api/v1/health",
+      "farmSimulationUrl": "http://localhost:5173/farmsim/",
+      "farmSimulationFingerprint": "<title>Farm Simulation"
     },
     "agriquill": {
-      "label": "AgriQill IDE",
-      "description": "Farm contracts, live water planner, twin rehearsal, ledger, field app and pitch story.",
-      "frontendDir": "../apps/agriquill-ide",
+      "label": "Farm Simulation API",
+      "description": "Backend for AgroGuard's Farm Simulation page (formerly the separate AgriQill IDE). It has no frontend of its own.",
       "backendDir": "../backend/agriquill",
-      "url": "http://localhost:3000/",
-      "fingerprint": "<title>AgriQill IDE</title>",
       "apiPort": 8010,
       "apiUrl": "http://127.0.0.1:8010/api/v1/agriquill/health"
     }

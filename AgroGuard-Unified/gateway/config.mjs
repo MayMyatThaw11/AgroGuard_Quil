@@ -26,7 +26,9 @@ export function loadConfig() {
   loadLocalEnv()
   const config = JSON.parse(readFileSync(resolve(here, 'gateway.config.json'), 'utf8'))
   for (const app of Object.values(config.apps)) {
-    app.frontendDir = resolve(here, app.frontendDir)
+    // The Farm Simulation API ("agriquill") is backend-only: its pages now live
+    // inside AgroGuard's frontend, so it has no frontendDir or url.
+    if (app.frontendDir) app.frontendDir = resolve(here, app.frontendDir)
     app.backendDir = resolve(here, app.backendDir)
   }
   return config

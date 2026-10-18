@@ -2,14 +2,13 @@
 // One stop command. Ctrl+C on `start.mjs` already stops everything cleanly;
 // this exists for when a terminal was closed instead of Ctrl+C'd and
 // processes were orphaned — it finds whatever is listening on this
-// workspace's five known ports and stops it, logging what it found.
+// workspace's four known ports and stops it, logging what it found.
 import { execSync, spawnSync } from 'node:child_process'
 
 const PORTS = {
   4000: 'gateway',
   5173: 'agroguard-web',
   8000: 'agroguard-api',
-  3000: 'agriquill-ide',
   8010: 'agriquill-api',
 }
 
@@ -62,4 +61,4 @@ for (const [port, name] of Object.entries(PORTS)) {
   }
 }
 
-console.log(stoppedAny ? '[stop] done' : '[stop] nothing was running on ports 3000/4000/5173/8000/8010')
+console.log(stoppedAny ? '[stop] done' : '[stop] nothing was running on ports 4000/5173/8000/8010')

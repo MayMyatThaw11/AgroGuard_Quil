@@ -2,7 +2,7 @@
   "name": "agroguard-unified",
   "private": true,
   "type": "module",
-  "description": "Unified workspace for AgroGuard and AgriQill IDE — see README.md",
+  "description": "Unified workspace for AgroGuard (with its Farm Simulation feature) — see README.md",
   "scripts": {
     "start": "node scripts/start.mjs",
     "stop": "node scripts/stop.mjs",

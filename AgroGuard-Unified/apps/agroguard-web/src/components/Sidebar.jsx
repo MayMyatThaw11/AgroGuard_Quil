@@ -1,7 +1,6 @@
-import { Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, ExternalLink, Box } from 'lucide-react'
+import { Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
-import { AGRIQUILL_IDE_URL } from '../api.js'
 
 const navItems = [
   { key: 'nav.landing', icon: Home, path: '/' },
@@ -66,22 +65,6 @@ function Sidebar({ mobileSidebarOpen, onClose }) {
           )
         })}
       </nav>
-
-      <div className="shrink-0 border-t border-myanglow-sage/70 px-4 py-3">
-        <a
-          id="open-agriquill"
-          href={AGRIQUILL_IDE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Open AgriQill IDE in a new tab"
-          onClick={onClose}
-          className="flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-myanglow-sage/60 hover:text-myanglow-navy"
-        >
-          <Sprout size={18} />
-          <span className="flex-1">Open AgriQill IDE</span>
-          <ExternalLink size={15} className="shrink-0 text-myanglow-medium" aria-hidden="true" />
-        </a>
-      </div>
 
       <div className="flex shrink-0 justify-center border-t border-myanglow-sage/70 px-4 py-3">
         <div className="inline-flex w-fit max-w-full items-center gap-1 rounded-xl border border-myanglow-sage bg-white p-1">

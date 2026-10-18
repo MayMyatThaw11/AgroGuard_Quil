@@ -4,7 +4,8 @@ One team-ready workspace for **AgroGuard** (sensor monitoring, crop scoring,
 disease detection, AI chat) and its **Farm Simulation** feature (3D farm
 models, farm contracts, water planning, twin rehearsal, field app).
 Farm Simulation is the former **AgriQill IDE**: it now lives inside AgroGuard
-as a sidebar item instead of running as a separate app. See
+as a sidebar item, and the separate AgriQill IDE app (`apps/agriquill-ide`,
+port 3000) has been removed. See
 [Farm Simulation (formerly AgriQill)](#farm-simulation-formerly-agriqill)
 below for everything that changed.
 
@@ -38,9 +39,6 @@ what was intentionally left behind, and what remains unresolved.
  └──────────────────────────┘   └──────────────────────────────┘   │  Simulation name + access │
                                                                     │  code sign in             │
                                                                     └──────────────────────────┘
-
- apps/agriquill-ide :3000 — the original standalone AgriQill IDE, kept only
- for the "Open AgriQill IDE" demo link at the bottom of AgroGuard's sidebar.
 ```
 
 Two backend processes, kept deliberately separate (no route/schema overlap,
@@ -49,7 +47,7 @@ ownership) — see RECONCILIATION.md for the full reasoning. AgroGuard's own
 `/api` proxy goes to port 8000, which is why AgriQill's API runs on 8010
 instead of its own 8000 default. Farm Simulation reaches AgroGuard's API
 through `/agroguard/*` (rewritten to `/*` on :8000, and `/agroguard/api/v1/ml/*`
-to :8001), exactly as the standalone IDE did.
+to :8001), exactly as the old standalone IDE did.
 
 ## Directory layout
 
@@ -62,13 +60,10 @@ AgroGuard-Unified/
 │   │   ├── farmsim/index.html            Farm Simulation's page (2nd Vite entry)
 │   │   ├── src/pages/FarmSimulationPage.jsx   the /farm-simulation route
 │   │   ├── src/features/farm-simulation/ Farm Simulation source (TypeScript,
-│   │   │                                 moved from apps/agriquill-ide/src)
+│   │   │                                 moved from the old apps/agriquill-ide/src)
 │   │   ├── tests/farm-simulation/        Farm Simulation tests (node --test)
 │   │   ├── vite.farm-simulation.js       Farm Simulation proxy rules + mock API
 │   │   └── tsconfig.farm-simulation.json type check settings for the feature
-│   └── agriquill-ide/     React/Vite — the original standalone AgriQill IDE. Kept
-│                          unchanged for the "Open AgriQill IDE" demo link only;
-│                          new work goes in agroguard-web/src/features/farm-simulation.
 ├── backend/
 │   ├── agroguard/         FastAPI — app/ package, own pyproject.toml + venv
 │   └── agriquill/         FastAPI — agriquill/ package, own pyproject.toml + venv
@@ -103,15 +98,12 @@ copy keys.env.example keys.env
 # blank/missing keys, just with the corresponding provider features disabled
 ```
 
-### 3. Frontends
+### 3. Frontend
 
 ```powershell
 cd apps\agroguard-web
 npm install              # also installs Farm Simulation's packages (three.js, MapLibre, ...)
 copy .env.example .env   # optional — defaults already point at localhost
-
-cd ..\agriquill-ide
-npm install              # only needed for the standalone "Open AgriQill IDE" demo link
 ```
 
 ### 4. Gateway
@@ -131,7 +123,7 @@ docker compose up -d mongo
 npm run start
 ```
 
-Starts all five processes (both frontends, both backends, the gateway) with
+Starts all four processes (AgroGuard's frontend, both backends, the gateway) with
 prefixed, interleaved logs in one terminal. **Ctrl+C stops everything.** If
 a terminal gets closed instead of Ctrl+C'd and something is orphaned:
 
@@ -139,21 +131,21 @@ a terminal gets closed instead of Ctrl+C'd and something is orphaned:
 npm run stop
 ```
 
-Finds and stops whatever is listening on this workspace's five known ports
-(3000, 4000, 5173, 8000, 8010), logging what it found.
+Finds and stops whatever is listening on this workspace's four known ports
+(4000, 5173, 8000, 8010), logging what it found.
 
 Open **http://localhost:4000/** — it redirects straight to AgroGuard's own
 landing page, which has the email/password sign-in flow. Once inside the
 dashboard, the sidebar has a **Farm Simulation** item (asks for a name and
-access code; see below). The "Open AgriQill IDE" link at the bottom of the
-sidebar still opens the original standalone app on :3000 in a new tab.
+access code; see below).
 
 ```powershell
 npm run verify   # in a second terminal, while start is running
 ```
 
-Checks the redirect, both apps' identity (title/fingerprint), both APIs, and
-that neither frontend's `/api` proxy reaches the other backend.
+Checks the redirect, AgroGuard's identity, the Farm Simulation sidebar item
+and page, both APIs, and that each proxy prefix reaches the right backend.
+The disease service and MongoDB checks fail if those aren't running.
 
 ### If a backend fails to start with a "No Python interpreter found" message
 
@@ -181,7 +173,6 @@ and must not be committed.
 | Farm Simulation's dev proxy and no-backend mock API | `apps/agroguard-web/vite.farm-simulation.js` |
 | Farm Simulation's built-in name and access code, other sign-ins | `backend/agriquill/agriquill/config.py` (`builtin_user`) or `.env` (`AGRIQUILL_BUILTIN_USER`, `AGRIQUILL_USERS`) |
 | AgriQill's telemetry, jobs, provider integrations (weather/soil/forest/prices), ledger | `backend/agriquill/agriquill/` |
-| The original standalone AgriQill IDE (demo link only) | `apps/agriquill-ide/src/` — normally leave it alone |
 | The landing page / entry routing | `gateway/` |
 
 ## Required external services
@@ -193,7 +184,7 @@ and must not be committed.
   AgroGuard repo (`AgroGuard/plant_disease_detection`), started on its own:
   `uvicorn app.main:app --port 8001 --reload` from that folder. This
   workspace doesn't start it — `npm run start` only warns if it's down, and
-  `npm run verify` checks it. Both frontends proxy `/api/v1/ml/*` to it
+  `npm run verify` checks it. AgroGuard's frontend proxies `/api/v1/ml/*` to it
   (`AGROGUARD_DISEASE_API_TARGET` overrides `http://localhost:8001`).
 - **MongoDB** (health updates only): `docker compose up -d mongo` from the
   workspace root runs it on `127.0.0.1:27017` (`AGROGUARD_MONGO_URL` /
@@ -227,9 +218,8 @@ and must not be committed.
    operations), Agronomy, Explorer/.agri editor, Workflows, Agents, Tests,
    Knowledge, ledger, season replay and the command palette (Ctrl/⌘+K).
 5. Everything a user reads says **Farm Simulation** instead of AgriQill /
-   AgriQuill IDE. The **Open AgriQill IDE** link at the bottom of the sidebar
-   was deliberately left as it is: it still opens the original standalone
-   app on :3000.
+   AgriQuill IDE. The old **Open AgriQill IDE** link at the bottom of the
+   sidebar is gone, along with the separate app it opened on :3000.
 
 ### Built-in name and access code
 
@@ -247,14 +237,12 @@ and must not be committed.
   backend is open and the entry screen is skipped, as before.
 - The sign-in is remembered in that browser (like the original app) until
   the user presses **Sign out** in Farm Simulation's top bar.
-- Because it is the same backend, the standalone AgriQill IDE on :3000 now
-  asks for the same name and code too.
 - Anyone who reads this repository can see the built-in code. Change it
   through `.env` before putting the app anywhere public.
 
 ### How it is built
 
-- **One app.** The AgriQill frontend source was copied from
+- **One app.** The AgriQill frontend source was moved from
   `apps/agriquill-ide/src` to `apps/agroguard-web/src/features/farm-simulation`
   and is built by AgroGuard's own Vite. `apps/agroguard-web/package.json`
   gained AgriQill's packages (three.js, React Three Fiber/drei, MapLibre,
@@ -273,8 +261,8 @@ and must not be committed.
   (`AGRIQUILL_API_TARGET`), `/agroguard/api/v1/ml` → :8001 and `/agroguard`
   → :8000, ahead of AgroGuard's own `/api` rule.
 - **No-backend mode.** `AGRIQUILL_USE_MOCK_API=1 npm run dev` in
-  `apps/agroguard-web` serves the same labelled demo responses the standalone
-  IDE's mock did.
+  `apps/agroguard-web` serves the same labelled demo responses the old
+  standalone IDE's mock did.
 - **Code names stay.** Folder names, API paths (`/api/v1/agriquill`), the
   `X-AgriQuill-Write-Token` header, `localStorage` keys (`agriquill.*`) and
   component names like `AgriQillTopBar` were not renamed, so saved sign-ins,
@@ -285,13 +273,14 @@ and must not be committed.
 | File | Change |
 |---|---|
 | `apps/agroguard-web/src/features/farm-simulation/**` | New: AgriQill source, with user-facing names changed to Farm Simulation |
-| `apps/agroguard-web/src/features/farm-simulation/App.tsx` | Opens on the 3D Farm view; fixed a crash when pressing **Back to farm operations** in Paddy settings (the click event was being used as a farm id — the same bug is still in the standalone app) |
+| `apps/agroguard-web/src/features/farm-simulation/App.tsx` | Opens on the 3D Farm view; fixed a crash when pressing **Back to farm operations** in Paddy settings (the click event was being used as a farm id) |
 | `…/farm-simulation/components/ActivityBar.tsx` | "Spatial" renamed **3D Farm** and moved to the top |
 | `…/farm-simulation/components/ops/OpsInspector.tsx`, `OpsCrewTimeline.tsx` | "Planner offline" hint now says `npm run start` / backend on :8010 instead of the standalone `npm run dev:full` |
 | `apps/agroguard-web/farmsim/index.html` | New: Farm Simulation page (title "Farm Simulation · AgroGuard") |
 | `apps/agroguard-web/src/pages/FarmSimulationPage.jsx` | New: `/farm-simulation` route |
 | `apps/agroguard-web/src/App.jsx` | Adds the `/farm-simulation` route inside the dashboard layout |
-| `apps/agroguard-web/src/components/Sidebar.jsx` | Adds the **Farm Simulation** item; "Open AgriQill IDE" link unchanged |
+| `apps/agroguard-web/src/components/Sidebar.jsx` | Adds the **Farm Simulation** item; removes the "Open AgriQill IDE" link |
+| `apps/agroguard-web/src/api.js` | Removes `AGRIQUILL_IDE_URL` (`VITE_AGRIQUILL_IDE_URL`), which only that link used |
 | `apps/agroguard-web/src/layouts/DashboardLayout.jsx` | Farm Simulation fills the area beside the sidebar, edge to edge |
 | `apps/agroguard-web/src/contexts/LanguageContext.jsx` | English and Burmese labels for Farm Simulation |
 | `apps/agroguard-web/vite.config.js`, `vite.farm-simulation.js` | Second page entry, Farm Simulation proxy rules, mock API, ES workers |
@@ -300,7 +289,11 @@ and must not be committed.
 | `apps/agroguard-web/tests/farm-simulation/**` | AgriQill's frontend tests, import paths updated |
 | `backend/agriquill/agriquill/config.py`, `agriquill/api/main.py` | Built-in name and access code (`builtin_user`) |
 | `backend/agriquill/tests/conftest.py`, `tests/test_agriquill_builtin_user.py` | Tests run with the built-in user off; new tests for it |
-| `apps/agriquill-ide/**` | **Not changed** (standalone demo link target) |
+| `apps/agriquill-ide/**` | **Removed**: the separate AgriQill IDE app on :3000. Its source lives on in `src/features/farm-simulation` |
+| `gateway/start-all.mjs`, `scripts/stop.mjs` | No longer start or stop the :3000 app; AgroGuard's frontend gets `AGRIQUILL_API_TARGET` instead |
+| `gateway/gateway.config.json`, `config.mjs`, `server.mjs` | The `agriquill` entry is now the backend-only **Farm Simulation API** (no frontend or :3000 URL) |
+| `gateway/verify.mjs` | Checks the Farm Simulation sidebar item, the `/farmsim/` page and the `/api/v1/agriquill` proxy instead of the :3000 app |
+| `package.json`, `gateway/package.json`, `gateway/README.md` | Descriptions no longer mention a separate AgriQill IDE |
 
 ### Checking it works
 
@@ -327,14 +320,13 @@ AgroGuard page. It found no JavaScript errors. The only console errors came
 from services that were not running in that environment (the AgroGuard
 backend on :8000, and internet map tiles and weather).
 
-### Still to do on your machine
+After removing the :3000 app, `npm run start`, `npm run stop` and
+`npm run verify` were run again: everything started, and every verify check
+passed except the disease service and MongoDB ones, which were not running
+in that environment.
 
-- `gateway/` was not part of the copy this merge was made in, so
-  `npm run start` / `npm run stop` / `npm run verify` were not changed. They
-  still start `apps/agriquill-ide` on :3000. Keep it if you want the
-  "Open AgriQill IDE" demo link to work. If you drop that link later, remove
-  the agriquill-ide process (port 3000) from the gateway's start script and
-  from `verify`.
+`docs/RECONCILIATION.md` is a record of the original consolidation, so it
+still describes `apps/agriquill-ide` as it was then.
 
 ## Known gaps (see RECONCILIATION.md for the full list)
 
