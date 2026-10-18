@@ -7,7 +7,9 @@ Farm Simulation is the former **AgriQill IDE**: it now lives inside AgroGuard
 as a sidebar item, and the separate AgriQill IDE app (`apps/agriquill-ide`,
 port 3000) has been removed. See
 [Farm Simulation (formerly AgriQill)](#farm-simulation-formerly-agriqill)
-below for everything that changed.
+below for everything that changed, and
+[`docs/TEAM-GUIDE.md`](docs/TEAM-GUIDE.md) for a step-by-step team guide
+(what changed, setup, and how to run every feature).
 
 The workspace was consolidated from two separate repositories
 (`AgriBackend/Agriculture` and `agroquill/Agriqill`) plus the shared

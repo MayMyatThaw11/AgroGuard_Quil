@@ -3,17 +3,19 @@
 Two folders, published together:
 
 - **[`AgroGuard-Unified/`](AgroGuard-Unified/)** — the active project: AgroGuard
-  (sensor monitoring, crop scoring, disease detection, AI chat) and AgriQill
-  IDE (farm contracts, water planning, twin rehearsal, field app), as one
-  team-ready workspace. Start here — see its own
+  (sensor monitoring, crop scoring, disease detection, AI chat) with its
+  **Farm Simulation** feature (the former AgriQill IDE: 3D farm, farm
+  contracts, water planning, twin rehearsal, field app), as one team-ready
+  workspace. Start here — see its own
   [README](AgroGuard-Unified/README.md) for setup, running, and
   [`docs/RECONCILIATION.md`](AgroGuard-Unified/docs/RECONCILIATION.md) for
-  how it was assembled and what's still open.
+  how it was assembled and what's still open. New to the Farm Simulation
+  change? Read [`docs/TEAM-GUIDE.md`](AgroGuard-Unified/docs/TEAM-GUIDE.md).
 - **[`platform-gateway/`](platform-gateway/)** — the original standalone
   landing-page gateway this workspace's own `gateway/` superseded. Kept for
   reference; not part of the active startup path.
 
-## Recreating the AgriQill backend environment
+## Recreating the Farm Simulation (AgriQill) backend environment
 
 `AgroGuard-Unified/backend/agriquill` has no committed virtual environment
 (by design — `.venv`/`.venv-agriquill` are never committed). To run it:
