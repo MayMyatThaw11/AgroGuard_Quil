@@ -1,0 +1,20 @@
+[
+  "00_Background_Non_Plant",
+  "Eggplant___Cercospora_Leaf_Spot",
+  "Eggplant___Healthy",
+  "Eggplant___Phomopsis_Blight_Wilt",
+  "Pepper_Fruit",
+  "Pepper_Leaf___Bacterial_Spot",
+  "Pepper_Leaf___Healthy",
+  "Pepper_Leaf___Leaf_Curl_Virus",
+  "Pepper_Leaf___mossaic",
+  "Tomato_Fruit_Reject",
+  "Tomato_Fruit_Ripe",
+  "Tomato_Fruit_Unripe",
+  "Tomato_Leaf___Bacterial_Spot",
+  "Tomato_Leaf___Early_Blight",
+  "Tomato_Leaf___Late_Blight",
+  "Tomato_Leaf___Leaf_Mold",
+  "Tomato_Leaf___Septoria_Leaf_Spot",
+  "Tomato_Leaf___Spider_Mites"
+]

@@ -1,0 +1,125 @@
+// The five model groups served by the plant disease detection service (:8001).
+// Each group is its own classifier, so the photo must be sent with its group.
+// Shared by the Disease Detection and Health Updates pages.
+export const PLANT_GROUPS = [
+  {
+    id: 'Group_1_Grains_Legumes_Oilseeds',
+    shortTitle: { en: 'Group 1', my: 'အုပ်စု ၁' },
+    name: {
+      en: 'Grains, Legumes & Oilseeds',
+      my: 'နှံစားသီးနှံ၊ ပဲမျိုးစုံနှင့် ဆီထွက်သီးနှံများ',
+    },
+    description: {
+      en: 'Staple cereal grasses, nitrogen-fixing bean crops, and annual oilseed plants.',
+      my: 'စပါး၊ ပြောင်းဖူး၊ ပဲမျိုးစုံနှင့် ဆီထွက်သီးနှံပင်များ ပါဝင်သည်။',
+    },
+    organTip: {
+      en: 'Capture a clear close-up of the leaf blade, sheath, or upper foliage.',
+      my: 'အရွက်ပြား၊ အရွက်ဖုံး သို့မဟုတ် အပေါ်ပိုင်းအရွက်များကို အနီးကပ် ကြည်လင်စွာ ရိုက်ယူပါ။',
+    },
+    crops: [
+      { id: 'Rice', en: 'Rice', my: 'စပါး' },
+      { id: 'Corn (Maize)', en: 'Corn (Maize)', my: 'ပြောင်းဖူး' },
+      { id: 'Soybean', en: 'Soybean', my: 'ပဲပုပ်' },
+      { id: 'Peanut (Groundnut)', en: 'Peanut (Groundnut)', my: 'မြေပဲ' },
+      { id: 'Sesame', en: 'Sesame', my: 'နှမ်း' },
+    ],
+    supportsFruitSplit: [],
+  },
+  {
+    id: 'Group_2_Palms_Industrial_Trees',
+    shortTitle: { en: 'Group 2', my: 'အုပ်စု ၂' },
+    name: {
+      en: 'Palms, Industrial Trees & Vines',
+      my: 'အုန်း၊ ဆီအုန်း၊ စက်မှုသီးနှံပင်ကြီးများနှင့် နွယ်ပင်များ',
+    },
+    description: {
+      en: 'Commercial palms, latex/nut plantation trees, and woody climbing spice vines.',
+      my: 'အုန်း၊ ဆီအုန်း၊ ရာဘာ၊ သီဟိုဠ်သရက်နှင့် ငရုတ်ကောင်းပင်များ ပါဝင်သည်။',
+    },
+    organTip: {
+      en: 'Photograph affected frond leaflets, tree leaves, or lower trunk/stem lesions.',
+      my: 'ရောဂါကျနေသော အရွက်များ သို့မဟုတ် ပင်စည်အနာကွက်များကို ဓာတ်ပုံရိုက်ပါ။',
+    },
+    crops: [
+      { id: 'Coconut', en: 'Coconut', my: 'အုန်းပင်' },
+      { id: 'Oil Palm', en: 'Oil Palm', my: 'ဆီအုန်း' },
+      { id: 'Rubber', en: 'Rubber', my: 'ရာဘာ' },
+      { id: 'Cashew', en: 'Cashew', my: 'သီဟိုဠ်သရက်' },
+      { id: 'Black Pepper', en: 'Black Pepper', my: 'ငရုတ်ကောင်း' },
+    ],
+    supportsFruitSplit: [],
+  },
+  {
+    id: 'Group_3_Beverage_Sugar_Root_Crops',
+    shortTitle: { en: 'Group 3', my: 'အုပ်စု ၃' },
+    name: {
+      en: 'Beverage, Sugar & Root Crops',
+      my: 'ဖျော်ရည်သီးနှံ၊ ကြံနှင့် ဥစားသီးနှံများ',
+    },
+    description: {
+      en: 'Perennial sugar stalks, commercial tea/coffee/cacao crops, and tuberous roots.',
+      my: 'ပီလောပီနံ၊ ကော်ဖီ၊ ကြံ၊ လက်ဖက်နှင့် ကိုကိုးပင်များ ပါဝင်သည်။',
+    },
+    organTip: {
+      en: 'Photograph the upper leaf surface, sugarcane stalk, or cacao pod surface.',
+      my: 'အရွက်မျက်နှာပြင်၊ ကြံပင်စည် သို့မဟုတ် ကိုကိုးသီးများကို ကြည်လင်စွာ ရိုက်ယူပါ။',
+    },
+    crops: [
+      { id: 'Cassava', en: 'Cassava', my: 'ပီလောပီနံ' },
+      { id: 'Coffee', en: 'Coffee', my: 'ကော်ဖီ' },
+      { id: 'Sugarcane', en: 'Sugarcane', my: 'ကြံ' },
+      { id: 'Tea', en: 'Tea', my: 'လက်ဖက်' },
+      { id: 'Cacao', en: 'Cacao', my: 'ကိုကိုး' },
+    ],
+    supportsFruitSplit: [],
+  },
+  {
+    id: 'Group_4_Orchard_Tree_Fruits',
+    shortTitle: { en: 'Group 4', my: 'အုပ်စု ၄' },
+    name: {
+      en: 'Orchard & Tree Fruits',
+      my: 'ဥယျာဉ်ခြံထွက် သစ်သီးဝလံပင်များ',
+    },
+    description: {
+      en: 'Tropical orchard trees, herbaceous banana/papaya trees, and climbing cactus fruits.',
+      my: 'ငှက်ပျော၊ ဒူးရင်း၊ သရက်၊ သင်္ဘောနှင့် နဂါးမောက်ပင်များ ပါဝင်သည်။',
+    },
+    organTip: {
+      en: 'Supports leaf photos for all crops, plus direct fruit skin photos for Mango.',
+      my: 'အပင်အားလုံးအတွက် အရွက်ပုံ စစ်ဆေးနိုင်ပြီး သရက်ပင်အတွက် အရွက်ရော အသီးပါ စစ်ဆေးနိုင်သည်။',
+    },
+    crops: [
+      { id: 'Banana', en: 'Banana', my: 'ငှက်ပျော' },
+      { id: 'Durian', en: 'Durian', my: 'ဒူးရင်း' },
+      { id: 'Mango', en: 'Mango', my: 'သရက်' },
+      { id: 'Papaya', en: 'Papaya', my: 'သင်္ဘော' },
+      { id: 'Dragon Fruit', en: 'Dragon Fruit', my: 'နဂါးမောက်' },
+    ],
+    supportsFruitSplit: ['Mango'],
+  },
+  {
+    id: 'Group_5_Vegetables_Vine_Fruits',
+    shortTitle: { en: 'Group 5', my: 'အုပ်စု ၅' },
+    name: {
+      en: 'Vegetables & Vine Fruits',
+      my: 'ဟင်းသီးဟင်းရွက်နှင့် နွယ်ပင်သီးနှံများ',
+    },
+    description: {
+      en: 'Nightshade fruiting vegetables, bromeliads, and trailing cucurbit vines.',
+      my: 'ခရမ်းချဉ်၊ ငရုတ်၊ ခရမ်းပင်၊ နာနတ်နှင့် ဖရဲပင်များ ပါဝင်သည်။',
+    },
+    organTip: {
+      en: 'Supports both leaf and fruit photos for Tomato and Chili / Bell Pepper.',
+      my: 'ခရမ်းချဉ်နှင့် ငရုတ်ပင်တို့အတွက် အရွက်ရော အသီးပါ တင်၍ စစ်ဆေးနိုင်သည်။',
+    },
+    crops: [
+      { id: 'Tomato', en: 'Tomato', my: 'ခရမ်းချဉ်' },
+      { id: 'Pepper / Chili', en: 'Pepper / Chili', my: 'ငရုတ်' },
+      { id: 'Eggplant', en: 'Eggplant', my: 'ခရမ်း' },
+      { id: 'Pineapple', en: 'Pineapple', my: 'နာနတ်' },
+      { id: 'Watermelon', en: 'Watermelon', my: 'ဖရဲ' },
+    ],
+    supportsFruitSplit: ['Tomato', 'Pepper / Chili'],
+  },
+]

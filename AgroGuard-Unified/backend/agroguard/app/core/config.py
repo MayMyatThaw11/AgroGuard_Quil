@@ -15,6 +15,10 @@ class Settings(BaseSettings):
         "postgresql+psycopg://postgres:postgres@localhost:5432/agroguard"
     )
     initialize_database: bool = False
+    # Health updates and their photos are stored in MongoDB (GridFS), separate
+    # from the PostgreSQL database used by the rest of the API.
+    mongo_url: str = "mongodb://localhost:27017"
+    mongo_database: str = "agroguard"
     cors_origins: list[str] = ["http://localhost:5173"]
 
     telegram_bot_token: SecretStr | None = None

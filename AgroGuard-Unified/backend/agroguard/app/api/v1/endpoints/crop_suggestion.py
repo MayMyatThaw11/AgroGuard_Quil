@@ -28,7 +28,7 @@ def crop_suggestion(request: CropSuggestionRequest) -> CropSuggestionResponse:
             request.rainfall_mm,
             request.temperature_c,
             language=request.language,
-            limit=2,
+            limit=4,
         )
     except PlantDatasetUnavailableError as exc:
         raise HTTPException(
@@ -50,6 +50,14 @@ def crop_suggestion(request: CropSuggestionRequest) -> CropSuggestionResponse:
                 ],
                 "yield_per_acre_kg": recommendation["yield_per_acre_kg"],
                 "description": recommendation["description"],
+                "price_usd_per_kg": recommendation.get("price_usd_per_kg", 0),
+                "price_mmk_per_viss": recommendation.get(
+                    "price_mmk_per_viss", 0
+                ),
+                "est_gross_revenue_usd_per_ha": recommendation.get(
+                    "est_gross_revenue_usd_per_ha", 0
+                ),
+                "price_source": recommendation.get("price_source", ""),
             }
             for recommendation in recommendations
         ],

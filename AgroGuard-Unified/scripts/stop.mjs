@@ -31,13 +31,34 @@ function pidsOnPort(port) {
   }
 }
 
+// uvicorn --reload serves from a spawned worker, but Windows reports the
+// listening socket under the reloader's PID. If the reloader already died,
+// `taskkill /T` on it can't walk the tree any more and the orphaned worker
+// keeps serving stale code — so also kill anything whose parent is that PID.
+function childPids(pid) {
+  try {
+    const out = execSync(
+      `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter 'ParentProcessId=${pid}' | ForEach-Object ProcessId"`,
+      { encoding: 'utf8' },
+    )
+    return out.split(/\s+/).filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
 let stoppedAny = false
 for (const [port, name] of Object.entries(PORTS)) {
   for (const pid of pidsOnPort(port)) {
     console.log(`[stop] ${name}: killing PID ${pid} (port ${port})`)
     stoppedAny = true
-    if (win) spawnSync('taskkill', ['/PID', pid, '/T', '/F'], { stdio: 'inherit' })
-    else spawnSync('kill', ['-9', pid], { stdio: 'inherit' })
+    if (win) {
+      const orphans = childPids(pid)
+      spawnSync('taskkill', ['/PID', pid, '/T', '/F'], { stdio: 'inherit' })
+      for (const child of orphans) spawnSync('taskkill', ['/PID', child, '/T', '/F'], { stdio: 'ignore' })
+    } else {
+      spawnSync('kill', ['-9', pid], { stdio: 'inherit' })
+    }
   }
 }
 

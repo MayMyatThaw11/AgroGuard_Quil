@@ -21,15 +21,20 @@ what was intentionally left behind, and what remains unresolved.
                                        │   the "Open AgriQill IDE"  │
                                        │   sidebar link)            │
                                        └─────────────┬─────────────┘
-                                                      │ /api proxy
-                                                      ▼
-                                       ┌──────────────────────────┐
-                                       │ backend/agroguard :8000   │
-                                       │  FastAPI — Postgres (Supabase)
-                                       └──────────────────────────┘
-
-                                       ┌──────────────────────────┐
+                                       /api proxy     │      /api/v1/ml proxy
+                                    ┌─────────────────┴──────────────┐
+                                    ▼                                ▼
+                     ┌──────────────────────────┐    ┌──────────────────────────────┐
+                     │ backend/agroguard :8000   │    │ plant disease service :8001  │
+                     │  FastAPI — Postgres       │    │  5-group classifier, runs    │
+                     │  (crop suggestion, etc.)  │    │  from AgroGuard repo (external)│
+                     └──────────────────────────┘    └──────────────────────────────┘
+                                    ▲                                ▲
+                                    │  /agroguard/*   /agroguard/api/v1/ml/*
+                                    └─────────────────┬──────────────┘
+                                       ┌──────────────┴───────────┐
                                        │ apps/agriquill-ide :3000  │
+                                       │  (Agronomy tab)           │
                                        └─────────────┬─────────────┘
                                                       │ /api proxy
                                                       ▼
@@ -107,7 +112,11 @@ npm install
 
 ## Run
 
+Start MongoDB once (it keeps running in Docker, and its data persists in the
+`agroguard-mongo-data` volume), then start the workspace:
+
 ```powershell
+docker compose up -d mongo
 npm run start
 ```
 
@@ -163,6 +172,18 @@ and must not be committed.
 - **AgroGuard**: a Postgres database (Supabase works out of the box — see
   `backend/agroguard/.env.example`). Everything else (LLM, weather, Telegram)
   degrades gracefully to a fallback response if its key is blank.
+- **Plant disease detection**: the 5-group classifier service from the
+  AgroGuard repo (`AgroGuard/plant_disease_detection`), started on its own:
+  `uvicorn app.main:app --port 8001 --reload` from that folder. This
+  workspace doesn't start it — `npm run start` only warns if it's down, and
+  `npm run verify` checks it. Both frontends proxy `/api/v1/ml/*` to it
+  (`AGROGUARD_DISEASE_API_TARGET` overrides `http://localhost:8001`).
+- **MongoDB** (health updates only): `docker compose up -d mongo` from the
+  workspace root runs it on `127.0.0.1:27017` (`AGROGUARD_MONGO_URL` /
+  `AGROGUARD_MONGO_DATABASE` override). Each health update stores its photo
+  and a K-means disease map in GridFS (`health_images` bucket) plus the
+  report in the `health_updates` collection. Everything else in AgroGuard
+  stays on PostgreSQL. `npm run start` warns if MongoDB is down.
 - **AgriQill**: no required external service — SQLite + a local JSONL
   ledger, both already present under `backend/agriquill/data/`. The
   provider integrations in `keys.env.example` (Global Forest Watch,
@@ -174,9 +195,21 @@ and must not be committed.
   **disabled by default** — set `AGROGUARD_AGRIQUILL_BRIDGE_TOKEN` (see
   `backend/agroguard/.env.example`) to turn it on. See RECONCILIATION.md
   for the auth-credential decision behind the default.
-- **Disease detection and AI chat are owned by other team members** and
-  were intentionally left untouched in this consolidation — see
-  RECONCILIATION.md → "Module handoff" for their current status
-  (disease detection: code wired up but no trained weights exist yet,
-  returns a generic error until one is supplied; AI chat: works today,
-  runs in a templated fallback mode until `AGROGUARD_LLM_API_KEY` is set).
+- **Disease detection** is served by the separate :8001 service above
+  (`POST /api/v1/ml/predict`, with `group_id` and optional `crop_name`).
+  The older single-model `POST /api/v1/disease-detect` route on :8000 is
+  still there but no frontend calls it any more.
+- **Health updates** use a farmer's photo: the 8001 service pre-fills plant
+  type and disease (editable), soil pH / rainfall / temperature come from
+  the last Crop Suggestion run in the same browser, and the backend's
+  K-means segmentation (`app/ml/leaf_segmentation.py`) measures the
+  discoloured share of the leaf. That figure is a colour heuristic, not a
+  diagnosis — shadows on coloured backdrops or naturally non-green leaves
+  can skew it.
+- **AI chat** runs in a templated fallback mode until
+  `AGROGUARD_LLM_API_KEY` is set — see RECONCILIATION.md → "Module handoff".
+- **Crop suggestion** uses the ASEAN Top-50 GaussianNB model
+  (`app/ml/artifacts/asean_crop_gnb.joblib`, retrain with
+  `python -m app.ml.training.train_model`) with ASEAN price data. If that
+  model is missing it falls back to the original plants.csv + township
+  ranking instead of failing.

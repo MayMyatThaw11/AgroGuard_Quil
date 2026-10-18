@@ -1,0 +1,26 @@
+# Web framework for API endpoints
+fastapi==0.143.1
+
+# ASGI server to run FastAPI
+uvicorn
+
+# Handles image file uploads
+python-multipart
+
+# Data validation and JSON schemas
+pydantic==2.14.1
+
+# HTTP requests for external URLs/APIs
+requests==2.34.2
+
+# Deep learning engine for model inference
+torch>=2.6.0
+
+# MobileNetV3 architecture and image transforms
+torchvision>=0.21.0
+
+# Image loading and resizing
+Pillow==12.3.0
+
+# Array operations and score calculations
+numpy<2.3.0

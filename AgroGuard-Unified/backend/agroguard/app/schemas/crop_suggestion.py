@@ -25,6 +25,10 @@ class CropRecommendation(APIModel):
     market_price_mmk_per_kg: float = Field(ge=0)
     yield_per_acre_kg: float = Field(ge=0)
     description: str
+    price_usd_per_kg: float = Field(default=0, ge=0)
+    price_mmk_per_viss: int = Field(default=0, ge=0)
+    est_gross_revenue_usd_per_ha: float = Field(default=0, ge=0)
+    price_source: str = ""
 
 
 class PlantSuggestionRequest(CropSuggestionRequest):

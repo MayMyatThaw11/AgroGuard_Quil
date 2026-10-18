@@ -1,0 +1,15 @@
+# Local services for the workspace. Only MongoDB for now (AgroGuard health
+# updates and their photos). Start it once with:
+#   docker compose up -d mongo
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: agroguard-mongo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - agroguard-mongo-data:/data/db
+
+volumes:
+  agroguard-mongo-data:

@@ -7,8 +7,9 @@
 // carries that to AgriQill's Vite proxy.
 import { existsSync } from 'node:fs'
 import { spawn, spawnSync } from 'node:child_process'
+import { connect } from 'node:net'
 import { join, resolve } from 'node:path'
-import { here, loadConfig } from './config.mjs'
+import { here, loadConfig, probe } from './config.mjs'
 
 const { apps } = loadConfig()
 const win = process.platform === 'win32'
@@ -47,6 +48,55 @@ const agriquillPython = resolvePython('agriquill', 'AGRIQUILL_PYTHON', apps.agri
 console.log(`[setup] agroguard interpreter: ${agroguardPython}`)
 console.log(`[setup] agriquill interpreter: ${agriquillPython}`)
 const agriquillApiTarget = `http://127.0.0.1:${apps.agriquill.apiPort}`
+
+// Plant disease detection is its own service (the 5-group classifier in the
+// AgroGuard repo's plant_disease_detection/), started separately on :8001.
+// This workspace only proxies to it, so warn rather than fail when it's down:
+// everything else still works, only disease detection reports it unreachable.
+const disease = await probe(apps.agroguard.diseaseApiUrl)
+console.log(
+  disease.up
+    ? `[setup] disease detection service: ${apps.agroguard.diseaseApiUrl} is up`
+    : `[setup] WARNING disease detection service not reachable at ${apps.agroguard.diseaseApiUrl}.\n` +
+        '        Start it from AgroGuard/plant_disease_detection: uvicorn app.main:app --port 8001 --reload',
+)
+
+function portOpen(port, host = '127.0.0.1') {
+  return new Promise((done) => {
+    const socket = connect({ host, port, timeout: 1500 })
+    socket.once('connect', () => { socket.destroy(); done(true) })
+    socket.once('timeout', () => { socket.destroy(); done(false) })
+    socket.once('error', () => done(false))
+  })
+}
+
+// Fail fast, with the fix, if a previous run is still holding one of our
+// ports — otherwise one child dies with a raw EADDRINUSE stack trace and
+// takes the rest down with it. Vite's "localhost" may bind IPv6 only, so
+// check both loopback addresses.
+const OWN_PORTS = { 5173: 'agroguard-web', 8000: 'agroguard-api', [apps.agriquill.apiPort]: 'agriquill-api', 3000: 'agriquill-ide', 4000: 'gateway' }
+const busy = []
+for (const [port, name] of Object.entries(OWN_PORTS)) {
+  if ((await portOpen(Number(port))) || (await portOpen(Number(port), '::1'))) busy.push(`${port} (${name})`)
+}
+if (busy.length) {
+  console.error(
+    `[setup] Already in use: ${busy.join(', ')}.\n` +
+      '        Another copy of this workspace (or another app) is still running.\n' +
+      '        Stop it with `npm run stop`, then run `npm run start` again.',
+  )
+  process.exit(1)
+}
+
+// Health updates (photos + K-means masks) live in MongoDB. Like the disease
+// service it runs outside these processes, so warn instead of failing.
+const mongoUp = await portOpen(27017)
+console.log(
+  mongoUp
+    ? '[setup] MongoDB (health updates): 127.0.0.1:27017 is up'
+    : '[setup] WARNING MongoDB not reachable on 127.0.0.1:27017 — Health Updates will not save.\n' +
+        '        Start it from the workspace root: docker compose up -d mongo',
+)
 
 const processes = [
   {

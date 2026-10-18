@@ -23,6 +23,7 @@ import { AgentStudio } from './components/AgentStudio';
 import { FarmOpsView } from './components/ops/FarmOpsView';
 import { PaddySettingsView } from './components/paddy/PaddySettingsView';
 import { FleetMonitorView } from './components/fleet/FleetMonitorView';
+import { AgronomyView } from './components/agronomy/AgronomyView';
 const FarmMapView = lazy(() => import('./components/farmmap/FarmMapView').then((module) => ({ default: module.FarmMapView })));
 const TwinWorkspace = lazy(() => import('./components/twin/TwinWorkspace').then((module) => ({ default: module.TwinWorkspace })));
 import { REAL_WORLD_EARTH_PARCELS } from './lib/googleEarth';
@@ -233,8 +234,9 @@ export const App: React.FC = () => {
       setSidebarOpen(open => !open);
     } else {
       setActiveDestination(dest);
-      setSidebarOpen(dest !== 'spatial' && dest !== 'operations');
+      setSidebarOpen(dest !== 'spatial' && dest !== 'operations' && dest !== 'agronomy');
       if (dest === 'operations') setActiveView('farm-map');
+      else if (dest === 'agronomy') setActiveView('agronomy');
       else if (dest === 'spatial') setActiveView('spatial');
       else if (dest === 'workflows') setActiveView('workflow');
       else if (dest === 'agents') setActiveView('agents');
@@ -282,7 +284,7 @@ export const App: React.FC = () => {
   };
 
   const showSplitEditor = isSplitView && activeView === 'editor';
-  const isFullBleed = activeView === 'spatial' || activeView === 'ops' || activeView === 'paddy-settings' || activeView === 'fleet' || activeView === 'farm-map' || activeView === 'twin';
+  const isFullBleed = activeView === 'spatial' || activeView === 'ops' || activeView === 'paddy-settings' || activeView === 'fleet' || activeView === 'farm-map' || activeView === 'twin' || activeView === 'agronomy';
 
   const [selectedFarmId, setSelectedFarmId] = useState<string>(
     () => new URLSearchParams(window.location.search).get('farm') || DEMO_FARM_ID
@@ -497,6 +499,7 @@ export const App: React.FC = () => {
                   }}
                 />
               )}
+              {activeView === 'agronomy' && <AgronomyView />}
               {activeView === 'paddy-settings' && <PaddySettingsView onBack={returnToOperations} />}
               {activeView === 'farm-map' && (
                 <Suspense fallback={<div className="aq-root aq-farmmap-loading" role="status">Loading the farm map</div>}>

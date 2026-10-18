@@ -10,11 +10,13 @@ import {
   HelpCircle,
   Settings,
   PanelLeftClose,
-  Tractor
+  Tractor,
+  Sprout
 } from 'lucide-react';
 
 export type ActivityDestination =
   | 'operations'
+  | 'agronomy'
   | 'explorer'
   | 'spatial'
   | 'workflows'
@@ -63,6 +65,12 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
       icon: Tractor
     },
     {
+      id: 'agronomy',
+      label: 'Agronomy',
+      description: 'Crop suggestion and leaf disease detection from AgroGuard',
+      icon: Sprout
+    },
+    {
       id: 'explorer',
       label: 'Explorer',
       description: 'Parcels, scenarios, .agri files, branches, saved runs (⌘1)',
@@ -107,7 +115,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
       onToggleSidebar();
     } else {
       onSelectDestination(id);
-      if (!sidebarOpen && id !== 'operations') {
+      if (!sidebarOpen && id !== 'operations' && id !== 'agronomy') {
         onToggleSidebar();
       }
     }

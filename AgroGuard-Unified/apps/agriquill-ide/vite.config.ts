@@ -1,9 +1,28 @@
-import { defineConfig, type Plugin, type Connect } from 'vite';
+import { defineConfig, type Plugin, type Connect, type ProxyOptions } from 'vite';
 import type { ServerResponse } from 'node:http';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 const API_TARGET = process.env.AGRIQUILL_API_TARGET ?? 'http://127.0.0.1:8000';
+// AgroGuard is reached through /agroguard/*: crop suggestion and the rest of
+// its API on :8000, plant disease detection (/api/v1/ml/*) on its own :8001 service.
+const AGROGUARD_TARGET = process.env.AGROGUARD_API_TARGET ?? 'http://127.0.0.1:8000';
+const AGROGUARD_DISEASE_TARGET = process.env.AGROGUARD_DISEASE_API_TARGET ?? 'http://127.0.0.1:8001';
+
+function agroguardProxy(target: string, label: string): ProxyOptions {
+  return {
+    target,
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace(/^\/agroguard/, ''),
+    configure: (proxy) => {
+      proxy.on('error', (_err, _req, res) => {
+        if (!('writeHead' in res) || res.headersSent) return;
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ detail: `${label} not reachable at ${target}.` }));
+      });
+    },
+  };
+}
 
 function apiDownMessage(target = API_TARGET): string {
   return `AgriQill API not reachable at ${target}. Start it with npm run dev:full, or run uvicorn agriquill.api.main:app --port 8000 in backend/.`;
@@ -105,6 +124,9 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: true,
     proxy: {
+      // More specific prefix first: disease detection goes to the 8001 service.
+      '/agroguard/api/v1/ml': agroguardProxy(AGROGUARD_DISEASE_TARGET, 'Plant disease detection service'),
+      '/agroguard': agroguardProxy(AGROGUARD_TARGET, 'AgroGuard API'),
       '/api': {
         target: API_TARGET,
         changeOrigin: true,

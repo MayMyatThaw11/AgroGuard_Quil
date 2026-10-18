@@ -1,0 +1,8 @@
+(
+echo yolo-env/
+echo __pycache__/
+echo *.pyc
+echo yolo11n-cls.pt
+echo yolo11n.pt
+echo yolo26n.pt
+) > .gitignore

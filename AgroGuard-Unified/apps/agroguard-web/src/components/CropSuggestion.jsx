@@ -1,12 +1,10 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import axios from 'axios';
 import {
-  CircleDollarSign,
   CircleCheck,
   Droplets,
   FlaskConical,
   LandPlot,
-  Leaf,
   Lightbulb,
   MapPin,
   Satellite,
@@ -15,11 +13,11 @@ import {
   Sprout,
   ThermometerSun,
   TriangleAlert,
-  Wheat,
   X,
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { API_BASE_URL } from '../api';
+import { saveCropConditions } from '../lib/cropConditions';
 
 const mockSuggestions = {
   Rice: { icon: '🌾', match: 94, marketRate: 1450, yieldPerAcre: 2100, reason: 'Warm temperatures, balanced soil pH, and strong rainfall make these conditions well suited for rice.' },
@@ -34,19 +32,6 @@ const cropDetails = {
   Beans: { icon: '🌱', match: 84, marketRate: 2600, yieldPerAcre: 900, reason: 'Moderate rainfall and temperature provide suitable growing conditions for beans.' },
   Sesame: { icon: '🌿', match: 88, marketRate: 3500, yieldPerAcre: 650, reason: 'Lower rainfall favors drought-tolerant sesame.' },
 };
-
-const cropIconMap = {
-  Rice: Wheat,
-  Wheat,
-  Corn: Sprout,
-  Beans: Leaf,
-  Sesame: Leaf,
-};
-
-function CropIcon({ cropKey, size = 32 }) {
-  const Icon = cropIconMap[cropKey] || Sprout;
-  return <Icon size={size} strokeWidth={1.8} aria-hidden="true" />;
-}
 
 function AdvisoryIcon({ severity }) {
   if (severity === 'warning' || severity === 'danger') {
@@ -219,23 +204,39 @@ export default function CropSuggestion() {
         setLoading(false);
         return;
       }
-      const response = await axios.post(
+      const response = await fetch(
         `${API_BASE_URL}/crop-suggestion`,
-        { ...payload, language }
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, language })
+        }
       );
-      const crop = response.data.crop;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const detail = typeof data.detail === 'string' ? data.detail : null;
+        throw new Error(detail || `HTTP ${response.status}`);
+      }
+      const crop = data.crop;
       setSuggestion(crop);
-      setPredictionConfidence(response.data.confidencePercent);
-      setPredictionRecommendations(response.data.recommendations || []);
+      setPredictionConfidence(data.confidencePercent);
+      setPredictionRecommendations(data.recommendations || []);
+      // Remember these conditions so Health Updates can pre-fill them.
+      saveCropConditions(payload, {
+        source: mode === 'auto' && weatherData ? 'satellite' : 'manual',
+        region: weatherData?.region?.name_en || null,
+      });
       setSelectedRecommendationIndex(0);
       setExplanation(
-        response.data.recommendations?.[0]?.description
+        data.recommendations?.[0]?.description
         || `${crop} is the best rule-based match for the supplied conditions.`
       );
       setLoading(false);
     } catch (err) {
       console.error('Crop prediction error:', err);
-      setError(err.response?.data?.detail || 'Unable to get a crop suggestion.');
+      setError(err.message && !err.message.startsWith('HTTP') && err.name !== 'TypeError'
+        ? err.message
+        : 'Unable to get a crop suggestion.');
       setLoading(false);
     }
   };
@@ -252,7 +253,7 @@ export default function CropSuggestion() {
 
   return (
     <div className="crop-suggestion">
-      <h1>{t('crop.title')}</h1>
+      <h2 className="m-0 text-xl font-semibold">{t('crop.title')}</h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
         {t('crop.subtitle')}
       </p>
@@ -267,7 +268,7 @@ export default function CropSuggestion() {
               <Satellite size={14} style={{display:'inline', marginRight:'0.4rem', verticalAlign:'text-bottom'}}/> {t('loc.autoMode')}
             </button>
             <button className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>
-              ✏️ {t('loc.manualMode')}
+               {t('loc.manualMode')}
             </button>
           </div>
 
@@ -425,44 +426,6 @@ export default function CropSuggestion() {
             )}
           </form>
         </div>
-
-        {/* ─── Right Panel: Result ─── */}
-        <div className="suggestion-result-slot" style={{ display: 'none' }}>
-          {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
-          
-          {suggestion ? (
-            <div className="suggestion-dashboard">
-              <div className="suggestion-hero">
-                <div className="suggestion-crop-icon">
-                  <CropIcon cropKey={selectedRecommendation?.cropKey} size={42} />
-                </div>
-                <div>
-                  <p className="suggestion-eyebrow">{t('crop.recommended')}</p>
-                  <h2>{suggestion}</h2>
-                  <span className="match-badge">{predictionConfidence ?? cropDetails[suggestion]?.match}% model confidence</span>
-                </div>
-              </div>
-
-              <div className="suggestion-stats">
-                <div><span>Best season</span><strong>{cropDetails[suggestion]?.season || 'Varies'}</strong></div>
-                <div><span>Harvest time</span><strong>{cropDetails[suggestion]?.harvest || 'Varies'}</strong></div>
-                <div><span>Water need</span><strong>{cropDetails[suggestion]?.water || 'Varies'}</strong></div>
-              </div>
-              
-              <div className="ai-explanation">
-                <div className="ai-explanation-header">
-                  <Sparkles size={18} /> {t('crop.analysis')}
-                </div>
-                {explanation || (explaining && <div className="typing-indicator" style={{ padding: 0 }}><span></span><span></span><span></span></div>)}
-              </div>
-            </div>
-          ) : (
-            <div style={{ color: 'var(--text-muted)', textAlign: 'center', margin: 'auto', padding: '3rem 1rem' }}>
-              <Sprout size={64} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-              <p>{t('crop.fillForm')}</p>
-            </div>
-          )}
-        </div>
       </div>
 
       {suggestion && selectedRecommendation && (
@@ -471,45 +434,71 @@ export default function CropSuggestion() {
             <button className="suggestion-close" type="button" aria-label="Close" onClick={() => setSuggestion(null)}>
               <X size={20} />
             </button>
-            <div className="suggestion-crop-icon">
-              <CropIcon cropKey={selectedRecommendation.cropKey} size={42} />
-            </div>
             <p className="suggestion-eyebrow">{t('crop.recommended')}</p>
-            <h2>{selectedRecommendation.crop}</h2>
-            <span className="match-badge">{selectedRecommendation.suitabilityPercent}% suitable</span>
-            <p className="suggestion-pop-reason">{selectedRecommendation.description}</p>
+            <h2 className="suggestion-title">Top {predictionRecommendations.length} crops for your field</h2>
+            <p className="suggestion-conditions">
+              pH {formData.soil_pH} · {formData.rainfall_mm} mm rain · {formData.temperature_c}°C
+            </p>
 
-            {predictionRecommendations.length > 1 && (
-              <div className="recommendation-options" aria-label="Choose a crop recommendation">
-                {predictionRecommendations.map((recommendation, index) => (
-                  <button
-                    type="button"
-                    key={recommendation.crop}
-                    className={`recommendation-option ${selectedRecommendationIndex === index ? 'active' : ''}`}
-                    aria-pressed={selectedRecommendationIndex === index}
-                    onClick={() => selectRecommendation(recommendation, index)}
-                  >
-                    <span className="recommendation-option-name">
-                      <span className="recommendation-option-icon">
-                        <CropIcon cropKey={recommendation.cropKey} size={22} />
-                      </span>
-                      <span>
-                        <small>Option {index + 1}</small>
-                        <strong>{recommendation.crop}</strong>
-                      </span>
-                    </span>
-                    <span className="recommendation-score">{recommendation.suitabilityPercent}%</span>
-                  </button>
-                ))}
+            <div className="recommendation-options" role="list" aria-label="Choose a crop recommendation">
+              {predictionRecommendations.map((recommendation, index) => (
+                <button
+                  type="button"
+                  role="listitem"
+                  key={recommendation.cropKey || recommendation.crop}
+                  className={`recommendation-option ${selectedRecommendationIndex === index ? 'active' : ''}`}
+                  aria-pressed={selectedRecommendationIndex === index}
+                  onClick={() => selectRecommendation(recommendation, index)}
+                >
+                  <span className="recommendation-rank">{index + 1}</span>
+                  <strong className="recommendation-option-title">{recommendation.crop}</strong>
+                  <span className="recommendation-bar" aria-hidden="true">
+                    <span style={{ width: `${recommendation.suitabilityPercent}%` }} />
+                  </span>
+                  <span className="recommendation-meta">
+                    <span>{recommendation.suitabilityPercent}% fit</span>
+                    <span>{Number(recommendation.marketPriceMmkPerKg).toLocaleString()} MMK/kg</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="crop-detail">
+              <div className="crop-detail-head">
+                <h3>{selectedRecommendation.crop}</h3>
+                <span className="match-badge">{selectedRecommendation.suitabilityPercent}% suitable</span>
               </div>
-            )}
+              <p className="crop-detail-reason">
+                A good fit for your soil pH, rainfall and temperature.
+              </p>
+              <dl className="crop-stats">
+                <div>
+                  <dt>Price</dt>
+                  <dd>{Number(selectedRecommendation.marketPriceMmkPerKg).toLocaleString()}<small> MMK/kg</small></dd>
+                </div>
+                <div>
+                  <dt>Per viss</dt>
+                  <dd>{selectedRecommendation.priceMmkPerViss > 0 ? Number(selectedRecommendation.priceMmkPerViss).toLocaleString() : '—'}<small> MMK</small></dd>
+                </div>
+                <div>
+                  <dt>Yield</dt>
+                  <dd>{Number(selectedRecommendation.yieldPerAcreKg).toLocaleString()}<small> kg/acre</small></dd>
+                </div>
+                <div>
+                  <dt>Revenue</dt>
+                  <dd>{selectedRecommendation.estGrossRevenueUsdPerHa > 0 ? `$${Number(selectedRecommendation.estGrossRevenueUsdPerHa).toLocaleString()}` : '—'}<small> /ha</small></dd>
+                </div>
+              </dl>
+              {selectedRecommendation.priceSource && (
+                <p className="crop-price-source">
+                  Price source: {selectedRecommendation.priceSource}
+                  {selectedRecommendation.priceUsdPerKg > 0 && ` · ≈ $${selectedRecommendation.priceUsdPerKg.toFixed(2)} USD/kg`}
+                </p>
+              )}
+            </div>
 
             <div className="crop-calculators">
               <div className="crop-calculator-card">
-                <div className="calculator-heading">
-                  <span><CircleDollarSign size={18} /> Market Value</span>
-                  <small>{selectedRecommendation.marketPriceMmkPerKg.toLocaleString()} MMK/kg</small>
-                </div>
                 <label htmlFor="market-weight"><Scale size={14} /> Product weight (kg)</label>
                 <input
                   id="market-weight"
@@ -524,12 +513,7 @@ export default function CropSuggestion() {
                   <strong>{(marketWeight * selectedRecommendation.marketPriceMmkPerKg).toLocaleString()} MMK</strong>
                 </p>
               </div>
-
               <div className="crop-calculator-card">
-                <div className="calculator-heading">
-                  <span><LandPlot size={18} /> Crop Yield</span>
-                  <small>{selectedRecommendation.yieldPerAcreKg.toLocaleString()} kg/acre</small>
-                </div>
                 <label htmlFor="farm-acreage"><LandPlot size={14} /> Farm acreage</label>
                 <input
                   id="farm-acreage"

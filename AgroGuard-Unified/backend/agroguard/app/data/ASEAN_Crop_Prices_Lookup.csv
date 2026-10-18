@@ -1,0 +1,51 @@
+﻿crop_name_en,crop_name_mm,scientific_name,category,asean_median_usd_tonne,myanmar_usd_tonne,price_min_usd_tonne,price_max_usd_tonne,price_usd_per_kg,price_mmk_per_kg,price_mmk_per_viss,avg_yield_tonnes_per_ha,est_gross_revenue_usd_per_ha,price_source
+Maize (Corn),ပြောင်း,Zea mays,Cereal,281.5,281.5,246.05,349.65,0.28,1267,2069,5.0,1408,FAOSTAT_Cleaned
+Rice (Paddy),စပါး,Oryza sativa,Cereal,334.2,334.2,279.1,928.45,0.33,1504,2456,4.2,1404,FAOSTAT_Cleaned
+Sorghum,နှံစားပြောင်း,Sorghum bicolor,Cereal,202.6,202.6,202.6,202.6,0.2,912,1489,2.8,567,FAOSTAT_Cleaned
+Avocado,ထောပတ်သီး,Persea americana,Fruit,785.0,785.0,508.65,5193.15,0.79,3532,5768,9.0,7065,FAOSTAT_Cleaned
+Banana,ငှက်ပျော,Musa paradisiaca,Fruit,361.8,361.8,319.3,1334.2,0.36,1628,2658,24.0,8683,FAOSTAT_Cleaned
+Durian,ဒူးရင်း,Durio zibethinus,Fruit,3800.0,3800.0,3230.0,4370.0,3.8,17100,27923,9.5,36100,ASEAN_Market_Baseline
+Jackfruit,ပိန္နဲ,Artocarpus heterophyllus,Fruit,460.0,460.0,391.0,529.0,0.46,2070,3380,18.0,8280,ASEAN_Market_Baseline
+Mango,သရက်,Mangifera indica,Fruit,676.25,676.25,575.4,2892.3,0.68,3043,4969,10.0,6762,FAOSTAT_Cleaned
+Mangosteen,မင်းဂွတ်,Garcinia mangostana,Fruit,2100.0,2100.0,1785.0,2415.0,2.1,9450,15431,7.5,15750,ASEAN_Market_Baseline
+Papaya,သင်္ဘော,Carica papaya,Fruit,305.1,305.1,122.1,1197.05,0.31,1373,2242,28.0,8543,FAOSTAT_Cleaned
+Pineapple,နာနတ်,Ananas comosus,Fruit,363.3,363.3,219.15,445.4,0.36,1635,2670,32.0,11626,FAOSTAT_Cleaned
+Pomelo,ကျွဲကော,Citrus maxima,Fruit,963.05,963.05,482.2,1764.6,0.96,4334,7077,14.0,13483,FAOSTAT_Cleaned
+Rambutan,ကြက်မောက်,Nephelium lappaceum,Fruit,920.0,920.0,782.0,1058.0,0.92,4140,6760,10.5,9660,ASEAN_Market_Baseline
+Watermelon,ဖရဲ,Citrullus lanatus,Fruit,346.35,346.35,315.1,397.25,0.35,1559,2546,25.0,8659,FAOSTAT_Cleaned
+Castor Bean,ကြက်ဆူ,Ricinus communis,Oilseed,950.0,950.0,807.5,1092.5,0.95,4275,6981,1.4,1330,ASEAN_Market_Baseline
+Groundnut (Peanut),မြေပဲ,Arachis hypogaea,Oilseed,1164.92,1164.92,847.7,1554.1,1.16,5242,8560,1.8,2097,FAOSTAT_Cleaned
+Mustard Seed,မုန်ညင်းစေ့,Brassica juncea,Oilseed,790.0,790.0,671.5,908.5,0.79,3555,5805,1.2,948,ASEAN_Market_Baseline
+Sesame,နှမ်း,Sesamum indicum,Oilseed,2088.8,2088.8,2088.8,2088.8,2.09,9400,15350,0.9,1880,FAOSTAT_Cleaned
+Sunflower,နေကြာ,Helianthus annuus,Oilseed,413.8,413.8,413.8,413.8,0.41,1862,3041,1.7,703,FAOSTAT_Cleaned
+Coconut,အုန်း,Cocos nucifera,Plantation,215.7,215.7,160.3,525.0,0.22,971,1586,6.5,1402,FAOSTAT_Cleaned
+Coffee (Arabica),ကော်ဖီ (အာရေဗီကာ),Coffea arabica,Plantation,4600.0,4600.0,3910.0,5290.0,4.6,20700,33802,1.1,5060,ASEAN_Market_Baseline
+Coffee (Robusta),ကော်ဖီ (ရိုဘတ်စတာ),Coffea canephora,Plantation,1749.45,1749.45,1263.12,2149.4,1.75,7873,12856,1.8,3149,FAOSTAT_Cleaned
+Cotton,ဝါ,Gossypium hirsutum,Plantation,1850.0,1850.0,1572.5,2127.5,1.85,8325,13594,1.8,3330,ASEAN_Market_Baseline
+Jute,ဂုန်လျှော်,Corchorus capsularis,Plantation,1187.8,1187.8,1187.8,1187.8,1.19,5345,8728,2.2,2613,FAOSTAT_Cleaned
+Oil Palm,ဆီအုန်း,Elaeis guineensis,Plantation,138.97,138.97,108.85,180.9,0.14,625,1021,18.5,2571,FAOSTAT_Cleaned
+Rubber,ရာဘာ,Hevea brasiliensis,Plantation,613.1,613.1,487.05,1453.45,0.61,2759,4505,1.5,920,FAOSTAT_Cleaned
+Sugarcane,ကြံ,Saccharum officinarum,Plantation,34.17,34.17,28.4,39.95,0.03,154,251,65.0,2221,FAOSTAT_Cleaned
+Tea,လက်ဖက်,Camellia sinensis,Plantation,1019.0,1019.0,1019.0,1019.0,1.02,4586,7489,2.0,2038,FAOSTAT_Cleaned
+Black Gram (Matpe),မတ်ပဲ,Vigna mungo,Pulse,1243.32,1243.32,1194.3,1292.35,1.24,5595,9136,1.4,1741,FAOSTAT_Cleaned
+Chickpea,ကုလားပဲ,Cicer arietinum,Pulse,820.0,820.0,697.0,943.0,0.82,3690,6026,1.5,1230,ASEAN_Market_Baseline
+Common Bean,ဘိုစားပဲ,Phaseolus vulgaris,Pulse,890.0,890.0,756.5,1023.5,0.89,4005,6540,1.6,1424,ASEAN_Market_Baseline
+Cowpea,ပဲလွမ်း,Vigna unguiculata,Pulse,553.1,553.1,553.1,553.1,0.55,2489,4064,1.2,664,FAOSTAT_Cleaned
+Lablab Bean,ပဲကြီး,Lablab purpureus,Pulse,760.0,760.0,646.0,874.0,0.76,3420,5585,1.3,988,ASEAN_Market_Baseline
+Mung Bean (Green Gram),ပဲတီစိမ်း,Vigna radiata,Pulse,1050.0,1050.0,892.5,1207.5,1.05,4725,7716,1.3,1365,ASEAN_Market_Baseline
+Pigeon Pea (Toor),ပဲစဉ်းငုံ,Cajanus cajan,Pulse,920.0,920.0,782.0,1058.0,0.92,4140,6760,1.3,1196,ASEAN_Market_Baseline
+Soybean,ပဲပုပ်,Glycine max,Pulse,596.2,596.2,524.1,873.4,0.6,2683,4381,2.1,1252,FAOSTAT_Cleaned
+Betel Nut (Areca),ကွမ်းသီး,Areca catechu,Spice/Cash,2200.0,2200.0,1870.0,2530.0,2.2,9900,16166,2.2,4840,ASEAN_Market_Baseline
+Black Pepper,ငရုတ်ကောင်း,Piper nigrum,Spice/Cash,4382.95,4382.95,3611.25,5665.85,4.38,19723,32206,1.8,7889,FAOSTAT_Cleaned
+Cacao (Cocoa),ကိုကိုး,Theobroma cacao,Spice/Cash,1735.1,1735.1,1486.35,1932.55,1.74,7808,12750,0.9,1562,FAOSTAT_Cleaned
+Chili Pepper,ငရုတ်,Capsicum annuum,Spice/Cash,1505.3,1505.3,1052.2,1958.4,1.51,6774,11061,2.8,4215,FAOSTAT_Cleaned
+Ginger,ချင်း (ဂျင်း),Zingiber officinale,Spice/Cash,1487.62,1487.62,718.6,2533.8,1.49,6694,10931,12.0,17852,FAOSTAT_Cleaned
+Turmeric,နနွင်း,Curcuma longa,Spice/Cash,1250.0,1250.0,1062.5,1437.5,1.25,5625,9185,4.5,5625,ASEAN_Market_Baseline
+Cassava (Tapioca),ပီလောပီနံ,Manihot esculenta,Tuber,219.8,219.8,67.9,272.7,0.22,989,1615,22.0,4836,FAOSTAT_Cleaned
+Potato,အာလူး,Solanum tuberosum,Tuber,686.65,686.65,376.25,785.15,0.69,3090,5046,16.5,11330,FAOSTAT_Cleaned
+Sweet Potato,ကန်စွန်းဥ,Ipomoea batatas,Tuber,452.43,452.43,320.7,522.6,0.45,2036,3325,14.0,6334,FAOSTAT_Cleaned
+Taro,ပိန်းဥ,Colocasia esculenta,Tuber,376.75,376.75,376.75,376.75,0.38,1695,2768,11.0,4144,FAOSTAT_Cleaned
+Cabbage,ဂေါ်ဖီထုပ်,Brassica oleracea,Vegetable,435.95,435.95,379.75,534.75,0.44,1962,3204,26.0,11335,FAOSTAT_Cleaned
+Garlic,ကြက်သွန်ဖြူ,Allium sativum,Vegetable,1450.0,1450.0,1232.5,1667.5,1.45,6525,10655,8.5,12325,ASEAN_Market_Baseline
+Onion,ကြက်သွန်နီ,Allium cepa,Vegetable,841.22,841.22,334.1,1766.7,0.84,3786,6182,15.0,12618,FAOSTAT_Cleaned
+Tomato,ခရမ်းချဉ်,Solanum lycopersicum,Vegetable,619.6,619.6,526.9,700.4,0.62,2788,4553,22.0,13631,FAOSTAT_Cleaned

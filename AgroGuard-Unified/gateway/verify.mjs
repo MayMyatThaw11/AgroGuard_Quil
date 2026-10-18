@@ -62,5 +62,19 @@ check(viaQuill.ok, `AgriQill IDE proxy reaches AgriQill API (HTTP ${viaQuill.sta
 const guardHasQuill = await fetch('http://127.0.0.1:8000/api/v1/agriquill/health')
 check(guardHasQuill.status === 404, 'port 8000 is AgroGuard (no AgriQill routes there)')
 
+// Disease detection lives in its own :8001 service; both frontends proxy
+// /api/v1/ml/* to it. A GET on the POST-only predict route answers 405 only
+// when the request actually reached that service.
+const diseaseApi = await probe(apps.agroguard.diseaseApiUrl)
+check(diseaseApi.up, `Disease detection service answers at ${apps.agroguard.diseaseApiUrl}`)
+const diseaseViaGuard = await fetch(new URL('/api/v1/ml/predict', apps.agroguard.url))
+check(diseaseViaGuard.status === 405, `AgroGuard frontend proxies /api/v1/ml to the disease service (HTTP ${diseaseViaGuard.status})`)
+const diseaseViaQuill = await fetch(new URL('/agroguard/api/v1/ml/predict', apps.agriquill.url))
+check(diseaseViaQuill.status === 405, `AgriQill IDE proxies /agroguard/api/v1/ml to the disease service (HTTP ${diseaseViaQuill.status})`)
+const healthUpdates = await fetch(new URL('/api/v1/health-updates?limit=1', apps.agroguard.url))
+check(healthUpdates.ok, `Health updates are readable from MongoDB (HTTP ${healthUpdates.status})`)
+const cropViaQuill = await fetch(new URL('/agroguard/api/v1/health', apps.agriquill.url))
+check(cropViaQuill.ok, `AgriQill IDE proxies /agroguard to the AgroGuard API (HTTP ${cropViaQuill.status})`)
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed')
 process.exitCode = failures ? 1 : 0

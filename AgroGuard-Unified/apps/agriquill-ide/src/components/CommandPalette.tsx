@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Play, Satellite, ShieldCheck, Columns, Globe, GitFork, BookOpen, Compass, Tractor, SlidersHorizontal, Terminal, LayoutGrid, Map, Workflow } from 'lucide-react';
+import { Search, Play, Satellite, ShieldCheck, Columns, Globe, GitFork, BookOpen, Compass, Tractor, SlidersHorizontal, Terminal, LayoutGrid, Map, Workflow, Sprout } from 'lucide-react';
 import type { AseanPreset } from '../types';
 
 interface CommandPaletteProps {
@@ -33,6 +33,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = props => {
 
   const items = [
     { title: 'Open farm operations', icon: Tractor, run: () => props.onSetActiveView('ops') },
+    { title: 'Open crop suggestion and disease detection', icon: Sprout, run: () => props.onSetActiveView('agronomy') },
     { title: 'Open fleet monitor', icon: LayoutGrid, run: () => props.onSetActiveView('fleet') },
     { title: 'Open ASEAN farm map', icon: Map, run: () => props.onSetActiveView('farm-map') },
     { title: 'Open practice plans and crop protection', icon: Workflow, run: () => props.onSetActiveView('twin') },
