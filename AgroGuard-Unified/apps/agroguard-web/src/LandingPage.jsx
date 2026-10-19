@@ -52,15 +52,6 @@ const capabilities = [
   },
 ]
 
-// Farm Simulation video on the landing page. Put the video file in
-// public/videos/ and set `src` to its path, for example
-// '/videos/farm-simulation.mp4'. `poster` is an optional still image shown
-// before it plays. While `src` is empty, a placeholder shows in its place.
-const FARM_SIM_VIDEO = {
-  src: '',
-  poster: '',
-}
-
 const farmSimPoints = [
   {
     icon: Box,
@@ -281,7 +272,7 @@ function LandingPage() {
                     <h2 className="mt-2 text-xl font-semibold text-myanglow-navy">Farm overview</h2>
                   </div>
                   <span className="inline-flex items-center gap-2 rounded-full bg-myanglow-sage/50 px-3 py-1.5 text-xs font-semibold text-myanglow-darkGreen">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-myanglow-brightLime" /> Active
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-myanglow-bright-lime" /> Active
                   </span>
                 </div>
 
@@ -315,7 +306,7 @@ function LandingPage() {
                   </div>
 
                   <div className="rounded-2xl bg-myanglow-navy p-5 text-white">
-                    <Sprout size={25} className="text-myanglow-brightLime" />
+                    <Sprout size={25} className="text-myanglow-bright-lime" />
                     <p className="mt-7 text-xs uppercase tracking-[0.2em] text-myanglow-grayGreen">Recommended</p>
                     <p className="mt-2 text-3xl font-semibold">Rice</p>
                     <p className="mt-2 text-sm text-myanglow-sage">94% field match</p>
@@ -396,32 +387,43 @@ function LandingPage() {
             </div>
           </div>
 
-          {/* Farm Simulation video: set FARM_SIM_VIDEO at the top of this file. */}
           <figure className="m-0 overflow-hidden rounded-[2rem] bg-myanglow-navy shadow-[0_30px_80px_rgba(12,46,61,0.2)]">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
               <div>
-                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-myanglow-brightLime">Farm Simulation</p>
+                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-myanglow-bright-lime">Farm Simulation</p>
                 <p className="mt-1 text-base font-semibold text-white">Demo farm</p>
               </div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-myanglow-sage">
+                <span className="h-2 w-2 rounded-full bg-myanglow-bright-lime" />
+                Day 42 of 120
+              </span>
             </div>
-            <div className="aspect-video w-full bg-black/20">
-              {FARM_SIM_VIDEO.src ? (
-                <video
-                  className="h-full w-full object-cover"
-                  src={FARM_SIM_VIDEO.src}
-                  poster={FARM_SIM_VIDEO.poster || undefined}
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
-              ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-white/20 p-6 text-center text-myanglow-sage">
-                  <PlayCircle size={44} className="text-myanglow-brightLime" />
-                  <p className="text-sm font-semibold text-white">Farm Simulation video</p>
-                  <p className="max-w-xs text-xs leading-5">Coming soon.</p>
-                </div>
-              )}
-            </div>
+            <svg
+              role="img"
+              aria-label="Illustration of a 3D paddy farm with canals, a sensor and a field robot"
+              viewBox="0 0 560 330"
+              className="block h-auto w-full"
+            >
+              <g stroke="#0c2e3d" strokeWidth="2">
+                <polygon points="280,35 380,85 280,135 180,85" fill="#1c6a3e" />
+                <polygon points="390,90 490,140 390,190 290,140" fill="#359244" />
+                <polygon points="170,90 270,140 170,190 70,140" fill="#54b03f" />
+                <polygon points="280,145 380,195 280,245 180,195" fill="#36704c" />
+                <polygon points="390,200 470,240 390,280 310,240" fill="#6ab36a" />
+                <polygon points="170,200 250,240 170,280 90,240" fill="#359244" />
+              </g>
+              <path d="M175 87 L285 142 L395 87" fill="none" stroke="#7cc4dd" strokeWidth="5" strokeLinecap="round" opacity="0.9" />
+              <g>
+                <line x1="390" y1="140" x2="390" y2="107" stroke="#cde4b5" strokeWidth="2" />
+                <circle cx="390" cy="103" r="6" fill="#bde63d" />
+                <circle cx="390" cy="103" r="14" fill="none" stroke="#bde63d" strokeWidth="1.5" opacity="0.6" />
+              </g>
+              <g transform="translate(260 183)">
+                <polygon points="0,10 20,0 40,10 20,20" fill="#f3f7f5" />
+                <polygon points="0,10 20,20 20,30 0,20" fill="#a1bcb2" />
+                <polygon points="20,20 40,10 40,20 20,30" fill="#cde4b5" />
+              </g>
+            </svg>
             <figcaption className="flex flex-wrap gap-2 border-t border-white/10 px-5 py-4">
               {['Paddies', 'Canals', 'Sensors', 'Robots', 'Soil & weather'].map((tag) => (
                 <span key={tag} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-myanglow-sage">
@@ -441,7 +443,7 @@ function LandingPage() {
 
             <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
               <div className="impact-reveal max-w-2xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-brightLime">Connected field impact</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-bright-lime">Connected field impact</p>
                 <h2 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">Turn field signals into confident action.</h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-myanglow-sage sm:text-base">AgroGuard combines monitoring, recommendations, disease support, and simulated sensor readings in one approachable platform.</p>
               </div>
@@ -453,7 +455,7 @@ function LandingPage() {
                   ['1', 'simple workspace'],
                 ].map(([value, label]) => (
                   <div key={label} className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur-sm">
-                    <p className="text-xl font-semibold text-myanglow-brightLime sm:text-2xl">{value}</p>
+                    <p className="text-xl font-semibold text-myanglow-bright-lime sm:text-2xl">{value}</p>
                     <p className="mt-1 text-xs leading-5 text-myanglow-sage">{label}</p>
                   </div>
                 ))}
@@ -463,7 +465,7 @@ function LandingPage() {
             <div className="relative mt-6 grid gap-3 md:grid-cols-3">
               {impactHighlights.map(({ icon: Icon, title, description }, index) => (
                 <article key={title} className="impact-card rounded-[1.25rem] border border-white/10 bg-white/[0.07] p-4 backdrop-blur-sm" style={{ animationDelay: `${180 + index * 120}ms` }}>
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-myanglow-brightLime text-myanglow-navy">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-myanglow-bright-lime text-myanglow-navy">
                     <Icon size={19} />
                   </div>
                   <h3 className="mt-3 text-base font-semibold">{title}</h3>
@@ -474,7 +476,7 @@ function LandingPage() {
 
             <div className="impact-reveal impact-reveal-delayed relative mt-6 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-xl text-sm leading-6 text-myanglow-sage">Start with your field overview, then explore the tools that matter most for today’s farming decisions.</p>
-              <button type="button" onClick={() => openAuth('signup')} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-myanglow-brightLime px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:-translate-y-1 hover:bg-white">
+              <button type="button" onClick={() => openAuth('signup')} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-myanglow-bright-lime px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:-translate-y-1 hover:bg-white">
                 Launch dashboard
               </button>
             </div>

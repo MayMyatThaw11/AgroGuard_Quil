@@ -176,29 +176,32 @@ and must not be committed.
 | Farm Simulation's built-in name and access code, other sign-ins | `backend/agriquill/agriquill/config.py` (`builtin_user`) or `.env` (`AGRIQUILL_BUILTIN_USER`, `AGRIQUILL_USERS`) |
 | AgriQill's telemetry, jobs, provider integrations (weather/soil/forest/prices), ledger | `backend/agriquill/agriquill/` |
 | The landing page / entry routing | `gateway/` |
-| The landing page's Farm Simulation video | `apps/agroguard-web/src/LandingPage.jsx` (`FARM_SIM_VIDEO`), see below |
+| Farm Simulation's opening-screen video | `apps/agroguard-web/src/features/farm-simulation/components/SignIn.tsx` (`FARM_SIM_VIDEO`), see below |
 
-## Landing page video
+## Farm Simulation video
 
-The landing page has a "Farm Simulation" section with a space for a demo video.
-Until a video is set, that space shows a "Coming soon" placeholder.
+Farm Simulation's opening screen (the sign-in screen at `/farm-simulation`)
+has a space for a demo video on the left, where the demo farm map is. Until a
+video is set, the demo farm map shows as before.
 
 To add the video:
 
 1. Put the file in `apps/agroguard-web/public/videos/`, for example
    `farm-simulation.mp4`. MP4 (H.264) plays in every browser; WebM also works.
-2. Open `apps/agroguard-web/src/LandingPage.jsx`. Near the top is:
+2. Open `apps/agroguard-web/src/features/farm-simulation/components/SignIn.tsx`.
+   Near the top is:
 
-   ```js
+   ```ts
    const FARM_SIM_VIDEO = {
      src: '',
      poster: '',
-   }
+   };
    ```
 
    Set `src` to `'/videos/farm-simulation.mp4'`. `poster` is optional: a still
    image (also in `public/videos/`) shown before the video plays.
-3. Reload the page. The video plays in a 16:9 box with normal controls.
+3. Reload the page. The video takes the place of the demo farm map, with
+   normal play controls.
 
 To use a hosted video instead, set `src` to its full `https://` URL to the
 video file. A YouTube page link will not play in a `<video>` tag.

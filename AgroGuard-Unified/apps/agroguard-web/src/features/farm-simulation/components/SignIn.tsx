@@ -9,6 +9,16 @@ import { useTheme } from '../lib/useTheme.ts';
 
 const SignInMap = lazy(() => import('./SignInField.tsx').then((module) => ({ default: module.SignInMap })));
 
+// Farm Simulation video, shown in place of the demo farm on the left of this
+// screen. Put the video file in apps/agroguard-web/public/videos/ and set
+// `src` to its path, for example '/videos/farm-simulation.mp4'. `poster` is an
+// optional still image shown before it plays. While `src` is empty, the demo
+// farm shows as before.
+const FARM_SIM_VIDEO = {
+  src: '',
+  poster: '',
+};
+
 const SKETCH_W = 800;
 const SKETCH_H = 600;
 const CONTACT: string = (import.meta.env?.VITE_TRIAL_CONTACT ?? '').trim();
@@ -139,26 +149,39 @@ export const SignIn: React.FC<{ onSignedIn: () => void }> = ({ onSignedIn }) => 
 
   return (
     <main className="si-root">
-      <section className="si-field" aria-label="Demo cooperative on the map">
-        <FieldSketch field={demo} />
-        {demo && demo.paddies.length > 0 && map !== 'failed' ? (
-          <div className={`si-map${map === 'ready' ? ' is-ready' : ''}`}>
-            <Suspense fallback={null}>
-              <SignInMap field={demo} onReady={() => setMap('ready')} onFail={() => setMap('failed')} />
-            </Suspense>
-          </div>
-        ) : null}
-        <div className="si-shade" aria-hidden="true" />
-        <p className="si-tag">
-          <span className="si-dot" aria-hidden="true" />
-          Demo cooperative · fixture farm on mapped farmland
-        </p>
-        <dl className="si-facts">
-          <FactRow label="Farm" fact={farmFact} source="Registered contract outlines" />
-          <FactRow label="Weather today" fact={weather} source="Open-Meteo forecast for the farm's grid cell" />
-          <FactRow label="Record chain" fact={ledgerRow} warn={ledger.state === 'ok' && !ledger.value.ok} source="Hash-chained ledger" />
-        </dl>
-      </section>
+      {FARM_SIM_VIDEO.src ? (
+        <section className="si-field" aria-label="Farm Simulation video">
+          <video
+            className="si-video"
+            src={FARM_SIM_VIDEO.src}
+            poster={FARM_SIM_VIDEO.poster || undefined}
+            controls
+            playsInline
+            preload="metadata"
+          />
+        </section>
+      ) : (
+        <section className="si-field" aria-label="Demo cooperative on the map">
+          <FieldSketch field={demo} />
+          {demo && demo.paddies.length > 0 && map !== 'failed' ? (
+            <div className={`si-map${map === 'ready' ? ' is-ready' : ''}`}>
+              <Suspense fallback={null}>
+                <SignInMap field={demo} onReady={() => setMap('ready')} onFail={() => setMap('failed')} />
+              </Suspense>
+            </div>
+          ) : null}
+          <div className="si-shade" aria-hidden="true" />
+          <p className="si-tag">
+            <span className="si-dot" aria-hidden="true" />
+            Demo cooperative · fixture farm on mapped farmland
+          </p>
+          <dl className="si-facts">
+            <FactRow label="Farm" fact={farmFact} source="Registered contract outlines" />
+            <FactRow label="Weather today" fact={weather} source="Open-Meteo forecast for the farm's grid cell" />
+            <FactRow label="Record chain" fact={ledgerRow} warn={ledger.state === 'ok' && !ledger.value.ok} source="Hash-chained ledger" />
+          </dl>
+        </section>
+      )}
 
       <section className="si-panel">
         <div className="si-inner">
