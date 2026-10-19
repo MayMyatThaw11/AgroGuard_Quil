@@ -19,6 +19,7 @@ MYANMAR_AGRI_GLOSSARY: Dict[str, str] = {
     "Non-Plant / Background Detected": "အပင်မဟုတ်ပါ / နောက်ခံပုံဖြစ်နေသည်",
     "None (Invalid Plant Image)": "မရှိပါ (မှားယွင်းသော အပင်ပုံ)",
     "No Disease Detected": "ရောဂါလက္ခဏာ မတွေ့ရှိပါ",
+    "Damaged Fruit (Reject Grade)": "ပျက်စီးနေသော အသီး (အဆင့်မမီ)",
     "None (Healthy Plant)": "ရောဂါမရှိပါ (ကျန်းမာသည်)",
     "Diseased (Action Needed)": "ရောဂါကျရောက်နေသည် (ကုသရန်လိုအပ်သည်)",
     "Moderate Infection": "အသင့်အတင့် ရောဂါကျရောက်မှု",
@@ -461,4 +462,4 @@ class TranslationService:
         return translated
 
 
-translation_service = TranslationService()
+translation_service = TranslationService()

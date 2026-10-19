@@ -27,12 +27,48 @@ CROP_PREFIX_MAP: Dict[str, List[str]] = {
     "Papaya": ["Papaya___", "papaya_"],
     "Dragon Fruit": ["Dragon_Fruit___"],
     # Group 5
-    "Tomato": ["Tomato_Leaf___", "Tomato_Fruit___", "Tomato___"],
-    "Pepper / Chili": ["Pepper_Leaf___", "Pepper_Fruit___", "Chili_Leaf___", "Chili_Fruit___", "Pepper,_bell___"],
+    # Tomato and pepper fruit classes are named "Tomato_Fruit_Ripe" and
+    # "Pepper_Fruit" (no "___"), so the fruit prefixes stop at "_Fruit".
+    "Tomato": ["Tomato_Leaf___", "Tomato_Fruit", "Tomato___"],
+    "Pepper / Chili": ["Pepper_Leaf___", "Pepper_Fruit", "Chili_Leaf___", "Chili_Fruit", "Pepper,_bell___"],
     "Eggplant": ["Eggplant___", "Eggplant "],
     "Pineapple": ["Pineapple___"],
     "Watermelon": ["Watermelon___"],
 }
+
+# The crops each group model is meant to diagnose (the crop buttons in the
+# frontend's plantGroups.js). A class outside these crops, such as the stray
+# Tomato_Leaf classes in Group 1, is never returned for that group.
+GROUP_CROPS: Dict[str, List[str]] = {
+    "Group_1_Grains_Legumes_Oilseeds": ["Rice", "Corn (Maize)", "Soybean", "Peanut (Groundnut)", "Sesame"],
+    "Group_2_Palms_Industrial_Trees": ["Coconut", "Oil Palm", "Rubber", "Cashew", "Black Pepper"],
+    "Group_3_Beverage_Sugar_Root_Crops": ["Cassava", "Coffee", "Sugarcane", "Tea", "Cacao"],
+    "Group_4_Orchard_Tree_Fruits": ["Banana", "Durian", "Mango", "Papaya", "Dragon Fruit"],
+    "Group_5_Vegetables_Vine_Fruits": ["Tomato", "Pepper / Chili", "Eggplant", "Pineapple", "Watermelon"],
+}
+
+# Fruit grading classes that carry no "Crop___Disease" split. A None disease
+# means the fruit is healthy.
+FRUIT_GRADE_CLASSES: Dict[str, Dict[str, Any]] = {
+    "Pepper_Fruit": {"plant": "Pepper Fruit", "disease": None},
+    "Tomato_Fruit_Ripe": {"plant": "Tomato Fruit", "disease": None},
+    "Tomato_Fruit_Unripe": {"plant": "Tomato Fruit", "disease": None},
+    "Tomato_Fruit_Reject": {"plant": "Tomato Fruit", "disease": "Damaged Fruit (Reject Grade)"},
+}
+
+
+def is_background_class(class_name: str) -> bool:
+    return class_name == "00_Background_Non_Plant" or "not_a_plant" in class_name.lower()
+
+
+def crop_matches(class_name: str, crop_name: str) -> bool:
+    prefixes = CROP_PREFIX_MAP.get(crop_name, [])
+    return any(class_name.lower().startswith(p.lower()) for p in prefixes)
+
+
+def is_fruit_class(class_name: str) -> bool:
+    return "_fruit" in class_name.lower()
+
 
 SCIENTIFIC_NAMES: Dict[str, str] = {
     "Rice": "Oryza sativa",
@@ -207,6 +243,17 @@ def parse_class_label(raw_class_name: str) -> Dict[str, Any]:
             "is_healthy": False,
         }
 
+    grade = FRUIT_GRADE_CLASSES.get(raw_class_name)
+    if grade:
+        base_crop_key = grade["plant"].replace(" Fruit", "")
+        return {
+            "is_background": False,
+            "plantName": grade["plant"],
+            "scientificName": SCIENTIFIC_NAMES.get(base_crop_key, "Tropical Crop Species"),
+            "detectedDisease": grade["disease"] or "None (Healthy Plant)",
+            "is_healthy": grade["disease"] is None,
+        }
+
     # Split Crop and Disease
     if "___" in raw_class_name:
         crop_part, disease_part = raw_class_name.split("___", 1)
@@ -362,4 +409,4 @@ def build_agronomic_details(raw_class_name: str, confidence: float) -> Dict[str,
         "diseaseSeverity": severity,
         "estimatedAffectedArea": affected_area,
         **matched_profile,
-    }
+    }

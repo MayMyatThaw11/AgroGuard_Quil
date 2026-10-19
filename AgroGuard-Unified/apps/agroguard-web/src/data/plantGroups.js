@@ -86,8 +86,8 @@ export const PLANT_GROUPS = [
       my: 'ငှက်ပျော၊ ဒူးရင်း၊ သရက်၊ သင်္ဘောနှင့် နဂါးမောက်ပင်များ ပါဝင်သည်။',
     },
     organTip: {
-      en: 'Supports leaf photos for all crops, plus direct fruit skin photos for Mango.',
-      my: 'အပင်အားလုံးအတွက် အရွက်ပုံ စစ်ဆေးနိုင်ပြီး သရက်ပင်အတွက် အရွက်ရော အသီးပါ စစ်ဆေးနိုင်သည်။',
+      en: 'Photograph a clear close-up of the affected leaf. Fruit photos are not supported yet.',
+      my: 'ရောဂါကျနေသော အရွက်ကို အနီးကပ် ကြည်လင်စွာ ရိုက်ပါ။ အသီးပုံ စစ်ဆေးခြင်းကို မပံ့ပိုးရသေးပါ။',
     },
     crops: [
       { id: 'Banana', en: 'Banana', my: 'ငှက်ပျော' },
@@ -96,7 +96,8 @@ export const PLANT_GROUPS = [
       { id: 'Papaya', en: 'Papaya', my: 'သင်္ဘော' },
       { id: 'Dragon Fruit', en: 'Dragon Fruit', my: 'နဂါးမောက်' },
     ],
-    supportsFruitSplit: ['Mango'],
+    // The Group 4 model has Mango leaf classes only.
+    supportsFruitSplit: [],
   },
   {
     id: 'Group_5_Vegetables_Vine_Fruits',

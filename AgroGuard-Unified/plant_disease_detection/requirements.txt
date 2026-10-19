@@ -24,3 +24,5 @@ Pillow==12.3.0
 
 # Array operations and score calculations
 numpy<2.3.0
+# Loads the ONNX group models (trained_models/<group>/model.onnx)
+onnxruntime

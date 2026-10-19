@@ -1,4 +1,5 @@
 from fastapi import APIRouter, File, Form, Header, HTTPException, UploadFile
+from app.ml.model import ModelUnavailableError, model_manager
 from app.schemas.predict import PredictionResponse
 from app.services.inference_service import inference_service
 from app.services.translation_service import translation_service
@@ -7,6 +8,12 @@ router = APIRouter()
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
 MAX_FILE_SIZE = 8 * 1024 * 1024
+
+
+@router.get("/groups")
+async def list_groups():
+    """Which plant groups have a trained model and which crops each one can diagnose."""
+    return {"groups": model_manager.describe_groups()}
 
 
 @router.post("/predict", response_model=PredictionResponse)
@@ -41,6 +48,8 @@ async def predict_disease_endpoint(
         )
         # Ensure all fields (including estimatedAffectedArea) are translated
         return translation_service.translate_prediction_details(result, selected_lang)
+    except ModelUnavailableError as missing:
+        raise HTTPException(status_code=503, detail=str(missing))
     except FileNotFoundError as fnf_err:
         raise HTTPException(status_code=500, detail=str(fnf_err))
     except ValueError as val_err:
@@ -49,4 +58,4 @@ async def predict_disease_endpoint(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to analyze the plant image: {str(exc)}",
-        )
+        )

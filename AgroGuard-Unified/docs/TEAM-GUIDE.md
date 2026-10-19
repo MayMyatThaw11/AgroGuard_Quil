@@ -1,6 +1,6 @@
 # Team guide: Farm Simulation is now part of AgroGuard
 
-This guide is for everyone on the team pulling the `feature/farm-simulation` branch.
+This guide is for everyone on the team pulling the `farm-simulation` branch.
 It covers what changed, how to set up your machine, and how to run every
 feature. The [README](../README.md) has the full file-by-file table.
 
@@ -83,7 +83,7 @@ All commands are for PowerShell on Windows, run from the
 
 ```powershell
 git fetch origin
-git checkout feature/farm-simulation
+git checkout farm-simulation
 git pull
 ```
 

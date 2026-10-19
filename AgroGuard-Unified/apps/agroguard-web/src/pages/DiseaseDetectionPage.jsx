@@ -54,6 +54,9 @@ function DiseaseDetectionPage() {
   const [validationError, setValidationError] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState(null)
+  // What the disease service can diagnose: { [groupId]: { available, crops: { [cropId]: leafAndFruit } } }.
+  // Null until it answers, and the full PLANT_GROUPS list shows meanwhile.
+  const [groupSupport, setGroupSupport] = useState(null)
 
   const workflowStages = useMemo(
     () => [
@@ -64,6 +67,44 @@ function DiseaseDetectionPage() {
     ],
     [language]
   )
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${API_BASE_URL}/ml/groups`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.groups) return
+        const support = {}
+        data.groups.forEach((group) => {
+          support[group.id] = {
+            available: group.available,
+            crops: Object.fromEntries(group.crops.map((crop) => [crop.id, crop.leafAndFruit])),
+          }
+        })
+        setGroupSupport(support)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // The plant groups and crops the backend models actually cover.
+  const plantGroups = useMemo(() => {
+    if (!groupSupport) return PLANT_GROUPS.map((group) => ({ ...group, available: true }))
+    return PLANT_GROUPS.map((group) => {
+      const support = groupSupport[group.id]
+      if (!support) return { ...group, available: false }
+      return {
+        ...group,
+        available: support.available,
+        crops: group.crops.filter((crop) => crop.id in support.crops),
+        supportsFruitSplit: group.crops
+          .filter((crop) => support.crops[crop.id])
+          .map((crop) => crop.id),
+      }
+    })
+  }, [groupSupport])
 
   // Show startup guide on first visit
   useEffect(() => {
@@ -87,6 +128,7 @@ function DiseaseDetectionPage() {
   }
 
   const handleSelectGroupFromGuide = (groupId, cropId = '') => {
+    if (plantGroups.find((g) => g.id === groupId)?.available === false) return
     setSelectedGroup(groupId)
     setSelectedCrop(cropId)
     setValidationError('')
@@ -95,8 +137,8 @@ function DiseaseDetectionPage() {
   }
 
   const activeGroupObj = useMemo(
-    () => PLANT_GROUPS.find((g) => g.id === selectedGroup) || null,
-    [selectedGroup]
+    () => plantGroups.find((g) => g.id === selectedGroup) || null,
+    [plantGroups, selectedGroup]
   )
 
   useEffect(() => {
@@ -131,8 +173,8 @@ function DiseaseDetectionPage() {
 
   const filteredGuideGroups = useMemo(() => {
     const q = guideSearch.trim().toLowerCase()
-    if (!q) return PLANT_GROUPS
-    return PLANT_GROUPS.filter(
+    if (!q) return plantGroups
+    return plantGroups.filter(
       (g) =>
         g.name.en.toLowerCase().includes(q) ||
         g.name.my.includes(q) ||
@@ -140,9 +182,10 @@ function DiseaseDetectionPage() {
           (c) => c.en.toLowerCase().includes(q) || c.my.includes(q)
         )
     )
-  }, [guideSearch])
+  }, [guideSearch, plantGroups])
 
   const handleGroupClick = (groupId) => {
+    if (plantGroups.find((g) => g.id === groupId)?.available === false) return
     if (selectedGroup !== groupId) {
       setSelectedGroup(groupId)
       setSelectedCrop('')
@@ -204,7 +247,9 @@ function DiseaseDetectionPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to analyze image')
+        // The service explains 400/503 errors, e.g. a group whose model is not trained yet.
+        const body = await response.json().catch(() => null)
+        throw new Error(typeof body?.detail === 'string' ? body.detail : '')
       }
 
       const data = await response.json()
@@ -214,7 +259,7 @@ function DiseaseDetectionPage() {
       setValidationError(
         activeLang === 'my'
           ? 'ပုံကို စစ်ဆေးရာတွင် အမှားအယွင်းရှိနေပါသည်။ ထပ်မံကြိုးစားကြည့်ပါ။'
-          : 'Failed to analyze the image. Please try again.'
+          : error.message || 'Failed to analyze the image. Please try again.'
       )
     } finally {
       setIsAnalyzing(false)
@@ -334,15 +379,18 @@ function DiseaseDetectionPage() {
         }
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {PLANT_GROUPS.map((group) => {
+          {plantGroups.map((group) => {
             const isSelected = selectedGroup === group.id
             return (
               <button
                 key={group.id}
                 type="button"
                 onClick={() => handleGroupClick(group.id)}
+                disabled={!group.available}
                 className={`flex flex-col justify-between rounded-[1.4rem] border p-4 text-left transition ${
-                  isSelected
+                  !group.available
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-70'
+                    : isSelected
                     ? 'border-myanglow-forest bg-myanglow-sage/35 ring-2 ring-myanglow-forest/20'
                     : 'border-myanglow-sage/70 bg-white hover:border-myanglow-medium hover:bg-myanglow-sage/15'
                 }`}
@@ -361,6 +409,11 @@ function DiseaseDetectionPage() {
                   <h3 className="mt-3 text-sm font-semibold leading-snug text-myanglow-navy">
                     {group.name[langKey]}
                   </h3>
+                  {!group.available ? (
+                    <p className="mt-1.5 text-xs font-semibold text-amber-700">
+                      {t('disease.modelNotReady')}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-1 border-t border-myanglow-sage/40 pt-2.5">
@@ -707,13 +760,19 @@ function DiseaseDetectionPage() {
                         <span className="rounded-full bg-myanglow-forest/10 px-3 py-1 text-xs font-semibold text-myanglow-forest">
                           {group.shortTitle[langKey]}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectGroupFromGuide(group.id)}
-                          className="text-xs font-semibold text-myanglow-forest hover:underline"
-                        >
-                          {group.shortTitle[langKey]} {langKey === 'my' ? 'ရွေးရန်' : 'Select'} &rarr;
-                        </button>
+                        {group.available ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSelectGroupFromGuide(group.id)}
+                            className="text-xs font-semibold text-myanglow-forest hover:underline"
+                          >
+                            {group.shortTitle[langKey]} {langKey === 'my' ? 'ရွေးရန်' : 'Select'} &rarr;
+                          </button>
+                        ) : (
+                          <span className="text-xs font-semibold text-amber-700">
+                            {t('disease.modelNotReady')}
+                          </span>
+                        )}
                       </div>
 
                       <h4 className="mt-2.5 text-base font-semibold text-myanglow-navy">
@@ -734,7 +793,8 @@ function DiseaseDetectionPage() {
                               onClick={() =>
                                 handleSelectGroupFromGuide(group.id, crop.id)
                               }
-                              className="inline-flex items-center gap-1 rounded-lg border border-myanglow-sage bg-white px-2.5 py-1 text-xs font-semibold text-myanglow-navy transition hover:border-myanglow-forest hover:bg-myanglow-forest hover:text-white"
+                              disabled={!group.available}
+                              className="inline-flex disabled:cursor-not-allowed disabled:opacity-60 items-center gap-1 rounded-lg border border-myanglow-sage bg-white px-2.5 py-1 text-xs font-semibold text-myanglow-navy transition hover:border-myanglow-forest hover:bg-myanglow-forest hover:text-white"
                             >
                               <span>{crop[langKey]}</span>
                               {hasFruitSplit ? (
@@ -808,4 +868,4 @@ function DetailPanel({ title, items = [], accent }) {
   )
 }
 
-export default DiseaseDetectionPage
+export default DiseaseDetectionPage
