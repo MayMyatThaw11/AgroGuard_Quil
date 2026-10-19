@@ -398,7 +398,7 @@ function DiseaseDetectionPage() {
                   onClick={() => setSelectedCrop('')}
                   className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                     selectedCrop === ''
-                      ? 'bg-myanglow-forest text-white'
+                      ? 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white'
                       : 'bg-white text-myanglow-navy hover:bg-myanglow-sage/40'
                   }`}
                 >
@@ -411,7 +411,7 @@ function DiseaseDetectionPage() {
                     onClick={() => setSelectedCrop(crop.id)}
                     className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                       selectedCrop === crop.id
-                        ? 'bg-myanglow-forest text-white'
+                        ? 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white'
                         : 'bg-white text-myanglow-navy hover:bg-myanglow-sage/40'
                     }`}
                   >
@@ -453,7 +453,7 @@ function DiseaseDetectionPage() {
                 <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
                   {t('disease.formats')}
                 </p>
-                <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-myanglow-forest px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-myanglow-medium">
+                <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-emerald-500">
                   <UploadCloud size={16} />
                   {t('disease.choose')}
                 </span>
@@ -510,7 +510,7 @@ function DiseaseDetectionPage() {
                 type="button"
                 onClick={handleAnalyze}
                 disabled={!selectedGroup || !selectedFile || isAnalyzing}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-myanglow-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-myanglow-medium disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isAnalyzing ? (
                   <Loader2 size={18} className="animate-spin" />
@@ -739,7 +739,7 @@ function DiseaseDetectionPage() {
                                 handleSelectGroupFromGuide(group.id, crop.id)
                               }
                               disabled={!group.available}
-                              className="inline-flex disabled:cursor-not-allowed disabled:opacity-60 items-center gap-1 rounded-lg border border-myanglow-sage bg-white px-2.5 py-1 text-xs font-semibold text-myanglow-navy transition hover:border-myanglow-forest hover:bg-myanglow-forest hover:text-white"
+                              className="inline-flex disabled:cursor-not-allowed disabled:opacity-60 items-center gap-1 rounded-lg border border-myanglow-sage bg-white px-2.5 py-1 text-xs font-semibold text-myanglow-navy transition hover:border-myanglow-forest hover:bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 hover:text-white"
                             >
                               <span>{crop[langKey]}</span>
                               {hasFruitSplit ? (
@@ -753,7 +753,7 @@ function DiseaseDetectionPage() {
                       </div>
                     </div>
 
-                    <div className="mt-3 flex items-start gap-2 rounded-xl bg-white/80 p-2.5 text-xs text-slate-600">
+                    <div className="mt-3 flex items-start gap-2 rounded-xl bg-white p-2.5 text-xs text-slate-600">
                       <Info
                         size={15}
                         className="mt-0.5 shrink-0 text-myanglow-medium"
@@ -774,7 +774,7 @@ function DiseaseDetectionPage() {
               <button
                 type="button"
                 onClick={handleCloseGuide}
-                className="w-full rounded-2xl bg-myanglow-forest px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-myanglow-medium sm:w-auto"
+                className="w-full rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 sm:w-auto"
               >
                 {langKey === 'my' ? 'နားလည်ပါပြီ၊ စတင်မည်' : 'Got It, Start Detecting'}
               </button>

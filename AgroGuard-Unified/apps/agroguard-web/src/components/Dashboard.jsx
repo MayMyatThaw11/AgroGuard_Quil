@@ -144,7 +144,7 @@ function Dashboard() {
 								<option value="dry-soil">Dry soil</option>
 								<option value="heat-stress">Heat stress</option>
 							</select>
-							<button type="button" onClick={startGrowth} className="rounded-xl bg-myanglow-forest px-3 py-2 text-sm font-semibold text-white">Replay</button>
+							<button type="button" onClick={startGrowth} className="rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Replay</button>
 						</div>
 					</div>
 					<div className="mt-4 grid gap-3 sm:grid-cols-2">

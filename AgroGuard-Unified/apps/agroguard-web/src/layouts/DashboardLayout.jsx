@@ -3,8 +3,21 @@ import { Menu } from 'lucide-react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar.jsx'
 
+const SIDEBAR_COLLAPSED_KEY = 'agroguard.sidebarCollapsed'
+
+function readSidebarCollapsed() {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 function DashboardLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  // Desktop only: the sidebar can shrink to an icon rail to give pages more
+  // width. The choice is remembered across visits.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
   const location = useLocation()
   // Farm Simulation has its own toolbars, so it takes the whole screen with no
   // AgroGuard sidebar; its page carries a "Back to dashboard" bar instead.
@@ -13,6 +26,16 @@ function DashboardLayout() {
   useEffect(() => {
     setMobileSidebarOpen(false)
   }, [location.pathname])
+
+  function toggleSidebarCollapsed() {
+    const next = !sidebarCollapsed
+    setSidebarCollapsed(next)
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0')
+    } catch {
+      // Storage blocked: the choice lasts for this visit only.
+    }
+  }
 
   if (fullScreen) {
     return (
@@ -26,7 +49,9 @@ function DashboardLayout() {
     <div className="min-h-screen bg-[#f4f6f3] text-slate-900">
       <Sidebar
         mobileSidebarOpen={mobileSidebarOpen}
+        collapsed={sidebarCollapsed}
         onClose={() => setMobileSidebarOpen(false)}
+        onToggleCollapsed={toggleSidebarCollapsed}
       />
 
       {mobileSidebarOpen ? (
@@ -38,7 +63,7 @@ function DashboardLayout() {
         />
       ) : null}
 
-      <div className="lg:pl-72">
+      <div className={`transition-[padding] duration-300 ease-out ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'}`}>
         <button
           type="button"
           aria-label="Open sidebar"

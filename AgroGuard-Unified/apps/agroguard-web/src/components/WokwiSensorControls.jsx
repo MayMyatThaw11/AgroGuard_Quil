@@ -283,7 +283,7 @@ export default function WokwiSensorControls({
               <span className="text-xs font-semibold">{t('iot.cropHealth')}</span>
               <span className="text-lg font-extrabold">{result.healthScore}%</span>
             </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/70">
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
               <div
                 className="h-full rounded-full transition-all duration-300"
                 style={{ width: `${result.healthScore}%`, backgroundColor: scoreColor }}

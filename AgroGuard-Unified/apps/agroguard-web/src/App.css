@@ -121,13 +121,15 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   border: 0;
   border-radius: .9rem;
   padding: .75rem 1.1rem;
-  font-weight: 700;
+  font-weight: 600;
   transition: transform .2s, background .2s;
 }
 .btn:hover:not(:disabled), .detect-btn:hover:not(:disabled) { transform: translateY(-1px); }
-.btn-primary, .detect-btn { background: var(--primary); color: #fff; }
-.btn-primary:hover:not(:disabled), .detect-btn:hover:not(:disabled) { background: var(--secondary); }
+.btn-primary, .detect-btn { background: #17aa51; color: #fff; }
+.btn-primary:active:not(:disabled), .detect-btn:active:not(:disabled) { background: #137a38; }
+.btn-primary:hover:not(:disabled), .detect-btn:hover:not(:disabled) { background: #12963f; }
 .btn-outline { border: 1px solid var(--border); background: #fff; color: var(--text); }
+.btn-outline:hover:not(:disabled) { background: #fafbfa; }
 .detect-btn { width: 100%; }
 
 .mode-toggle { display: flex; gap: .35rem; border-radius: 1rem; background: rgba(219,226,221,.4); padding: .3rem; }
@@ -146,7 +148,7 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .ndvi-header .ndvi-controls select { min-width: 13rem; }
 .ndvi-info { position: relative; }
 .ndvi-info-btn { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--primary); cursor: pointer; }
-.ndvi-info-btn:hover, .ndvi-info-btn.active { background: var(--primary); color: #fff; }
+.ndvi-info-btn:hover, .ndvi-info-btn.active { background: #d8f2e9; color: var(--primary); }
 .ndvi-info-popover { position: absolute; z-index: 20; top: calc(100% + .6rem); left: -.75rem; width: min(24rem, 80vw); border: 1px solid rgba(11,159,169,.3); border-radius: 1.25rem; background: #e6f4f4; padding: 1rem 1.15rem; box-shadow: 0 16px 45px rgba(20,26,22,.15); color: #08808a; }
 .ndvi-info-popover-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .ndvi-info-popover-head button { display: grid; place-items: center; width: 2rem; height: 2rem; border: 0; border-radius: .5rem; background: transparent; color: inherit; cursor: pointer; }

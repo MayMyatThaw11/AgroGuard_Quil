@@ -172,7 +172,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
             ) : null}
 
             {message ? <p className="rounded-xl bg-myanglow-sage/40 px-4 py-3 text-sm text-myanglow-forest">{message}</p> : null}
-            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-myanglow-forest px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-myanglow-forest/20 transition hover:-translate-y-0.5 hover:bg-myanglow-medium">
+            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500">
               {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'} 
             </button>
           </form>
@@ -215,13 +215,13 @@ function LandingPage() {
               <a href="#capabilities" className="transition hover:text-myanglow-forest">Capabilities</a>
               <a href="#farm-simulation" className="transition hover:text-myanglow-forest">Farm Simulation</a>
               <a href="#impact" className="transition hover:text-myanglow-forest">Impact</a>
-              <button type="button" onClick={() => openAuth('signin')} className="rounded-2xl bg-myanglow-forest px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-myanglow-forest/15 transition hover:bg-myanglow-medium">Sign in</button>
+              <button type="button" onClick={() => openAuth('signin')} className="rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-6 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-emerald-500">Sign in</button>
             </div>
           </nav>
 
           <div className="grid items-center gap-12 pb-14 pt-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:pb-16 lg:pt-7">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-myanglow-sage bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-myanglow-forest shadow-sm backdrop-blur">
+              <div className="inline-flex items-center gap-2 rounded-full border border-myanglow-sage bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-myanglow-forest shadow-sm backdrop-blur">
                 <Sparkles size={14} />
                 Built for smarter farming
               </div>
@@ -241,13 +241,13 @@ function LandingPage() {
                   id="open-agroguard"
                   type="button"
                   onClick={() => openAuth('signup')}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-myanglow-forest px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-myanglow-forest/20 transition hover:-translate-y-0.5 hover:bg-myanglow-medium"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500"
                 >
                   Explore the dashboard
                 </button>
                 <a
                   href="#capabilities"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-myanglow-sage bg-white/85 px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:bg-myanglow-sage/35"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-myanglow-sage bg-white px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:bg-myanglow-sage/35"
                 >
                   See how it works <ChevronDown size={17} />
                 </a>
@@ -264,7 +264,7 @@ function LandingPage() {
 
             <div className="relative mx-auto w-full max-w-2xl lg:mx-0">
               <div className="absolute -inset-5 rounded-[2.5rem] bg-myanglow-lime/15 blur-2xl" />
-              <div className="relative rounded-[2rem] border border-white/90 bg-white/80 p-4 shadow-[0_35px_90px_rgba(20,26,22,0.14)] backdrop-blur-xl sm:p-6">
+              <div className="relative rounded-[2rem] border border-white/90 bg-white p-4 shadow-[0_35px_90px_rgba(20,26,22,0.14)] backdrop-blur-xl sm:p-6">
                 <div className="flex items-center justify-between border-b border-myanglow-sage/60 pb-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-myanglow-medium">Field intelligence</p>
@@ -317,7 +317,7 @@ function LandingPage() {
         </div>
       </section>
 
-      <section id="capabilities" className="relative flex min-h-screen scroll-mt-0 items-center bg-white/80 py-12 sm:py-14">
+      <section id="capabilities" className="relative flex min-h-screen scroll-mt-0 items-center bg-white py-12 sm:py-14">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-medium">One connected platform</p>
@@ -344,7 +344,7 @@ function LandingPage() {
       <section id="farm-simulation" className="scroll-mt-0 py-16 sm:py-20">
         <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14 lg:px-8">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-myanglow-sage bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-myanglow-forest shadow-sm backdrop-blur">
+            <div className="inline-flex items-center gap-2 rounded-full border border-myanglow-sage bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-myanglow-forest shadow-sm backdrop-blur">
               <span className="h-2 w-2 rounded-full bg-myanglow-lime" />
               New: Farm Simulation
             </div>
@@ -372,14 +372,14 @@ function LandingPage() {
               <button
                 type="button"
                 onClick={() => navigate('/farm-simulation')}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-myanglow-forest px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-myanglow-forest/20 transition hover:-translate-y-0.5 hover:bg-myanglow-medium"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500"
               >
                 Open Farm Simulation
               </button>
               <button
                 type="button"
                 onClick={() => navigate('/farm-simulation?story')}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-myanglow-sage bg-white/85 px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:bg-myanglow-sage/35"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-myanglow-sage bg-white px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:bg-myanglow-sage/35"
               >
                 <PlayCircle size={17} /> Watch the guided demo
               </button>
