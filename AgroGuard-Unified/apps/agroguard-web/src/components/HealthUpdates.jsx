@@ -63,7 +63,26 @@ export default function HealthUpdates() {
   const [message, setMessage] = useState(null); // { kind: 'info' | 'error', text }
   const [saving, setSaving] = useState(false);
   const [showMask, setShowMask] = useState({});
+  // Group ids the disease service has a model for, from /ml/groups. Null
+  // until it answers, and every group is offered meanwhile.
+  const [readyGroups, setReadyGroups] = useState(null);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${API_BASE_URL}/ml/groups`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!active || !data?.groups) return;
+        const ready = new Set(data.groups.filter((group) => group.available).map((group) => group.id));
+        setReadyGroups(ready);
+        setGroupId((current) => (ready.has(current) ? current : PLANT_GROUPS.find((group) => ready.has(group.id))?.id || current));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -303,7 +322,10 @@ export default function HealthUpdates() {
                   <label htmlFor="hu-group">{t('health.group')}</label>
                   <select id="hu-group" value={groupId} onChange={handleGroup}>
                     {PLANT_GROUPS.map((group) => (
-                      <option key={group.id} value={group.id}>{group.shortTitle[lang]} · {group.name[lang]}</option>
+                      <option key={group.id} value={group.id} disabled={readyGroups ? !readyGroups.has(group.id) : false}>
+                        {group.shortTitle[lang]} · {group.name[lang]}
+                        {readyGroups && !readyGroups.has(group.id) ? ` (${t('disease.modelNotReady')})` : ''}
+                      </option>
                     ))}
                   </select>
                 </div>

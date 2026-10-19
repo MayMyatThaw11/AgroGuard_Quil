@@ -60,7 +60,7 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 
 .crop-suggestion > h1,
 .health-updates > h1,
-.ndvi-analysis > h1,
+.ndvi-title-row h1,
 .chat-header h1 {
   margin: 0 0 .5rem;
   color: var(--text);
@@ -136,6 +136,21 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 
 .ndvi-controls { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
 .ndvi-controls select { max-width: 28rem; }
+/* Title and info icon on the left, region picker on the top right. */
+.ndvi-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+.ndvi-header-text { flex: 1 1 26rem; min-width: 0; }
+.ndvi-title-row { display: flex; align-items: center; gap: .6rem; }
+.ndvi-title-row h1 { margin-bottom: 0; }
+.ndvi-header .ndvi-controls { flex: 0 1 auto; margin-bottom: 0; padding: .6rem .75rem .6rem 1rem; gap: .6rem; }
+.ndvi-header .ndvi-controls label { white-space: nowrap; }
+.ndvi-header .ndvi-controls select { min-width: 13rem; }
+.ndvi-info { position: relative; }
+.ndvi-info-btn { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--primary); cursor: pointer; }
+.ndvi-info-btn:hover, .ndvi-info-btn.active { background: var(--primary); color: #fff; }
+.ndvi-info-popover { position: absolute; z-index: 20; top: calc(100% + .6rem); left: -.75rem; width: min(24rem, 80vw); border: 1px solid rgba(52,152,219,.3); border-radius: 1.25rem; background: #eff6ff; padding: 1rem 1.15rem; box-shadow: 0 16px 45px rgba(12,46,61,.15); color: #1e3a8a; }
+.ndvi-info-popover-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.ndvi-info-popover-head button { display: grid; place-items: center; width: 2rem; height: 2rem; border: 0; border-radius: .5rem; background: transparent; color: inherit; cursor: pointer; }
+.ndvi-info-popover p { margin: .6rem 0 0; font-size: .9rem; line-height: 1.6; }
 
 .region-badge, .data-source-tag, .llm-badge {
   display: inline-flex; align-items: center; gap: .4rem; border-radius: 999px;
@@ -303,16 +318,19 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 
   .glass-panel { border-radius: 1.25rem; padding: 1rem; }
 
-  .ndvi-analysis > h1,
+  .ndvi-title-row h1,
   .health-updates > h1,
   .crop-suggestion > h1,
   .chat-header h1 { font-size: 1.65rem; line-height: 1.25; }
 
-  .ndvi-analysis > p,
+  .ndvi-header-text > p,
   .health-updates > p,
   .crop-suggestion > p { margin-bottom: 1.25rem !important; font-size: .9rem; }
 
   .ndvi-controls { gap: .65rem; margin-bottom: 1rem; }
+  .ndvi-header { margin-bottom: 1rem; }
+  .ndvi-header .ndvi-controls { flex-basis: 100%; }
+  .ndvi-header .ndvi-controls select { min-width: 0; }
   .ndvi-analysis .grid.grid-cols-3 { gap: .75rem !important; margin-bottom: 1rem !important; }
   .ndvi-analysis .grid.grid-cols-3 .glass-panel { text-align: center; }
   .ndvi-analysis .grid.grid-cols-3 .glass-panel div { font-size: 2rem !important; }

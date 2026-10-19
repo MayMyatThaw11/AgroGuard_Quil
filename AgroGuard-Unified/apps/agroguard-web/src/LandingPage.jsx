@@ -1,12 +1,16 @@
 import {
   Activity,
   Bot,
+  Box,
   CheckCircle2,
   ChevronDown,
+  History,
   Leaf,
   LineChart,
   LockKeyhole,
   Mail,
+  Map as MapIcon,
+  PlayCircle,
   Radar,
   RadioTower,
   ScanSearch,
@@ -45,6 +49,33 @@ const capabilities = [
     icon: RadioTower,
     title: 'IoT sensor simulation',
     description: 'Monitor simulated soil moisture, pH, and light readings through live charts and sensor status updates.',
+  },
+]
+
+// Farm Simulation video on the landing page. Put the video file in
+// public/videos/ and set `src` to its path, for example
+// '/videos/farm-simulation.mp4'. `poster` is an optional still image shown
+// before it plays. While `src` is empty, a placeholder shows in its place.
+const FARM_SIM_VIDEO = {
+  src: '',
+  poster: '',
+}
+
+const farmSimPoints = [
+  {
+    icon: Box,
+    title: '3D farm model',
+    description: 'Terrain, paddies, canals, sensors and robots in one scene you can turn and zoom.',
+  },
+  {
+    icon: MapIcon,
+    title: 'Farm map, globe to field',
+    description: 'Zoom from the region down to one paddy and follow field operations and the machine fleet.',
+  },
+  {
+    icon: History,
+    title: 'Replay a season',
+    description: 'Play an example season to see how planting, irrigation and weather change the crop.',
   },
 ]
 
@@ -192,6 +223,7 @@ function LandingPage() {
 
             <div className="hidden items-center gap-9 text-base font-medium text-slate-600 md:flex lg:gap-11">
               <a href="#capabilities" className="transition hover:text-myanglow-forest">Capabilities</a>
+              <a href="#farm-simulation" className="transition hover:text-myanglow-forest">Farm Simulation</a>
               <a href="#impact" className="transition hover:text-myanglow-forest">Impact</a>
               <button type="button" onClick={() => openAuth('signin')} className="rounded-2xl bg-myanglow-forest px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-myanglow-forest/15 transition hover:bg-myanglow-medium">Sign in</button>
             </div>
@@ -316,6 +348,88 @@ function LandingPage() {
               </article>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section id="farm-simulation" className="scroll-mt-0 py-16 sm:py-20">
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14 lg:px-8">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-myanglow-sage bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-myanglow-forest shadow-sm backdrop-blur">
+              <span className="h-2 w-2 rounded-full bg-myanglow-lime" />
+              New: Farm Simulation
+            </div>
+            <h2 className="mt-5 text-3xl font-semibold leading-tight text-myanglow-navy sm:text-4xl">
+              See your farm in 3D <span className="text-myanglow-forest">before you act.</span>
+            </h2>
+            <p className="mt-4 max-w-xl text-base leading-8 text-slate-600">
+              Farm Simulation builds a 3D model of the farm, with terrain, paddies, canals, sensors and field robots
+              on top of satellite imagery, soil and weather data. Try a season there first, then decide in the real field.
+            </p>
+            <div className="mt-7 space-y-3">
+              {farmSimPoints.map(({ icon: Icon, title, description }) => (
+                <div key={title} className="flex items-start gap-4 rounded-[1.25rem] border border-myanglow-sage/80 bg-white p-4 shadow-[0_14px_40px_rgba(12,46,61,0.05)]">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-myanglow-sage/45 text-myanglow-forest">
+                    <Icon size={20} />
+                  </span>
+                  <span>
+                    <span className="block text-base font-semibold text-myanglow-navy">{title}</span>
+                    <span className="mt-0.5 block text-sm leading-6 text-slate-500">{description}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => navigate('/farm-simulation')}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-myanglow-forest px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-myanglow-forest/20 transition hover:-translate-y-0.5 hover:bg-myanglow-medium"
+              >
+                Open Farm Simulation
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/farm-simulation?story')}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-myanglow-sage bg-white/85 px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:bg-myanglow-sage/35"
+              >
+                <PlayCircle size={17} /> Watch the guided demo
+              </button>
+            </div>
+          </div>
+
+          {/* Farm Simulation video: set FARM_SIM_VIDEO at the top of this file. */}
+          <figure className="m-0 overflow-hidden rounded-[2rem] bg-myanglow-navy shadow-[0_30px_80px_rgba(12,46,61,0.2)]">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+              <div>
+                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-myanglow-brightLime">Farm Simulation</p>
+                <p className="mt-1 text-base font-semibold text-white">Demo farm</p>
+              </div>
+            </div>
+            <div className="aspect-video w-full bg-black/20">
+              {FARM_SIM_VIDEO.src ? (
+                <video
+                  className="h-full w-full object-cover"
+                  src={FARM_SIM_VIDEO.src}
+                  poster={FARM_SIM_VIDEO.poster || undefined}
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-white/20 p-6 text-center text-myanglow-sage">
+                  <PlayCircle size={44} className="text-myanglow-brightLime" />
+                  <p className="text-sm font-semibold text-white">Farm Simulation video</p>
+                  <p className="max-w-xs text-xs leading-5">Coming soon.</p>
+                </div>
+              )}
+            </div>
+            <figcaption className="flex flex-wrap gap-2 border-t border-white/10 px-5 py-4">
+              {['Paddies', 'Canals', 'Sensors', 'Robots', 'Soil & weather'].map((tag) => (
+                <span key={tag} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-myanglow-sage">
+                  {tag}
+                </span>
+              ))}
+            </figcaption>
+          </figure>
         </div>
       </section>
 

@@ -58,16 +58,6 @@ function DiseaseDetectionPage() {
   // Null until it answers, and the full PLANT_GROUPS list shows meanwhile.
   const [groupSupport, setGroupSupport] = useState(null)
 
-  const workflowStages = useMemo(
-    () => [
-      t('disease.stage.selectGroup'),
-      t('disease.stage.upload'),
-      t('disease.stage.analyze'),
-      t('disease.stage.review'),
-    ],
-    [language]
-  )
-
   useEffect(() => {
     let cancelled = false
     fetch(`${API_BASE_URL}/ml/groups`)
@@ -162,14 +152,6 @@ function DiseaseDetectionPage() {
       runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language)
     }
   }, [language])
-
-  const currentStage = useMemo(() => {
-    if (analysisResult) return 3
-    if (isAnalyzing) return 2
-    if (selectedGroup && previewUrl) return 2
-    if (selectedGroup) return 1
-    return 0
-  }, [analysisResult, isAnalyzing, previewUrl, selectedGroup])
 
   const filteredGuideGroups = useMemo(() => {
     const q = guideSearch.trim().toLowerCase()
@@ -270,8 +252,8 @@ function DiseaseDetectionPage() {
     if (!selectedGroup) {
       setValidationError(
         langKey === 'my'
-          ? 'ပုံမစစ်ဆေးမီ အဆင့် (၁) တွင် သင့်အပင်အုပ်စုကို အရင်ရွေးချယ်ပါ။'
-          : 'Please select a Plant Group in Step 1 before analyzing the image.'
+          ? 'ပုံမစစ်ဆေးမီ သင့်အပင်အုပ်စုကို အရင်ရွေးချယ်ပါ။'
+          : 'Please choose a plant group before analyzing the image.'
       )
       return
     }
@@ -336,35 +318,9 @@ function DiseaseDetectionPage() {
             </button>
           </div>
         </div>
-
-        {/* WORKFLOW STAGES */}
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {workflowStages.map((stage, index) => {
-            const isDone = currentStage > index
-            const isActive = currentStage === index
-
-            return (
-              <div
-                key={stage}
-                className={`rounded-2xl border px-4 py-3 transition ${
-                  isDone
-                    ? 'border-myanglow-soft bg-myanglow-sage/35 text-myanglow-navy'
-                    : isActive
-                      ? 'border-myanglow-lime bg-white text-myanglow-navy shadow-sm'
-                      : 'border-white bg-white/70 text-slate-500'
-                }`}
-              >
-                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.35em]">
-                  {t('disease.step')} {index + 1}
-                </p>
-                <p className="mt-2 text-sm font-semibold">{stage}</p>
-              </div>
-            )
-          })}
-        </div>
       </section>
 
-      {/* STEP 1: PLANT GROUP SELECTOR */}
+      {/* PLANT GROUP SELECTOR */}
       <SectionCard
         title={t('disease.chooseGroupTitle')}
         action={
@@ -414,17 +370,6 @@ function DiseaseDetectionPage() {
                       {t('disease.modelNotReady')}
                     </p>
                   ) : null}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-1 border-t border-myanglow-sage/40 pt-2.5">
-                  {group.crops.map((crop) => (
-                    <span
-                      key={crop.id}
-                      className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[0.68rem] font-medium text-slate-600"
-                    >
-                      {crop[langKey]}
-                    </span>
-                  ))}
                 </div>
               </button>
             )

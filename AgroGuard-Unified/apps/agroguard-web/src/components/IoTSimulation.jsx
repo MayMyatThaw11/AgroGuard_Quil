@@ -183,10 +183,12 @@ export default function IoTSimulation() {
       }
 
       const result = await response.json()
-      const unhealthy = result.health_score != null && result.health_score < 50
-      const delivered = ['sent', 'suppressed'].includes(result.alert_status)
+      // The backend answers in camelCase (healthScore, alertStatus).
+      const { healthScore, alertStatus } = result
+      const unhealthy = healthScore != null && healthScore < 50
+      const delivered = ['sent', 'suppressed'].includes(alertStatus)
       setSyncStatus(
-        unhealthy && result.alert_status === 'failed'
+        unhealthy && alertStatus === 'failed'
           ? 'telegramError'
           : unhealthy && !delivered
             ? 'backendError'

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Satellite, Leaf, TrendingUp, Info } from 'lucide-react';
+import { Satellite, Leaf, TrendingUp, Info, MapPin, X } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
 import { useLanguage, pcodeMap } from '../contexts/LanguageContext';
 import { API_BASE_URL } from '../api';
@@ -34,6 +34,7 @@ export default function NDVIAnalysis() {
   const [ndviData, setNdviData] = useState({ labels: [], vim: [], viq: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -169,33 +170,54 @@ export default function NDVIAnalysis() {
 
   return (
     <div className="ndvi-analysis">
-      <h1><Satellite size={28} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }}/> {t('ndvi.title')}</h1>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-        {t('ndvi.subtitle')}
-      </p>
+      <div className="ndvi-header">
+        <div className="ndvi-header-text">
+          <div className="ndvi-title-row">
+            <h1><Satellite size={28} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }}/> {t('ndvi.title')}</h1>
+            <div className="ndvi-info">
+              <button
+                type="button"
+                className={`ndvi-info-btn ${infoOpen ? 'active' : ''}`}
+                onClick={() => setInfoOpen((open) => !open)}
+                aria-expanded={infoOpen}
+                aria-label={t('ndvi.whatIsNdvi')}
+                title={t('ndvi.whatIsNdvi')}
+              >
+                <Info size={20} />
+              </button>
+              {infoOpen && (
+                <div className="ndvi-info-popover" role="dialog" aria-label={t('ndvi.whatIsNdvi')}>
+                  <div className="ndvi-info-popover-head">
+                    <strong>{t('ndvi.whatIsNdvi')}</strong>
+                    <button type="button" onClick={() => setInfoOpen(false)} aria-label="Close">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <p>{t('ndvi.vimDesc')}</p>
+                  <p>{t('ndvi.viqDesc')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+            {t('ndvi.subtitle')}
+          </p>
+        </div>
 
-      {/* Simple explanation box */}
-      <div className="glass-panel" style={{ marginBottom: '2rem', background: 'rgba(52, 152, 219, 0.1)', border: '1px solid rgba(52, 152, 219, 0.3)' }}>
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3498db', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-          <Info size={18} /> {t('ndvi.whatIsNdvi')}
-        </h3>
-        <ul style={{ paddingLeft: '1.5rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <li><strong>{t('ndvi.vimDesc')}</strong></li>
-          <li><strong>{t('ndvi.viqDesc')}</strong></li>
-        </ul>
-      </div>
-
-      <div className="ndvi-controls glass-panel">
-        <label style={{ margin: 0 }}>{t('ndvi.selectRegion')}</label>
-        <select 
-          value={selectedPcode} 
-          onChange={(e) => setSelectedPcode(e.target.value)}
-          disabled={loading && regions.length === 0}
-        >
-          {regions.map((r) => (
-            <option key={`${r.PCODE}-${r.adm_id}`} value={r.PCODE}>{getRegionName(r.PCODE, r.adm_id)}</option>
-          ))}
-        </select>
+        <div className="ndvi-controls glass-panel">
+          <MapPin size={18} color="var(--primary)" aria-hidden="true" />
+          <label htmlFor="ndvi-region" style={{ margin: 0 }}>{t('ndvi.selectRegion')}</label>
+          <select
+            id="ndvi-region"
+            value={selectedPcode}
+            onChange={(e) => setSelectedPcode(e.target.value)}
+            disabled={loading && regions.length === 0}
+          >
+            {regions.map((r) => (
+              <option key={`${r.PCODE}-${r.adm_id}`} value={r.PCODE}>{getRegionName(r.PCODE, r.adm_id)}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {error && <p className="crop-suggestion-error" role="alert">{error}</p>}

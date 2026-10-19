@@ -71,10 +71,12 @@ function Dashboard() {
 		return () => { active = false }
 	}, [])
 
+	// The dashboard schema names the yield field `yield_`.
+	const overviewYield = stats?.overview?.yield_ ?? stats?.overview?.yield
 	const overviewCards = useMemo(() => [
 		{ key: 'dash.townships', value: stats ? String(stats.totalFields ?? stats.overview?.townships ?? 0) : '112', icon: MapPinned, accent: 'text-emerald-700', bg: 'bg-emerald-100' },
 		{ key: 'dash.records', value: stats ? String(stats.totalAssessments ?? stats.overview?.records ?? 0) : '24,860', icon: BarChart3, accent: 'text-sky-700', bg: 'bg-sky-100' },
-		{ key: 'dash.yield', value: stats?.overview?.yield && stats.overview.yield !== 'demo' ? `${stats.overview.yield} t/ha` : 'Demo rules', icon: Sprout, accent: 'text-amber-700', bg: 'bg-amber-100' },
+		{ key: 'dash.yield', value: overviewYield && overviewYield !== 'demo' ? `${overviewYield} t/ha` : 'Demo rules', icon: Sprout, accent: 'text-amber-700', bg: 'bg-amber-100' },
 		{ key: 'dash.rainfall', value: stats?.overview?.rainfall && stats.overview.rainfall !== 'seeded' ? `${stats.overview.rainfall} mm` : 'Seeded', icon: CloudRain, accent: 'text-indigo-700', bg: 'bg-indigo-100' },
 	], [stats])
 	const fieldStatus = stats?.fieldStatuses?.[0]
@@ -212,7 +214,7 @@ function Dashboard() {
 								className="flex items-center justify-between rounded-xl border border-myanglow-sage/50 bg-myanglow-sage/20 px-4 py-3"
 							>
 								<span className="font-medium text-slate-700">{item.crop}</span>
-								<span className="text-sm font-semibold text-myanglow-navy">{item.yield} t/ha</span>
+								<span className="text-sm font-semibold text-myanglow-navy">{item.yield_ ?? item.yield} t/ha</span>
 							</div>
 						))}
 					</div>
