@@ -23,7 +23,7 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-myanglow-sage/35 via-white to-myanglow-soft/25 text-slate-900">
+    <div className="min-h-screen bg-[#f4f6f3] text-slate-900">
       <Sidebar
         mobileSidebarOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}

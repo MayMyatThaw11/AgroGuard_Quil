@@ -424,7 +424,7 @@ export default function HealthUpdates() {
               <h2>Field alerts</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {alerts.map((alert) => (
-                  <div key={alert.id} className="glass-panel" style={{ padding: '1rem', borderLeft: `4px solid ${alert.severity === 'critical' ? '#ef4444' : '#f59e0b'}` }}>
+                  <div key={alert.id} className="glass-panel" style={{ padding: '1rem', borderLeft: `4px solid ${alert.severity === 'critical' ? '#e5322d' : '#d77a11'}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                       <strong>{alert.severity.toUpperCase()} · {alert.riskType}</strong>
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{alert.status}</span>

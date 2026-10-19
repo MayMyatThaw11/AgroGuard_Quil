@@ -35,7 +35,7 @@ function Sidebar({ mobileSidebarOpen, onClose }) {
 
   return (
     <aside
-      className={`aq-sidebar fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-hidden border-r border-white/70 bg-white/90 backdrop-blur-xl transition-transform duration-300 ease-out lg:translate-x-0 ${
+      className={`aq-sidebar fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-hidden border-r border-[#e6ebe7] bg-white backdrop-blur-xl transition-transform duration-300 ease-out lg:translate-x-0 ${
         mobileSidebarOpen ? 'translate-x-0 shadow-2xl shadow-myanglow-navy/10' : '-translate-x-full'
       }`}
     >

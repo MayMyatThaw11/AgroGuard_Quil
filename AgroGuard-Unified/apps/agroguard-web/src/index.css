@@ -1,18 +1,138 @@
 @import "tailwindcss";
 
 @theme {
-  --color-myanglow-sage: #cde4b5;
-  --color-myanglow-lime: #9ad64c;
-  --color-myanglow-forest: #1c6a3e;
-  --color-myanglow-soft: #90c689;
-  --color-myanglow-dark-green: #36704c;
-  --color-myanglow-navy: #0c2e3d;
-  --color-myanglow-gray-green: #a1bcb2;
-  --color-myanglow-medium: #359244;
-  --color-myanglow-bright-lime: #bde63d;
-  --color-myanglow-fresh: #54b03f;
-  --color-myanglow-pastel: #6ab36a;
-  --color-myanglow-muted: #4e8e52;
+  /* Build plan section 3.2 colours (same values as features/farm-simulation/paddy-tokens.css). */
+  --font-sans: "Plus Jakarta Sans", "Noto Sans Myanmar", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* The old myanglow names now point at plan colours, so existing classes keep working. */
+  --color-myanglow-sage: #dbe2dd;
+  --color-myanglow-lime: #17aa51;
+  --color-myanglow-forest: #137a38;
+  --color-myanglow-soft: #4dbf7a;
+  --color-myanglow-dark-green: #135f30;
+  --color-myanglow-darkGreen: #135f30;
+  --color-myanglow-navy: #141a16;
+  --color-myanglow-gray-green: #6f7a74;
+  --color-myanglow-grayGreen: #6f7a74;
+  --color-myanglow-medium: #137a38;
+  --color-myanglow-bright-lime: #17aa51;
+  --color-myanglow-fresh: #17aa51;
+  --color-myanglow-pastel: #4dbf7a;
+  --color-myanglow-muted: #135f30;
+
+  /* Stone: text, borders and surfaces. */
+  --color-slate-50: #f4f6f3;
+  --color-slate-100: #eef1ee;
+  --color-slate-200: #dbe2dd;
+  --color-slate-300: #c3ccc6;
+  --color-slate-400: #9aa39d;
+  --color-slate-500: #6f7a74;
+  --color-slate-600: #535d57;
+  --color-slate-700: #3a423d;
+  --color-slate-800: #232a25;
+  --color-slate-900: #141a16;
+  --color-slate-950: #0d110e;
+  --color-gray-50: #f4f6f3;
+  --color-gray-100: #eef1ee;
+  --color-gray-200: #dbe2dd;
+  --color-gray-300: #c3ccc6;
+  --color-gray-400: #9aa39d;
+  --color-gray-500: #6f7a74;
+  --color-gray-600: #535d57;
+  --color-gray-700: #3a423d;
+  --color-gray-800: #232a25;
+  --color-gray-900: #141a16;
+
+  /* Leaf: healthy, primary actions. */
+  --color-emerald-50: #e2f4e8;
+  --color-emerald-100: #e2f4e8;
+  --color-emerald-200: #c4e9d1;
+  --color-emerald-300: #b6e5d4;
+  --color-emerald-400: #4dbf7a;
+  --color-emerald-500: #17aa51;
+  --color-emerald-600: #12963f;
+  --color-emerald-700: #137a38;
+  --color-emerald-800: #135f30;
+  --color-emerald-900: #135f30;
+  --color-green-50: #e2f4e8;
+  --color-green-100: #e2f4e8;
+  --color-green-200: #c4e9d1;
+  --color-green-300: #b6e5d4;
+  --color-green-400: #4dbf7a;
+  --color-green-500: #17aa51;
+  --color-green-600: #12963f;
+  --color-green-700: #137a38;
+  --color-green-800: #135f30;
+  --color-green-900: #135f30;
+
+  /* Grain: warnings. */
+  --color-amber-50: #fbf1dc;
+  --color-amber-100: #fbf1dc;
+  --color-amber-200: #f0c56a;
+  --color-amber-300: #f0c56a;
+  --color-amber-400: #f0c56a;
+  --color-amber-500: #d77a11;
+  --color-amber-600: #b5660e;
+  --color-amber-700: #94520a;
+  --color-amber-800: #94520a;
+  --color-amber-900: #6e3d07;
+  --color-yellow-50: #fbf1dc;
+  --color-yellow-100: #fbf1dc;
+  --color-yellow-500: #d77a11;
+  --color-yellow-700: #94520a;
+  --color-orange-50: #fbf1dc;
+  --color-orange-100: #fbf1dc;
+  --color-orange-500: #d77a11;
+  --color-orange-700: #94520a;
+
+  /* Clay: errors and disease. */
+  --color-rose-50: #fdeceb;
+  --color-rose-100: #fdeceb;
+  --color-rose-200: #f4c7c5;
+  --color-rose-300: #ec8f8c;
+  --color-rose-400: #e5322d;
+  --color-rose-500: #e5322d;
+  --color-rose-600: #cc2a26;
+  --color-rose-700: #b3241f;
+  --color-rose-800: #8f1d19;
+  --color-rose-900: #8f1d19;
+  --color-red-50: #fdeceb;
+  --color-red-100: #fdeceb;
+  --color-red-200: #f4c7c5;
+  --color-red-300: #ec8f8c;
+  --color-red-400: #e5322d;
+  --color-red-500: #e5322d;
+  --color-red-600: #cc2a26;
+  --color-red-700: #b3241f;
+  --color-red-800: #8f1d19;
+  --color-red-900: #8f1d19;
+
+  /* Water: information. */
+  --color-sky-50: #e6f4f4;
+  --color-sky-100: #e6f4f4;
+  --color-sky-200: #97d3d1;
+  --color-sky-500: #0b9fa9;
+  --color-sky-600: #08808a;
+  --color-sky-700: #08808a;
+  --color-blue-50: #e6f4f4;
+  --color-blue-100: #e6f4f4;
+  --color-blue-200: #97d3d1;
+  --color-blue-500: #0b9fa9;
+  --color-blue-600: #08808a;
+  --color-blue-700: #08808a;
+  --color-blue-800: #065f66;
+  --color-blue-900: #065f66;
+  --color-indigo-50: #e6f4f4;
+  --color-indigo-100: #e6f4f4;
+  --color-indigo-500: #0b9fa9;
+  --color-indigo-600: #08808a;
+  --color-indigo-700: #08808a;
+  --color-purple-50: #e6f4f4;
+  --color-purple-100: #e6f4f4;
+  --color-purple-500: #0b9fa9;
+  --color-purple-600: #08808a;
+  --color-purple-700: #08808a;
 }
 
 :root {
@@ -30,9 +150,10 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background: #ffffff;
-  color: #0c2e3d;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f4f6f3;
+  color: #141a16;
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
 }
 
 #root {

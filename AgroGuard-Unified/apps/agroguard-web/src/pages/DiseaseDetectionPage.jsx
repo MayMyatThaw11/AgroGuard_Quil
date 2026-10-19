@@ -27,7 +27,7 @@ const GUIDE_STORAGE_KEY = 'myanglow_plant_group_guide_seen_v1'
 function SectionCard({ title, action, children, className = '' }) {
   return (
     <section
-      className={`rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(12,46,61,0.08)] backdrop-blur-xl sm:p-6 ${className}`}
+      className={`rounded-[2rem] border border-[#e6ebe7] bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 ${className}`}
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-myanglow-navy sm:text-xl">{title}</h2>
@@ -286,14 +286,14 @@ function DiseaseDetectionPage() {
 
   const scoreGradient = analysisResult
     ? {
-        background: `conic-gradient(#9ad64c 0 ${analysisResult.healthScore}%, rgba(161, 188, 178, 0.35) ${analysisResult.healthScore}% 100%)`,
+        background: `conic-gradient(#17aa51 0 ${analysisResult.healthScore}%, rgba(154, 163, 157, 0.35) ${analysisResult.healthScore}% 100%)`,
       }
     : undefined
 
   return (
     <div className="space-y-6">
       {/* HERO HEADER */}
-      <section className="rounded-[2rem] border border-white/80 bg-white/85 p-5 shadow-[0_20px_60px_rgba(12,46,61,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
+      <section className="rounded-[2rem] border border-[#e6ebe7] bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.45em] text-myanglow-medium">
@@ -434,7 +434,7 @@ function DiseaseDetectionPage() {
             <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               <label
                 htmlFor="plant-image"
-                className="group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-myanglow-sage bg-gradient-to-br from-white to-myanglow-sage/20 p-6 text-center transition hover:border-myanglow-medium hover:bg-myanglow-sage/30"
+                className="group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-myanglow-sage bg-[#fafbfa] p-6 text-center transition hover:border-myanglow-medium hover:bg-myanglow-sage/30"
               >
                 <input
                   ref={inputRef}
@@ -474,7 +474,7 @@ function DiseaseDetectionPage() {
                   </span>
                 </div>
 
-                <div className="mt-4 flex min-h-[18rem] items-center justify-center rounded-[1.3rem] bg-gradient-to-br from-white to-myanglow-sage/25 p-3">
+                <div className="mt-4 flex min-h-[18rem] items-center justify-center rounded-[1.3rem] bg-[#f4f6f3] p-3">
                   {previewUrl ? (
                     <img
                       src={previewUrl}
@@ -698,7 +698,7 @@ function DiseaseDetectionPage() {
                 {filteredGuideGroups.map((group) => (
                   <div
                     key={group.id}
-                    className="flex flex-col justify-between rounded-2xl border border-myanglow-sage/80 bg-gradient-to-br from-white to-myanglow-sage/15 p-4 shadow-sm"
+                    className="flex flex-col justify-between rounded-2xl border border-myanglow-sage/80 bg-white p-4 shadow-sm"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">
@@ -813,4 +813,4 @@ function DetailPanel({ title, items = [], accent }) {
   )
 }
 
-export default DiseaseDetectionPage
+export default DiseaseDetectionPage

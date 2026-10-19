@@ -98,7 +98,7 @@ function Dashboard() {
 
 	return (
 		<div className="space-y-6">
-			<section className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_rgba(12,46,61,0.08)] backdrop-blur-xl">
+			<section className="rounded-[2rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl">
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<p className="text-xs font-semibold uppercase tracking-[0.4em] text-myanglow-medium">
@@ -118,7 +118,7 @@ function Dashboard() {
 			</section>
 
 			<section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-				<article className="rounded-[1.8rem] border border-white/80 bg-white/90 p-6 shadow-[0_16px_50px_rgba(12,46,61,0.08)] backdrop-blur-xl">
+				<article className="rounded-[1.8rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_16px_50px_rgba(20,26,22,0.08)] backdrop-blur-xl">
 					<div className="flex items-start justify-between gap-4">
 						<div>
 							<p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-medium">Live assessment</p>
@@ -132,7 +132,7 @@ function Dashboard() {
 					{fieldStatus?.healthScore != null ? <p className="mt-4 text-sm font-semibold text-myanglow-forest">Health score: {fieldStatus.healthScore}/100</p> : null}
 				</article>
 
-				<article className="rounded-[1.8rem] border border-white/80 bg-white/90 p-6 shadow-[0_16px_50px_rgba(12,46,61,0.08)] backdrop-blur-xl">
+				<article className="rounded-[1.8rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_16px_50px_rgba(20,26,22,0.08)] backdrop-blur-xl">
 					<div className="flex flex-wrap items-center justify-between gap-3">
 						<div>
 							<p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-medium">Growth comparison</p>
@@ -162,7 +162,7 @@ function Dashboard() {
 					return (
 						<article
 							key={card.key}
-							className="rounded-[1.6rem] border border-white/80 bg-white/90 p-5 shadow-[0_14px_40px_rgba(12,46,61,0.08)] backdrop-blur-xl"
+							className="rounded-[1.6rem] border border-[#e6ebe7] bg-white p-5 shadow-[0_14px_40px_rgba(20,26,22,0.08)] backdrop-blur-xl"
 						>
 							<div className="flex items-center justify-between gap-3">
 								<p className="text-sm font-medium text-slate-500">{t(card.key)}</p>
@@ -177,7 +177,7 @@ function Dashboard() {
 			</section>
 
 			<section className="grid gap-6 xl:grid-cols-2">
-				<article className="rounded-[1.8rem] border border-white/80 bg-white/90 p-6 shadow-[0_16px_50px_rgba(12,46,61,0.08)] backdrop-blur-xl">
+				<article className="rounded-[1.8rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_16px_50px_rgba(20,26,22,0.08)] backdrop-blur-xl">
 					<div className="mb-5 flex items-center gap-2 text-myanglow-navy">
 						<Leaf size={18} />
 						<h3 className="text-lg font-semibold">{t('dash.cropDist')}</h3>
@@ -201,7 +201,7 @@ function Dashboard() {
 					</div>
 				</article>
 
-				<article className="rounded-[1.8rem] border border-white/80 bg-white/90 p-6 shadow-[0_16px_50px_rgba(12,46,61,0.08)] backdrop-blur-xl">
+				<article className="rounded-[1.8rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_16px_50px_rgba(20,26,22,0.08)] backdrop-blur-xl">
 					<div className="mb-5 flex items-center gap-2 text-myanglow-navy">
 						<BarChart3 size={18} />
 						<h3 className="text-lg font-semibold">{t('dash.avgYieldCrop')}</h3>

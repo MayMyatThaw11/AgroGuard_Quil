@@ -14,7 +14,7 @@ function FarmSimulationPage() {
   const { t } = useLanguage()
 
   return (
-    <div className="flex h-full flex-col bg-[#0f1311]">
+    <div className="flex h-full flex-col bg-[#141a16]">
       <div className="flex h-9 shrink-0 items-center gap-3 border-b border-white/10 px-3 text-[13px] text-slate-300">
         <Link
           id="farm-sim-back"

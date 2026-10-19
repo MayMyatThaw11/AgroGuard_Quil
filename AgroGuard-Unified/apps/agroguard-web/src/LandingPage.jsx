@@ -117,7 +117,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
         role="dialog"
         aria-modal="true"
         aria-label="AgroGuard authentication"
-        className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/80 bg-white p-6 shadow-[0_30px_100px_rgba(12,46,61,0.3)] sm:p-8"
+        className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/80 bg-white p-6 shadow-[0_30px_100px_rgba(20,26,22,0.3)] sm:p-8"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-myanglow-lime/20 blur-2xl" />
@@ -194,10 +194,9 @@ function LandingPage() {
   const openAuth = (mode = 'signin') => setAuthMode(mode)
 
   return (
-    <main className="min-h-screen overflow-hidden bg-gradient-to-br from-myanglow-sage via-white to-myanglow-soft/40 text-myanglow-navy">
+    <main className="min-h-screen overflow-hidden bg-[#f4f6f3] text-myanglow-navy">
       <section className="relative min-h-screen">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(154,214,76,0.28),transparent_25%),radial-gradient(circle_at_88%_12%,rgba(90,176,63,0.18),transparent_24%),radial-gradient(circle_at_65%_88%,rgba(161,188,178,0.28),transparent_30%)]" />
-        <div className="absolute -left-20 top-52 h-56 w-56 rounded-full border border-myanglow-soft/30" />
+                <div className="absolute -left-20 top-52 h-56 w-56 rounded-full border border-myanglow-soft/30" />
         <div className="absolute -left-12 top-60 h-40 w-40 rounded-full border border-myanglow-soft/30" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -265,7 +264,7 @@ function LandingPage() {
 
             <div className="relative mx-auto w-full max-w-2xl lg:mx-0">
               <div className="absolute -inset-5 rounded-[2.5rem] bg-myanglow-lime/15 blur-2xl" />
-              <div className="relative rounded-[2rem] border border-white/90 bg-white/80 p-4 shadow-[0_35px_90px_rgba(12,46,61,0.14)] backdrop-blur-xl sm:p-6">
+              <div className="relative rounded-[2rem] border border-white/90 bg-white/80 p-4 shadow-[0_35px_90px_rgba(20,26,22,0.14)] backdrop-blur-xl sm:p-6">
                 <div className="flex items-center justify-between border-b border-myanglow-sage/60 pb-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-myanglow-medium">Field intelligence</p>
@@ -290,7 +289,7 @@ function LandingPage() {
                 </div>
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-[1.25fr_0.75fr]">
-                  <div className="overflow-hidden rounded-2xl border border-myanglow-sage/70 bg-gradient-to-br from-myanglow-sage/60 to-white p-5">
+                  <div className="overflow-hidden rounded-2xl border border-myanglow-sage/70 bg-[#f4f6f3] p-5">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-myanglow-medium">Vegetation trend</p>
@@ -307,7 +306,7 @@ function LandingPage() {
 
                   <div className="rounded-2xl bg-myanglow-navy p-5 text-white">
                     <Sprout size={25} className="text-myanglow-bright-lime" />
-                    <p className="mt-7 text-xs uppercase tracking-[0.2em] text-myanglow-grayGreen">Recommended</p>
+                    <p className="mt-7 text-xs uppercase tracking-[0.2em] text-slate-400">Recommended</p>
                     <p className="mt-2 text-3xl font-semibold">Rice</p>
                     <p className="mt-2 text-sm text-myanglow-sage">94% field match</p>
                   </div>
@@ -327,7 +326,7 @@ function LandingPage() {
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {capabilities.map(({ icon: Icon, title, description }, index) => (
-              <article key={title} className="group rounded-[1.6rem] border border-myanglow-sage/80 bg-white p-6 shadow-[0_14px_40px_rgba(12,46,61,0.06)] transition hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(12,46,61,0.1)]">
+              <article key={title} className="group rounded-[1.6rem] border border-myanglow-sage/80 bg-white p-6 shadow-[0_14px_40px_rgba(20,26,22,0.06)] transition hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(20,26,22,0.1)]">
                 <div className="flex items-center justify-between">
                   <span className="grid h-12 w-12 place-items-center rounded-2xl bg-myanglow-sage/45 text-myanglow-forest transition group-hover:bg-myanglow-forest group-hover:text-white">
                     <Icon size={22} />
@@ -358,7 +357,7 @@ function LandingPage() {
             </p>
             <div className="mt-7 space-y-3">
               {farmSimPoints.map(({ icon: Icon, title, description }) => (
-                <div key={title} className="flex items-start gap-4 rounded-[1.25rem] border border-myanglow-sage/80 bg-white p-4 shadow-[0_14px_40px_rgba(12,46,61,0.05)]">
+                <div key={title} className="flex items-start gap-4 rounded-[1.25rem] border border-myanglow-sage/80 bg-white p-4 shadow-[0_14px_40px_rgba(20,26,22,0.05)]">
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-myanglow-sage/45 text-myanglow-forest">
                     <Icon size={20} />
                   </span>
@@ -387,7 +386,7 @@ function LandingPage() {
             </div>
           </div>
 
-          <figure className="m-0 overflow-hidden rounded-[2rem] bg-myanglow-navy shadow-[0_30px_80px_rgba(12,46,61,0.2)]">
+          <figure className="m-0 overflow-hidden rounded-[2rem] bg-myanglow-navy shadow-[0_30px_80px_rgba(20,26,22,0.2)]">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
               <div>
                 <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-myanglow-bright-lime">Farm Simulation</p>
@@ -404,24 +403,24 @@ function LandingPage() {
               viewBox="0 0 560 330"
               className="block h-auto w-full"
             >
-              <g stroke="#0c2e3d" strokeWidth="2">
-                <polygon points="280,35 380,85 280,135 180,85" fill="#1c6a3e" />
-                <polygon points="390,90 490,140 390,190 290,140" fill="#359244" />
-                <polygon points="170,90 270,140 170,190 70,140" fill="#54b03f" />
-                <polygon points="280,145 380,195 280,245 180,195" fill="#36704c" />
-                <polygon points="390,200 470,240 390,280 310,240" fill="#6ab36a" />
-                <polygon points="170,200 250,240 170,280 90,240" fill="#359244" />
+              <g stroke="#141a16" strokeWidth="2">
+                <polygon points="280,35 380,85 280,135 180,85" fill="#137a38" />
+                <polygon points="390,90 490,140 390,190 290,140" fill="#137a38" />
+                <polygon points="170,90 270,140 170,190 70,140" fill="#17aa51" />
+                <polygon points="280,145 380,195 280,245 180,195" fill="#135f30" />
+                <polygon points="390,200 470,240 390,280 310,240" fill="#4dbf7a" />
+                <polygon points="170,200 250,240 170,280 90,240" fill="#137a38" />
               </g>
-              <path d="M175 87 L285 142 L395 87" fill="none" stroke="#7cc4dd" strokeWidth="5" strokeLinecap="round" opacity="0.9" />
+              <path d="M175 87 L285 142 L395 87" fill="none" stroke="#97d3d1" strokeWidth="5" strokeLinecap="round" opacity="0.9" />
               <g>
-                <line x1="390" y1="140" x2="390" y2="107" stroke="#cde4b5" strokeWidth="2" />
-                <circle cx="390" cy="103" r="6" fill="#bde63d" />
-                <circle cx="390" cy="103" r="14" fill="none" stroke="#bde63d" strokeWidth="1.5" opacity="0.6" />
+                <line x1="390" y1="140" x2="390" y2="107" stroke="#dbe2dd" strokeWidth="2" />
+                <circle cx="390" cy="103" r="6" fill="#17aa51" />
+                <circle cx="390" cy="103" r="14" fill="none" stroke="#17aa51" strokeWidth="1.5" opacity="0.6" />
               </g>
               <g transform="translate(260 183)">
-                <polygon points="0,10 20,0 40,10 20,20" fill="#f3f7f5" />
-                <polygon points="0,10 20,20 20,30 0,20" fill="#a1bcb2" />
-                <polygon points="20,20 40,10 40,20 20,30" fill="#cde4b5" />
+                <polygon points="0,10 20,0 40,10 20,20" fill="#f4f6f3" />
+                <polygon points="0,10 20,20 20,30 0,20" fill="#9aa39d" />
+                <polygon points="20,20 40,10 40,20 20,30" fill="#dbe2dd" />
               </g>
             </svg>
             <figcaption className="flex flex-wrap gap-2 border-t border-white/10 px-5 py-4">
@@ -437,7 +436,7 @@ function LandingPage() {
 
       <section id="impact" className="flex min-h-screen scroll-mt-0 items-center py-8 sm:py-10">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="impact-panel relative overflow-hidden rounded-[2rem] bg-myanglow-navy px-6 py-8 text-white shadow-[0_30px_80px_rgba(12,46,61,0.2)] sm:px-8 lg:px-10 lg:py-9">
+          <div className="impact-panel relative overflow-hidden rounded-[2rem] bg-myanglow-navy px-6 py-8 text-white shadow-[0_30px_80px_rgba(20,26,22,0.2)] sm:px-8 lg:px-10 lg:py-9">
             <div className="impact-orb absolute -right-20 -top-24 h-72 w-72 rounded-full bg-myanglow-lime/15 blur-3xl" />
             <div className="impact-orb impact-orb-delayed absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-myanglow-soft/10 blur-3xl" />
 

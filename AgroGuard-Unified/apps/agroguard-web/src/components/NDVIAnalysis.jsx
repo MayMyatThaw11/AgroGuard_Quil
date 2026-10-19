@@ -96,8 +96,8 @@ export default function NDVIAnalysis() {
       {
         label: t('ndvi.latestVim'),
         data: ndviData?.vim || [],
-        borderColor: '#2ecc71',
-        backgroundColor: 'rgba(46, 204, 113, 0.2)',
+        borderColor: '#17aa51',
+        backgroundColor: 'rgba(23, 170, 81, 0.2)',
         fill: true,
         tension: 0.4,
         yAxisID: 'y'
@@ -105,7 +105,7 @@ export default function NDVIAnalysis() {
       {
         label: t('ndvi.latestViq'),
         data: ndviData?.viq || [],
-        borderColor: '#f59e0b',
+        borderColor: '#d77a11',
         backgroundColor: 'transparent',
         borderDash: [5, 5],
         tension: 0.4,
@@ -124,7 +124,7 @@ export default function NDVIAnalysis() {
     plugins: {
       legend: {
         labels: {
-          color: '#334155',
+          color: '#3a423d',
           font: { size: 13, weight: '600' },
           padding: 18,
           usePointStyle: true,
@@ -132,22 +132,22 @@ export default function NDVIAnalysis() {
       }
     },
     scales: {
-      x: { ticks: { color: '#475569' }, grid: { color: 'rgba(148,163,184,0.18)' } },
+      x: { ticks: { color: '#535d57' }, grid: { color: 'rgba(154,163,157,0.18)' } },
       y: {
         type: 'linear',
         display: true,
         position: 'left',
-        title: { display: true, text: t('ndvi.latestVim'), color: '#2ecc71' },
-        ticks: { color: '#475569' },
-        grid: { color: 'rgba(148,163,184,0.18)' }
+        title: { display: true, text: t('ndvi.latestVim'), color: '#17aa51' },
+        ticks: { color: '#535d57' },
+        grid: { color: 'rgba(154,163,157,0.18)' }
       },
       y1: {
         type: 'linear',
         display: true,
         position: 'right',
-        title: { display: true, text: t('ndvi.latestViq'), color: '#f59e0b' },
+        title: { display: true, text: t('ndvi.latestViq'), color: '#d77a11' },
         grid: { drawOnChartArea: false },
-        ticks: { color: '#475569' }
+        ticks: { color: '#535d57' }
       },
     },
   };

@@ -57,43 +57,43 @@ function randomWalk(current, variance, min, max) {
 function getSoilMoistureStatus(val, t) {
   if (val <= 34) return {
     label: t('iot.dry'),
-    color: '#D97706',
+    color: '#d77a11',
     dotColor: 'bg-amber-500',
     badge: 'bg-amber-50 text-amber-700 border-amber-200/60',
-    bar: 'linear-gradient(90deg, #D97706, #F59E0B)',
+    bar: '#d77a11',
   }
   if (val <= 90) return {
     label: t('iot.normal'),
-    color: '#2E7D32',
+    color: '#137a38',
     dotColor: 'bg-emerald-500',
     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
-    bar: 'linear-gradient(90deg, #2E7D32, #4ADE80)',
+    bar: '#137a38',
   }
   return {
     label: t('iot.tooWet'),
-    color: '#E11D48',
+    color: '#e5322d',
     dotColor: 'bg-rose-500',
     badge: 'bg-rose-50 text-rose-700 border-rose-200/60',
-    bar: 'linear-gradient(90deg, #0EA5E9, #38BDF8)',
+    bar: '#0b9fa9',
   }
 }
 
 function getPHStatus(val, t) {
   if (val < 5.5) return {
     label: t('iot.acidic'),
-    color: '#D97706',
+    color: '#d77a11',
     dotColor: 'bg-amber-500',
     badge: 'bg-amber-50 text-amber-700 border-amber-200/60',
   }
   if (val <= 7.5) return {
     label: t('iot.suitable'),
-    color: '#2E7D32',
+    color: '#137a38',
     dotColor: 'bg-emerald-500',
     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
   }
   return {
     label: t('iot.alkaline'),
-    color: '#E11D48',
+    color: '#e5322d',
     dotColor: 'bg-rose-500',
     badge: 'bg-rose-50 text-rose-700 border-rose-200/60',
   }
@@ -102,24 +102,24 @@ function getPHStatus(val, t) {
 function getLightStatus(val, t) {
   if (val <= 19) return {
     label: t('iot.lowLight'),
-    color: '#D97706',
+    color: '#d77a11',
     dotColor: 'bg-amber-500',
     badge: 'bg-amber-50 text-amber-700 border-amber-200/60',
-    bar: 'linear-gradient(90deg, #6B7280, #9CA3AF)',
+    bar: '#6f7a74',
   }
   if (val <= 85) return {
     label: t('iot.suitableLight'),
-    color: '#2E7D32',
+    color: '#137a38',
     dotColor: 'bg-emerald-500',
     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
-    bar: 'linear-gradient(90deg, #D97706, #FBBF24)',
+    bar: '#d77a11',
   }
   return {
     label: t('iot.tooBright'),
-    color: '#D97706',
+    color: '#d77a11',
     dotColor: 'bg-amber-500',
     badge: 'bg-amber-50 text-amber-700 border-amber-200/60',
-    bar: 'linear-gradient(90deg, #D97706, #FBBF24)',
+    bar: '#d77a11',
   }
 }
 
@@ -252,39 +252,39 @@ export default function IoTSimulation() {
       {
         label: t('iot.soilMoisture'),
         data: soilHistory,
-        borderColor: '#2E7D32',
-        backgroundColor: 'rgba(46, 125, 50, 0.10)',
+        borderColor: '#137a38',
+        backgroundColor: 'rgba(19, 122, 56, 0.10)',
         borderWidth: 2.5,
         fill: true,
         tension: 0.35,
         pointRadius: 2,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#2E7D32',
+        pointBackgroundColor: '#137a38',
       },
       {
         label: t('iot.soilPh'),
         data: phHistory,
-        borderColor: '#8E44AD',
-        backgroundColor: 'rgba(142, 68, 173, 0.08)',
+        borderColor: '#0b9fa9',
+        backgroundColor: 'rgba(11, 159, 169, 0.08)',
         borderWidth: 2.5,
         borderDash: [5, 3],
         fill: true,
         tension: 0.35,
         pointRadius: 2,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#8E44AD',
+        pointBackgroundColor: '#0b9fa9',
       },
       {
         label: t('iot.light'),
         data: lightHistory,
-        borderColor: '#F39C12',
-        backgroundColor: 'rgba(243, 156, 18, 0.08)',
+        borderColor: '#d77a11',
+        backgroundColor: 'rgba(215, 122, 17, 0.08)',
         borderWidth: 2.5,
         fill: true,
         tension: 0.35,
         pointRadius: 2,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#F39C12',
+        pointBackgroundColor: '#d77a11',
       },
     ],
   }), [labels, soilHistory, phHistory, lightHistory, language])
@@ -302,14 +302,14 @@ export default function IoTSimulation() {
         labels: {
           usePointStyle: true,
           padding: 16,
-          font: { family: 'Outfit, sans-serif', size: 11 },
-          color: '#374151',
+          font: { family: 'Plus Jakarta Sans, sans-serif', size: 11 },
+          color: '#3a423d',
         },
       },
       tooltip: {
-        backgroundColor: '#0B252C',
-        titleFont: { family: 'Outfit, sans-serif' },
-        bodyFont: { family: 'Outfit, sans-serif' },
+        backgroundColor: '#141a16',
+        titleFont: { family: 'Plus Jakarta Sans, sans-serif' },
+        bodyFont: { family: 'Plus Jakarta Sans, sans-serif' },
         padding: 12,
         cornerRadius: 8,
       },
@@ -318,8 +318,8 @@ export default function IoTSimulation() {
       x: {
         grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
         ticks: {
-          font: { family: 'Outfit, sans-serif', size: 10 },
-          color: '#6B7280',
+          font: { family: 'Plus Jakarta Sans, sans-serif', size: 10 },
+          color: '#6f7a74',
           maxTicksLimit: 8,
           autoSkip: true,
           maxRotation: 0,
@@ -330,16 +330,16 @@ export default function IoTSimulation() {
         max: 100,
         grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
         ticks: {
-          font: { family: 'Outfit, sans-serif', size: 11 },
-          color: '#6B7280',
+          font: { family: 'Plus Jakarta Sans, sans-serif', size: 11 },
+          color: '#6f7a74',
           stepSize: 10,
           callback: (v) => v + '%',
         },
         title: {
           display: true,
           text: t('iot.percentage'),
-          font: { family: 'Outfit, sans-serif', size: 11 },
-          color: '#374151',
+          font: { family: 'Plus Jakarta Sans, sans-serif', size: 11 },
+          color: '#3a423d',
         },
       },
     },
@@ -401,7 +401,7 @@ export default function IoTSimulation() {
       <div className="max-w-7xl mx-auto flex flex-col gap-4 lg:gap-5">
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold m-0" style={{ color: '#1E5E3A' }}>
+            <h1 className="text-xl lg:text-2xl font-bold m-0" style={{ color: '#135f30' }}>
               {t('iot.title')}
             </h1>
             <p className="text-slate-500 mt-0.5 text-xs lg:text-sm">
@@ -424,7 +424,7 @@ export default function IoTSimulation() {
             <button
               onClick={() => setIsSimulating((s) => !s)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-700 transition-all cursor-pointer"
-              style={{ fontFamily: 'Outfit, sans-serif' }}
+              style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
             >
               <RefreshCw size={13} />
               {isSimulating ? t('iot.pause') : t('iot.resume')}
@@ -486,12 +486,12 @@ export default function IoTSimulation() {
                 style={{
                   width: `${(soilPH / 14) * 100}%`,
                   background: `linear-gradient(90deg,
-                    rgba(217,119,6,0.35) 0%,
-                    rgba(217,119,6,0.35) 39.3%,
-                    rgba(46,125,50,0.35) 39.3%,
-                    rgba(46,125,50,0.35) 53.6%,
-                    rgba(225,29,72,0.35) 53.6%,
-                    rgba(225,29,72,0.35) 100%)`,
+                    rgba(215,122,17,0.35) 0%,
+                    rgba(215,122,17,0.35) 39.3%,
+                    rgba(19,122,56,0.35) 39.3%,
+                    rgba(19,122,56,0.35) 53.6%,
+                    rgba(229,50,45,0.35) 53.6%,
+                    rgba(229,50,45,0.35) 100%)`,
                 }}
               />
               <div
@@ -543,7 +543,7 @@ export default function IoTSimulation() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50/50 border border-emerald-100 text-sm text-[#1C5D39]">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50/50 border border-emerald-100 text-sm text-[#135f30]">
           <Timer size={15} className="shrink-0" />
           {t('iot.refresh')}{' '}
           <strong>{labels[labels.length - 1]}</strong>

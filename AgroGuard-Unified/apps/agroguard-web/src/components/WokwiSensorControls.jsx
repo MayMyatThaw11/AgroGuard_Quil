@@ -108,7 +108,7 @@ function SliderControl({
         onChange={(event) => onChange(Number(event.target.value))}
         style={{
           '--range-color': color,
-          background: `linear-gradient(90deg, ${color} 0%, ${color} ${progress}%, #E2E8F0 ${progress}%, #E2E8F0 100%)`,
+          background: `linear-gradient(90deg, ${color} 0%, ${color} ${progress}%, #e6ebe7 ${progress}%, #e6ebe7 100%)`,
         }}
         aria-label={label}
       />
@@ -138,10 +138,10 @@ export default function WokwiSensorControls({
       ? 'border-blue-200 bg-blue-50 text-blue-700'
       : 'border-amber-200 bg-amber-50 text-amber-700'
   const scoreColor = result.healthScore >= 80
-    ? '#16A34A'
+    ? '#12963f'
     : result.healthScore >= 60
-      ? '#D97706'
-      : '#DC2626'
+      ? '#d77a11'
+      : '#cc2a26'
 
   const soilAdc = Math.round((draft.soilMoisture / 100) * 4095)
   const phAdc = Math.round(((draft.soilPH - 3) / 7) * 4095)
@@ -184,7 +184,7 @@ export default function WokwiSensorControls({
               max={100}
               step={1}
               unit="%"
-              color="#2E7D32"
+              color="#137a38"
               secondaryValue={`${soilAdc} / 4095 ADC`}
               onChange={(value) => onChange('soilMoisture', value)}
             />
@@ -195,7 +195,7 @@ export default function WokwiSensorControls({
               max={10}
               step={0.1}
               unit=" pH"
-              color="#8E44AD"
+              color="#0b9fa9"
               secondaryValue={`${phAdc} / 4095 ADC · ${t('iot.demoEstimate')}`}
               onChange={(value) => onChange('soilPH', value)}
             />
@@ -206,7 +206,7 @@ export default function WokwiSensorControls({
               max={100}
               step={1}
               unit="%"
-              color="#F39C12"
+              color="#d77a11"
               secondaryValue={`${lightAdc} / 4095 ADC`}
               onChange={(value) => onChange('lightIntensity', value)}
             />
@@ -224,7 +224,7 @@ export default function WokwiSensorControls({
               max={50}
               step={1}
               unit="°C"
-              color="#E11D48"
+              color="#e5322d"
               secondaryValue="DHT22"
               onChange={(value) => onChange('temperature', value)}
             />
@@ -235,7 +235,7 @@ export default function WokwiSensorControls({
               max={100}
               step={1}
               unit="%"
-              color="#0EA5E9"
+              color="#0b9fa9"
               secondaryValue="DHT22"
               onChange={(value) => onChange('humidity', value)}
             />
@@ -313,7 +313,7 @@ export default function WokwiSensorControls({
             type="button"
             onClick={onApply}
             disabled={isApplying}
-            className="mt-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1E5E3A] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#174b2f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            className="mt-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#135f30] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#135f30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
           >
             <Send size={15} />
             {isApplying ? t('iot.applying') : t('iot.applyReading')}
