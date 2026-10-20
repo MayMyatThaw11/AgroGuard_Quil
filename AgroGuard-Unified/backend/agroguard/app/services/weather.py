@@ -1,6 +1,10 @@
-from httpx import AsyncClient
+import asyncio
 
-from app.core.config import get_settings
+from app.services.climate import (
+    ClimateUnavailableError,
+    fetch_climate,
+    fetch_soil_ph,
+)
 
 _PCODE_DATA: list[tuple[str, str, str, float, float]] = [
     ("MMR001", "Sagaing Region", "စစ်ကိုင်းတိုင်းဒေသကြီး", 21.88, 95.98),
@@ -35,35 +39,6 @@ SOIL_PH_MAP = {
     "MMR017": 6.1, "MMR018": 6.2,
 }
 
-HUMIDITY_MAP = {
-    "MMR001": 65, "MMR002": 75, "MMR003": 55, "MMR004": 50,
-    "MMR005": 80, "MMR006": 82, "MMR007": 70, "MMR008": 68,
-    "MMR009": 78, "MMR010": 72, "MMR011": 76, "MMR012": 74,
-    "MMR013": 65, "MMR014": 78, "MMR015": 60, "MMR016": 65,
-    "MMR017": 62, "MMR018": 75,
-}
-
-
-def _get_ow_api_key() -> str | None:
-    settings = get_settings()
-    return settings.openweather_api_key.get_secret_value() if settings.openweather_api_key else None
-
-
-async def _fetch_openweather(lat: float, lon: float) -> dict | None:
-    api_key = _get_ow_api_key()
-    if not api_key:
-        return None
-
-    settings = get_settings()
-    base = settings.openweather_base_url.rstrip("/")
-    url = f"{base}/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
-    async with AsyncClient(timeout=10) as client:
-        response = await client.get(url)
-        if response.status_code == 200:
-            return response.json()
-    return None
-
-
 def _find_nearest_region(lat: float, lon: float) -> tuple[str, dict]:
     import math
 
@@ -77,16 +52,6 @@ def _find_nearest_region(lat: float, lon: float) -> tuple[str, dict]:
             best_dist = dist
             best_pcode = pcode
     return best_pcode, PCODE_MAP[best_pcode]
-
-
-def _estimate_soil_pH(lat: float, lon: float) -> float:
-    pcode, _ = _find_nearest_region(lat, lon)
-    return SOIL_PH_MAP.get(pcode, 6.5)
-
-
-def _estimate_humidity(lat: float, lon: float) -> int:
-    pcode, _ = _find_nearest_region(lat, lon)
-    return HUMIDITY_MAP.get(pcode, 70)
 
 
 def _generate_advisories(
@@ -185,37 +150,67 @@ def _generate_advisories(
     return advisories
 
 
+# Myanmar's bounding box, plus how far (degrees) the nearest region centre may be.
+_MYANMAR_BOX = (9.5, 28.6, 92.0, 101.3)  # lat min, lat max, lon min, lon max
+_MAX_REGION_DISTANCE_DEG = 4.5
+_OUTSIDE = {"name_en": "Outside Myanmar", "name_my": "မြန်မာနိုင်ငံပြင်ပ"}
+_WEEKS_PER_YEAR = 52.18
+
+
+def _in_myanmar(lat: float, lon: float, region: dict) -> bool:
+    import math
+
+    lat_min, lat_max, lon_min, lon_max = _MYANMAR_BOX
+    if not (lat_min <= lat <= lat_max and lon_min <= lon <= lon_max):
+        return False
+    return math.hypot(region["lat"] - lat, region["lon"] - lon) <= _MAX_REGION_DISTANCE_DEG
+
+
 async def get_location_weather(lat: float, lon: float, language: str) -> dict:
+    """Climate and soil pH for a point.
+
+    Temperature, annual rainfall and humidity come from NASA POWER, soil pH
+    from SoilGrids; inside Myanmar the old regional pH table is the last
+    resort for pH. Raises ClimateUnavailableError if NASA POWER has nothing.
+    """
     pcode, region = _find_nearest_region(lat, lon)
-    ow_data = await _fetch_openweather(lat, lon)
+    in_myanmar = _in_myanmar(lat, lon, region)
 
-    if ow_data:
-        temp = ow_data["main"]["temp"]
-        humidity = ow_data["main"]["humidity"]
-        rainfall = (
-            ow_data.get("rain", {}).get("1h", 0)
-            or ow_data.get("rain", {}).get("3h", 0)
-            or 0
-        )
-        rainfall_7d = rainfall * 7
+    # The two lookups are independent, so run them side by side.
+    climate_result, soil_result = await asyncio.gather(
+        fetch_climate(lat, lon), fetch_soil_ph(lat, lon), return_exceptions=True
+    )
+    if isinstance(climate_result, ClimateUnavailableError):
+        raise climate_result
+    if isinstance(climate_result, BaseException):
+        raise ClimateUnavailableError("Climate data could not be loaded.") from climate_result
+    climate = climate_result
+    soil = None if isinstance(soil_result, BaseException) else soil_result
+
+    if soil is not None:
+        soil_ph, soil_source = soil.value, "soilgrids"
+    elif in_myanmar:
+        soil_ph, soil_source = SOIL_PH_MAP.get(pcode, 6.5), "regional_estimate"
     else:
-        temp = 28.0
-        humidity = _estimate_humidity(lat, lon)
-        rainfall_7d = 120
+        soil_ph, soil_source = None, "unavailable"
 
-    soil_pH = _estimate_soil_pH(lat, lon)
-    advisories = _generate_advisories(temp, rainfall_7d, humidity)
-
+    weekly_rain = climate.rainfall_annual_mm / _WEEKS_PER_YEAR
     return {
         "region": {
-            "name_en": region["name_en"],
-            "name_my": region["name_my"],
+            "name_en": region["name_en"] if in_myanmar else _OUTSIDE["name_en"],
+            "name_my": region["name_my"] if in_myanmar else _OUTSIDE["name_my"],
+            "in_myanmar": in_myanmar,
         },
         "current": {
-            "temperature_c": round(temp, 1),
-            "rainfall_7d_mm": round(rainfall_7d, 1),
-            "humidity_pct": humidity,
-            "soil_pH_estimate": soil_pH,
+            "temperature_c": climate.temperature_c,
+            "rainfall_7d_mm": round(weekly_rain, 1),
+            "rainfall_annual_mm": climate.rainfall_annual_mm,
+            "humidity_pct": climate.humidity_pct,
+            "soil_pH_estimate": soil_ph,
+            "climate_source": "NASA POWER climatology (long-term annual mean)",
+            "soil_ph_source": soil_source,
         },
-        "advisories": advisories,
+        "advisories": _generate_advisories(
+            climate.temperature_c, weekly_rain, climate.humidity_pct
+        ),
     }

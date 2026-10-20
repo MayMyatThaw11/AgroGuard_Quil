@@ -408,3 +408,25 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   .health-card-media img { aspect-ratio: 4 / 3; }
   .health-conditions-grid { grid-template-columns: 1fr; }
 }
+
+/* Photo picker: file picker, drag and drop, live camera (shared by Health Updates) */
+.photo-picker { display: flex; flex-direction: column; align-items: center; gap: .75rem; border: 2px dashed var(--border); border-radius: 1rem; background: #fafbfa; padding: 1rem; text-align: center; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+.photo-picker:hover, .photo-picker.is-dragging { border-color: var(--secondary); background: #f1f7ea; }
+.photo-picker.is-disabled { cursor: not-allowed; opacity: .6; }
+.photo-picker-input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+.photo-picker:focus-within { outline: 2px solid var(--secondary); outline-offset: 2px; }
+.photo-picker-title { margin: 0; color: var(--text-muted); font-size: .85rem; }
+.photo-picker-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; }
+.photo-picker-btn { display: inline-flex; align-items: center; gap: .4rem; border: 1px solid var(--secondary); border-radius: 999px; background: #fff; padding: .45rem .9rem; color: var(--primary); font-size: .85rem; font-weight: 600; cursor: pointer; }
+.photo-picker-btn.is-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.photo-picker-btn:disabled { cursor: not-allowed; opacity: .6; }
+.health-field-label { display: block; margin-bottom: .4rem; font-weight: 600; }
+
+/* Crop Suggestion: clickable Leaflet map */
+.location-map-card { margin-top: 1rem; border: 1px solid var(--border); border-radius: 1rem; background: #fff; overflow: hidden; }
+.location-map-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .5rem 1rem; padding: .85rem 1rem; }
+.location-map-head strong { font-size: .9rem; color: var(--text); }
+.location-map-head p { margin: .2rem 0 0; color: var(--text-muted); font-size: .78rem; }
+.location-map-coords { color: var(--primary); font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.location-map { height: 18rem; width: 100%; background: #e8efe2; cursor: crosshair; }
+.location-map .leaflet-container { font: inherit; }

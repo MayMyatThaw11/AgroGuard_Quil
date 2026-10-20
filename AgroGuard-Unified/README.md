@@ -217,6 +217,14 @@ video file. A YouTube page link will not play in a `<video>` tag.
   workspace doesn't start it — `npm run start` only warns if it's down, and
   `npm run verify` checks it. AgroGuard's frontend proxies `/api/v1/ml/*` to it
   (`AGROGUARD_DISEASE_API_TARGET` overrides `http://localhost:8001`).
+- **NASA POWER and ISRIC SoilGrids** (Crop Suggestion map and "Detect my
+  location"; both free, no key): temperature, annual rainfall and humidity
+  come from NASA POWER's long-term climatology, soil pH from SoilGrids (about
+  250 m, top 30 cm). SoilGrids has gaps (cities, water) and a low rate limit,
+  so missing points are retried nearby, results are cached, and inside
+  Myanmar the old regional pH table is the last resort (labelled as such).
+  If NASA POWER is unreachable the lookup fails with a clear message rather
+  than filling in made-up values. Needs internet access.
 - **MongoDB** (health updates only): `docker compose up -d mongo` from the
   workspace root runs it on `127.0.0.1:27017` (`AGROGUARD_MONGO_URL` /
   `AGROGUARD_MONGO_DATABASE` override). Each health update stores its photo

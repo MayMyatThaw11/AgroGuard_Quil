@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   HelpCircle,
   ImagePlus,
+  Camera,
   Info,
   Layers,
   Loader2,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { API_BASE_URL } from '../api.js'
+import CameraCapture from '../components/CameraCapture.jsx'
 import { PLANT_GROUPS } from '../data/plantGroups.js'
 
 const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp']
@@ -52,6 +54,8 @@ function DiseaseDetectionPage() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [validationError, setValidationError] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState(null)
   // What the disease service can diagnose: { [groupId]: { available, crops: { [cropId]: leafAndFruit } } }.
@@ -176,9 +180,10 @@ function DiseaseDetectionPage() {
     }
   }
 
-  const handleFileChange = (event) => {
-    const nextFile = event.target.files?.[0]
-    if (!nextFile) return
+  // One path for every way an image can arrive (file picker, drag and drop,
+  // camera capture): same type and size checks, same state updates.
+  const acceptFile = (nextFile) => {
+    if (!nextFile) return false
 
     if (!acceptedTypes.includes(nextFile.type)) {
       setValidationError(
@@ -187,8 +192,7 @@ function DiseaseDetectionPage() {
           : 'Please upload a JPG, PNG, or WEBP plant image.'
       )
       setSelectedFile(null)
-      event.target.value = ''
-      return
+      return false
     }
 
     if (nextFile.size > maxFileSize) {
@@ -198,13 +202,45 @@ function DiseaseDetectionPage() {
           : 'Please choose an image smaller than 8 MB.'
       )
       setSelectedFile(null)
-      event.target.value = ''
-      return
+      return false
     }
 
     setValidationError('')
     setSelectedFile(nextFile)
     setAnalysisResult(null)
+    return true
+  }
+
+  const handleFileChange = (event) => {
+    const nextFile = event.target.files?.[0]
+    if (!nextFile) return
+    if (!acceptFile(nextFile)) event.target.value = ''
+  }
+
+  const handleDrop = (event) => {
+    event.preventDefault()
+    setIsDragging(false)
+    const dropped = event.dataTransfer?.files?.[0]
+    if (!dropped) return
+    if (inputRef.current) inputRef.current.value = ''
+    acceptFile(dropped)
+  }
+
+  const handleDragOver = (event) => {
+    // Without preventDefault the browser refuses the drop and opens the image instead.
+    event.preventDefault()
+    if (!isDragging) setIsDragging(true)
+  }
+
+  const handleDragLeave = (event) => {
+    // dragleave also fires when moving onto a child element; only clear when leaving the zone.
+    if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false)
+  }
+
+  const handleCameraCapture = (file) => {
+    setIsCameraOpen(false)
+    if (inputRef.current) inputRef.current.value = ''
+    acceptFile(file)
   }
 
   const runPredictionRequest = async (fileToUse, groupToUse, cropToUse, activeLang) => {
@@ -434,7 +470,15 @@ function DiseaseDetectionPage() {
             <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               <label
                 htmlFor="plant-image"
-                className="group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-myanglow-sage bg-[#fafbfa] p-6 text-center transition hover:border-myanglow-medium hover:bg-myanglow-sage/30"
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed p-6 text-center transition ${
+                  isDragging
+                    ? 'border-myanglow-medium bg-myanglow-sage/50'
+                    : 'border-myanglow-sage bg-[#fafbfa] hover:border-myanglow-medium hover:bg-myanglow-sage/30'
+                }`}
               >
                 <input
                   ref={inputRef}
@@ -448,15 +492,31 @@ function DiseaseDetectionPage() {
                   <ImagePlus size={28} />
                 </div>
                 <p className="mt-4 text-lg font-semibold text-myanglow-navy">
-                  {t('disease.uploadPrompt')}
+                  {isDragging ? t('disease.dropHere') : t('disease.uploadPrompt')}
                 </p>
                 <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
                   {t('disease.formats')}
                 </p>
-                <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-emerald-500">
-                  <UploadCloud size={16} />
-                  {t('disease.choose')}
-                </span>
+                <p className="mt-2 text-xs text-slate-500">{t('disease.orDrag')}</p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-emerald-500">
+                    <UploadCloud size={16} />
+                    {t('disease.choose')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      // Inside the <label>: don't let this click also open the file dialog.
+                      event.preventDefault()
+                      event.stopPropagation()
+                      setIsCameraOpen(true)
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border border-emerald-500 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                  >
+                    <Camera size={16} />
+                    {t('disease.useCamera')}
+                  </button>
+                </div>
               </label>
 
               <div className="overflow-hidden rounded-[1.5rem] border border-myanglow-sage/70 bg-white p-4">
@@ -782,6 +842,10 @@ function DiseaseDetectionPage() {
           </div>
         </div>
       ) : null}
+
+      {isCameraOpen && (
+        <CameraCapture onCapture={handleCameraCapture} onClose={() => setIsCameraOpen(false)} />
+      )}
     </div>
   )
 }

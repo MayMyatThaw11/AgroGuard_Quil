@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { API_BASE_URL, DEMO_FIELD_ID } from '../api';
 import { PLANT_GROUPS } from '../data/plantGroups';
 import { loadCropConditions } from '../lib/cropConditions';
+import PhotoPicker from './PhotoPicker';
 
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const STATUS_OPTIONS = ['Healthy', 'Diseased', 'Pest Infested', 'Drought Stressed', 'Nutrient Deficiency'];
 
 // The disease service's healthStatus text is translated in Burmese mode, so
@@ -66,7 +65,7 @@ export default function HealthUpdates() {
   // Group ids the disease service has a model for, from /ml/groups. Null
   // until it answers, and every group is offered meanwhile.
   const [readyGroups, setReadyGroups] = useState(null);
-  const fileRef = useRef(null);
+  const [pickerKey, setPickerKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -135,7 +134,7 @@ export default function HealthUpdates() {
     setPreview('');
     setDetection(null);
     setMessage(null);
-    if (fileRef.current) fileRef.current.value = '';
+    setPickerKey((key) => key + 1);
   };
 
   const runDetection = async (file, group) => {
@@ -174,17 +173,15 @@ export default function HealthUpdates() {
     }
   };
 
-  const handlePhoto = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!ACCEPTED_TYPES.includes(file.type) || file.size > MAX_FILE_SIZE) {
-      setMessage({ kind: 'error', text: t('health.photoHelp') });
-      e.target.value = '';
-      return;
-    }
+  const handlePhoto = (file) => {
     setPhoto(file);
     setPreview(URL.createObjectURL(file));
+    setDetection(null);
     runDetection(file, groupId);
+  };
+
+  const handleInvalidPhoto = () => {
+    setMessage({ kind: 'error', text: t('health.photoHelp') });
   };
 
   const handleGroup = (e) => {
@@ -330,8 +327,14 @@ export default function HealthUpdates() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="hu-photo">{t('health.photo')}</label>
-                  <input id="hu-photo" ref={fileRef} type="file" accept={ACCEPTED_TYPES.join(',')} onChange={handlePhoto} />
+                  <span className="health-field-label" id="hu-photo-label">{t('health.photo')}</span>
+                  <PhotoPicker
+                    key={pickerKey}
+                    inputId="hu-photo"
+                    onFile={handlePhoto}
+                    onInvalid={handleInvalidPhoto}
+                    disabled={detecting || saving}
+                  />
                   <small style={{ color: 'var(--text-muted)' }}>{t('health.photoHelp')}</small>
                   {preview && (
                     <img src={preview} alt={t('health.photo')} className="health-photo-preview" />
@@ -347,6 +350,9 @@ export default function HealthUpdates() {
                 {message.text}
                 {detection && !isBackgroundClass(detection.rawClassName) && message.kind === 'info' && (
                   <> ({Math.round(detection.confidenceScore)}% {t('health.confidence')})</>
+                )}
+                {detection && !isBackgroundClass(detection.rawClassName) && message.kind === 'info' && detection.confidenceScore < 60 && (
+                  <> {t('health.lowConfidence')}</>
                 )}
               </p>
             )}
@@ -483,7 +489,7 @@ export default function HealthUpdates() {
                           {translateStatus(update.healthStatus)}
                         </span>
                       </div>
-                      {update.diseaseName && <p className="health-disease">{update.diseaseName}</p>}
+                      {update.isDiseased && update.diseaseName && <p className="health-disease">{update.diseaseName}</p>}
                       <dl className="health-stats">
                         {update.segmentation && (
                           <div><dt>{t('health.affected')}</dt><dd>{update.segmentation.affectedPercent}%</dd></div>
