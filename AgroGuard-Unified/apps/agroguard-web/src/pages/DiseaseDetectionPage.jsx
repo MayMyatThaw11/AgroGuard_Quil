@@ -33,7 +33,7 @@ const GUIDE_STORAGE_KEY = 'myanglow_plant_group_guide_seen_v1'
 function SectionCard({ title, action, children, className = '' }) {
   return (
     <section
-      className={`rounded-[2rem] border border-[#e6ebe7] bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 ${className}`}
+      className={`rounded-[2rem] border border-(--ag-line) bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 ${className}`}
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-myanglow-navy sm:text-xl">{title}</h2>
@@ -373,7 +373,7 @@ function DiseaseDetectionPage() {
   return (
     <div className="space-y-6">
       {/* HERO HEADER */}
-      <section className="rounded-[2rem] border border-[#e6ebe7] bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
+      <section className="rounded-[2rem] border border-(--ag-line) bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.45em] text-myanglow-medium">
@@ -521,7 +521,7 @@ function DiseaseDetectionPage() {
                 className={`group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed p-6 text-center transition ${
                   isDragging
                     ? 'border-myanglow-medium bg-myanglow-sage/50'
-                    : 'border-myanglow-sage bg-[#fafbfa] hover:border-myanglow-medium hover:bg-myanglow-sage/30'
+                    : 'border-myanglow-sage bg-(--ag-card-2) hover:border-myanglow-medium hover:bg-myanglow-sage/30'
                 }`}
               >
                 <input
@@ -578,7 +578,7 @@ function DiseaseDetectionPage() {
                   </span>
                 </div>
 
-                <div className="mt-4 flex min-h-[18rem] items-center justify-center rounded-[1.3rem] bg-[#f4f6f3] p-3">
+                <div className="mt-4 flex min-h-[18rem] items-center justify-center rounded-[1.3rem] bg-(--ag-card-2) p-3">
                   {previewUrl ? (
                     <img
                       src={previewUrl}

@@ -543,7 +543,7 @@ export default function IoTSimulation() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50/50 border border-emerald-100 text-sm text-[#135f30]">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50/50 border border-emerald-100 text-sm text-(--ag-accent)">
           <Timer size={15} className="shrink-0" />
           {t('iot.refresh')}{' '}
           <strong>{labels[labels.length - 1]}</strong>

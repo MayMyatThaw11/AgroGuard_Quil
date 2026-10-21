@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useEffect, useState, useContext } from 'react';
 
 const LanguageContext = createContext();
 
@@ -53,6 +53,8 @@ const translations = {
     "nav.farmSimulation": "Farm Simulation",
     "nav.signOut": "Sign out",
     "nav.hideSidebar": "Collapse sidebar",
+    "theme.toLight": "Switch to light mode",
+    "theme.toDark": "Switch to dark mode",
     "nav.showSidebar": "Expand sidebar",
     "farmSim.frameTitle": "Farm Simulation: 3D farm models",
     "farmSim.back": "Back to dashboard",
@@ -174,6 +176,36 @@ const translations = {
     "ndvi.whatIsNdvi": "What do these numbers mean?",
     "ndvi.vimDesc": "VIM (Greenness Index): A score measuring the actual density and health of vegetation. Higher numbers mean greener, thicker crops.",
     "ndvi.viqDesc": "VIQ (Quality Percentile): Compares current health to historical averages. Above 50 means better than normal, below 50 means worse than normal.",
+    "ndvi.mapTitle": "Choose on map",
+    "ndvi.mapHint": "Click the map to select the nearest analysis region.",
+    "ndvi.mapMyanmar": "Myanmar",
+    "ndvi.location": "NDVI LOCATION",
+    "ndvi.stateRegion": "State or Region",
+    "ndvi.districtDetail": "Optional district detail",
+    "ndvi.allDistricts": "All districts (state overview)",
+    "ndvi.loadingData": "Loading NDVI data...",
+    "ndvi.correlationKicker": "ENVIRONMENTAL RELATIONSHIP",
+    "ndvi.correlationTitle": "What changes with vegetation health?",
+    "ndvi.correlationRainfall": "Rainfall",
+    "ndvi.correlationTemperature": "Temperature",
+    "ndvi.correlationLoading": "Calculating environmental correlations...",
+    "ndvi.correlationError": "Unable to calculate environmental correlations.",
+    "ndvi.correlationStrong": "Strong",
+    "ndvi.correlationModerate": "Moderate",
+    "ndvi.correlationWeak": "Weak",
+    "ndvi.correlationVeryWeak": "Very weak",
+    "ndvi.correlationPositive": "positive",
+    "ndvi.correlationNegative": "negative",
+    "ndvi.correlationNeutral": "no clear direction",
+    "ndvi.correlationUnavailable": "Not enough variation",
+    "ndvi.correlationBasedOn": "Based on",
+    "ndvi.correlationMonths": "paired months",
+    "ndvi.correlationCaveat": "Correlation shows association, not cause.",
+    "ndvi.regionsError": "Unable to load NDVI regions.",
+    "ndvi.measurementsError": "Unable to load NDVI measurements for this region.",
+    "ndvi.correlationSubtitle": "How closely monthly NDVI moves with monthly rainfall and temperature (NASA POWER) at the centre of this region.",
+    "ndvi.correlationPoint": "Weather at the region centre",
+    "ndvi.correlationSeasons": "Both follow the seasons, so a strong value mostly means they rise and fall together through the year.",
 
     // Crop Suggestion
     "crop.title": "AI Crop Suggestion",
@@ -345,6 +377,8 @@ const translations = {
     "nav.farmSimulation": "လယ်ယာ စမ်းသပ်စနစ်",
     "nav.signOut": "အကောင့်မှ ထွက်ရန်",
     "nav.hideSidebar": "ဘေးဘားကို ချုံ့ရန်",
+    "theme.toLight": "အလင်းမုဒ်သို့ ပြောင်းရန်",
+    "theme.toDark": "အမှောင်မုဒ်သို့ ပြောင်းရန်",
     "nav.showSidebar": "ဘေးဘားကို ချဲ့ရန်",
     "farmSim.frameTitle": "လယ်ယာ စမ်းသပ်စနစ်: 3D လယ်ယာပုံစံများ",
     "farmSim.back": "ဒက်ရှ်ဘုတ်သို့ ပြန်သွားရန်",
@@ -464,6 +498,36 @@ const translations = {
     "ndvi.whatIsNdvi": "ဤဂဏန်းများက ဘာကိုဆိုလိုသနည်း?",
     "ndvi.vimDesc": "VIM (စိမ်းလန်းမှု အညွှန်းကိန်း): အပင်များ၏ သိပ်သည်းဆနှင့် ကျန်းမာရေးကို တိုင်းတာသော အမှတ်။ ဂဏန်းပိုများလေ သီးနှံများ ပိုမိုစိမ်းလန်းထူထပ်လေ ဖြစ်သည်။",
     "ndvi.viqDesc": "VIQ (အရည်အသွေး ရာခိုင်နှုန်း): လက်ရှိကျန်းမာရေးကို ယခင်နှစ်များ၏ ပျမ်းမျှအခြေအနေနှင့် နှိုင်းယှဉ်ပြသည်။ ၅၀ အထက်ဆိုလျှင် ပုံမှန်ထက် ပိုကောင်းပြီး၊ ၅၀ အောက်ဆိုလျှင် ပုံမှန်ထက် ဆိုးရွားသည်ဟု ဆိုလိုသည်။",
+    "ndvi.mapTitle": "မြေပုံပေါ်မှ ရွေးချယ်ပါ",
+    "ndvi.mapHint": "မြေပုံပေါ်တွင် နှိပ်၍ အနီးဆုံး ခွဲခြမ်းစိတ်ဖြာမည့် ဒေသကို ရွေးချယ်ပါ။",
+    "ndvi.mapMyanmar": "မြန်မာနိုင်ငံ",
+    "ndvi.location": "NDVI တည်နေရာ",
+    "ndvi.stateRegion": "ပြည်နယ် သို့မဟုတ် တိုင်းဒေသကြီး",
+    "ndvi.districtDetail": "ခရိုင် အသေးစိတ်",
+    "ndvi.allDistricts": "ခရိုင်အားလုံး (ပြည်နယ်/တိုင်း အကျဉ်းချုပ်)",
+    "ndvi.loadingData": "NDVI အချက်အလက်များ ရယူနေပါသည်...",
+    "ndvi.correlationKicker": "ပတ်ဝန်းကျင်ဆိုင်ရာ ဆက်နွယ်မှု",
+    "ndvi.correlationTitle": "အပင်စိမ်းလန်းကျန်းမာမှုနှင့် မည်သည့်အချက်များ ဆက်နွယ်နေသနည်း။",
+    "ndvi.correlationRainfall": "မိုးရေချိန်",
+    "ndvi.correlationTemperature": "အပူချိန်",
+    "ndvi.correlationLoading": "ပတ်ဝန်းကျင်ဆိုင်ရာ ဆက်နွယ်မှုကို တွက်ချက်နေသည်...",
+    "ndvi.correlationError": "ပတ်ဝန်းကျင်ဆိုင်ရာ ဆက်နွယ်မှုကို တွက်ချက်၍ မရပါ။",
+    "ndvi.correlationStrong": "အားကောင်း",
+    "ndvi.correlationModerate": "အသင့်အတင့်",
+    "ndvi.correlationWeak": "အားနည်း",
+    "ndvi.correlationVeryWeak": "အလွန်အားနည်း",
+    "ndvi.correlationPositive": "အပြုသဘောဆက်နွယ်မှု",
+    "ndvi.correlationNegative": "အနုတ်သဘောဆက်နွယ်မှု",
+    "ndvi.correlationNeutral": "ဦးတည်ချက် မရှင်းလင်း",
+    "ndvi.correlationUnavailable": "ကွဲပြားမှု မလုံလောက်ပါ",
+    "ndvi.correlationBasedOn": "အခြေခံထားသော တွဲဖက်လများ",
+    "ndvi.correlationMonths": "လ",
+    "ndvi.correlationCaveat": "ဆက်နွယ်မှုသည် အကြောင်းရင်းဖြစ်ကြောင်း မဆိုလိုပါ။",
+    "ndvi.regionsError": "NDVI ဒေသများကို ရယူ၍ မရပါ။",
+    "ndvi.measurementsError": "ဤဒေသအတွက် NDVI တိုင်းတာချက်များကို ရယူ၍ မရပါ။",
+    "ndvi.correlationSubtitle": "ဤဒေသ၏ အလယ်ဗဟိုရှိ လစဉ် မိုးရေချိန်နှင့် အပူချိန် (NASA POWER) နှင့် လစဉ် NDVI တို့ မည်မျှ တူညီစွာ ပြောင်းလဲသည်ကို ပြသည်။",
+    "ndvi.correlationPoint": "ဒေသအလယ်ရှိ ရာသီဥတု",
+    "ndvi.correlationSeasons": "နှစ်ခုစလုံးသည် ရာသီအလိုက် ပြောင်းလဲသဖြင့် တန်ဖိုးမြင့်လျှင် တစ်နှစ်တာအတွင်း အတူတက်အတူကျ ဖြစ်သည်ဟုသာ ဆိုလိုသည်။",
 
     // Crop Suggestion
     "crop.title": "AI သီးနှံအကြံပြုချက်",
@@ -632,6 +696,11 @@ const translations = {
 
 export function LanguageProvider({ children }) {
   const [language, setLanguage] = useState('en');
+
+  // Screen readers and the browser's font choice follow the page language.
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   const t = (key) => {
     return translations[language][key] || translations['en'][key] || key;

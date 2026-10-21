@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Menu } from 'lucide-react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar.jsx'
+import { useTheme } from '../contexts/ThemeContext.jsx'
 
 const SIDEBAR_COLLAPSED_KEY = 'agroguard.sidebarCollapsed'
 
@@ -19,6 +20,7 @@ function DashboardLayout() {
   // width. The choice is remembered across visits.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
   const location = useLocation()
+  const { theme } = useTheme()
   // Farm Simulation has its own toolbars, so it takes the whole screen with no
   // AgroGuard sidebar; its page carries a "Back to dashboard" bar instead.
   const fullScreen = location.pathname === '/farm-simulation'
@@ -46,7 +48,7 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f6f3] text-slate-900">
+    <div data-theme={theme} className="min-h-screen bg-(--ag-bg) text-slate-900">
       <Sidebar
         mobileSidebarOpen={mobileSidebarOpen}
         collapsed={sidebarCollapsed}

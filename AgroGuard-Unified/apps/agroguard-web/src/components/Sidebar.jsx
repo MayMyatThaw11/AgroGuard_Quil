@@ -1,6 +1,7 @@
-import { Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
+import { useTheme } from '../contexts/ThemeContext.jsx'
 
 const navItems = [
   { key: 'nav.landing', icon: Home, path: '/' },
@@ -22,6 +23,8 @@ const FARM_SIM_SESSION_KEYS = ['agriquill.accessCode', 'agriquill.reporter']
 function Sidebar({ mobileSidebarOpen, collapsed, onClose, onToggleCollapsed }) {
   const { language, setLanguage, t } = useLanguage()
   const navigate = useNavigate()
+  const { theme, toggleTheme } = useTheme()
+  const themeLabel = t(theme === 'dark' ? 'theme.toLight' : 'theme.toDark')
   // Classes that only apply on desktop while the sidebar is an icon rail.
   const rail = (classes) => (collapsed ? classes : '')
   const toggleLabel = t(collapsed ? 'nav.showSidebar' : 'nav.hideSidebar')
@@ -38,7 +41,7 @@ function Sidebar({ mobileSidebarOpen, collapsed, onClose, onToggleCollapsed }) {
 
   return (
     <aside
-      className={`aq-sidebar fixed inset-y-0 left-0 z-40 flex w-72 ${rail('lg:w-16')} flex-col overflow-hidden border-r border-[#e6ebe7] bg-white backdrop-blur-xl transition-[transform,width] duration-300 ease-out lg:translate-x-0 ${
+      className={`aq-sidebar fixed inset-y-0 left-0 z-40 flex w-72 ${rail('lg:w-16')} flex-col overflow-hidden border-r border-(--ag-line) bg-white backdrop-blur-xl transition-[transform,width] duration-300 ease-out lg:translate-x-0 ${
         mobileSidebarOpen ? 'translate-x-0 shadow-2xl shadow-myanglow-navy/10' : '-translate-x-full'
       }`}
     >
@@ -113,7 +116,16 @@ function Sidebar({ mobileSidebarOpen, collapsed, onClose, onToggleCollapsed }) {
         </button>
       </div>
 
-      <div className={`flex shrink-0 justify-center border-t border-myanglow-sage/70 px-4 py-3 ${rail('lg:hidden')}`}>
+      <div className={`flex shrink-0 items-center justify-center gap-2 border-t border-myanglow-sage/70 px-4 py-3 ${rail('lg:hidden')}`}>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={themeLabel}
+          title={themeLabel}
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-myanglow-sage bg-white text-myanglow-navy transition hover:bg-myanglow-sage/40"
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
         <div className="inline-flex w-fit max-w-full items-center gap-1 rounded-xl border border-myanglow-sage bg-white p-1">
           <Languages size={16} className="shrink-0 text-myanglow-navy" />
           {['en', 'my'].map((code) => (

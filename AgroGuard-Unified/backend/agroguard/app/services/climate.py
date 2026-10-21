@@ -11,6 +11,7 @@ first suggestion for a field, not a replacement for a soil test.
 """
 
 import asyncio
+import calendar
 import logging
 import time
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 NASA_URL = "https://power.larc.nasa.gov/api/temporal/climatology/point"
+NASA_MONTHLY_URL = "https://power.larc.nasa.gov/api/temporal/monthly/point"
 SOILGRIDS_URL = "https://rest.isric.org/soilgrids/v2.0/properties/query"
 NASA_FILL = -999.0  # NASA POWER marks missing values with -999
 DAYS_PER_YEAR = 365.25
@@ -151,3 +153,47 @@ async def fetch_soil_ph(lat: float, lon: float) -> SoilPh | None:
             return soil
     _store(key, False)  # genuinely no soil data here (city, water, ice): remember it
     return None
+
+
+async def fetch_monthly(
+    lat: float, lon: float, start_year: int, end_year: int
+) -> dict[str, tuple[float, float]]:
+    """Monthly rainfall (mm) and mean temperature (deg C) from NASA POWER, keyed "YYYY-MM".
+
+    Months NASA has not published yet are left out rather than filled in.
+    """
+    key = ("nasa-monthly", round(lat * 4) / 4, round(lon * 4) / 4, start_year, end_year)
+    if (hit := _cached(key)) is not None:
+        return hit
+    params = {
+        "parameters": "T2M,PRECTOTCORR",
+        "community": "AG",
+        "latitude": f"{lat:.4f}",
+        "longitude": f"{lon:.4f}",
+        "start": str(start_year),
+        "end": str(end_year),
+        "format": "JSON",
+    }
+    try:
+        async with _client(NASA_TIMEOUT_S) as client:
+            response = await client.get(NASA_MONTHLY_URL, params=params)
+        response.raise_for_status()
+        values = response.json()["properties"]["parameter"]
+        temperature, rain_per_day = values["T2M"], values["PRECTOTCORR"]
+    except (httpx.HTTPError, KeyError, ValueError, TypeError) as exc:
+        logger.warning("NASA POWER monthly request failed for %s,%s: %s", lat, lon, exc)
+        raise ClimateUnavailableError("NASA POWER is not reachable right now.") from exc
+    months: dict[str, tuple[float, float]] = {}
+    for stamp, per_day in rain_per_day.items():
+        year, month = int(stamp[:4]), int(stamp[4:])
+        if not 1 <= month <= 12:  # month 13 is NASA's annual summary
+            continue
+        temp = temperature.get(stamp)
+        if per_day is None or temp is None or NASA_FILL in (per_day, temp):
+            continue
+        days = calendar.monthrange(year, month)[1]
+        months[f"{year}-{month:02d}"] = (round(float(per_day) * days, 1), round(float(temp), 2))
+    if not months:
+        raise ClimateUnavailableError("NASA POWER has no monthly data for this location.")
+    _store(key, months)
+    return months
