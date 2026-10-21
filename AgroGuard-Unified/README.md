@@ -86,6 +86,7 @@ python -m venv .venv
 .venv\Scripts\python.exe -m pip install -e ".[dev]"
 copy .env.example .env
 # edit .env: set a real AGROGUARD_DATABASE_URL and any API keys you have
+# AI chat: set AGROGUARD_LLM_API_KEY to a free Groq key (console.groq.com/keys)
 ```
 
 ### 2. AgriQill backend (`backend/agriquill`)
@@ -382,8 +383,11 @@ still describes `apps/agriquill-ide` as it was then.
   discoloured share of the leaf. That figure is a colour heuristic, not a
   diagnosis — shadows on coloured backdrops or naturally non-green leaves
   can skew it.
-- **AI chat** runs in a templated fallback mode until
-  `AGROGUARD_LLM_API_KEY` is set — see RECONCILIATION.md → "Module handoff".
+- **AI chat** uses Groq's free tier (`openai/gpt-oss-120b`) and runs in a
+  templated fallback mode until `AGROGUARD_LLM_API_KEY` is set in
+  `backend/agroguard/.env`. It only answers farming questions, in English or
+  Burmese; see `backend/agroguard/README.md` → "AI chat" for how the
+  guardrails work.
 - **Crop suggestion** uses the ASEAN Top-50 GaussianNB model
   (`app/ml/artifacts/asean_crop_gnb.joblib`, retrain with
   `python -m app.ml.training.train_model`) with ASEAN price data. If that

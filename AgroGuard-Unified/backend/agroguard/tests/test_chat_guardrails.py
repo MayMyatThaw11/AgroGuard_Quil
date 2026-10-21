@@ -132,3 +132,19 @@ async def test_long_history_is_trimmed(provider) -> None:
     sent = provider.chat_requests[0]["messages"]
     assert len(sent) == MAX_HISTORY_MESSAGES + 1  # plus the system prompt
     assert sent[-1]["content"] == "turn 30"
+
+
+@pytest.mark.asyncio
+async def test_burmese_question_gets_burmese_prompt_even_with_english_ui(provider) -> None:
+    await _collect([{"role": "user", "content": "စပါး ဘယ်အချိန်စိုက်ရမလဲ"}], "en")
+
+    system_prompt = provider.chat_requests[0]["messages"][0]["content"]
+    assert "မြန်မာဘာသာဖြင့်သာ" in system_prompt
+
+
+@pytest.mark.asyncio
+async def test_english_question_gets_english_prompt_even_with_burmese_ui(provider) -> None:
+    await _collect([{"role": "user", "content": "When should I plant rice?"}], "my")
+
+    system_prompt = provider.chat_requests[0]["messages"][0]["content"]
+    assert "Only answer questions about farming" in system_prompt

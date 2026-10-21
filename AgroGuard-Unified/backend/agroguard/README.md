@@ -28,6 +28,48 @@ Copy `.env.example` to `.env` and replace its placeholder database credentials. 
 real `.env` is ignored by Git. Never commit database connection strings, Telegram
 tokens, or other credentials.
 
+## AI chat (Groq)
+
+`POST /api/v1/chat` streams answers from Groq's free tier through its
+OpenAI-compatible API (`app/services/llm.py`).
+
+1. Create a free key at https://console.groq.com/keys.
+2. Put it in the private `.env` as `AGROGUARD_LLM_API_KEY=...`. Never put it
+   in `.env.example`, which is committed.
+3. Restart the API after changing `.env`.
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `AGROGUARD_LLM_ENDPOINT` | `https://api.groq.com/openai/v1` | Any OpenAI-compatible endpoint (Ollama works too) |
+| `AGROGUARD_LLM_MODEL` | `openai/gpt-oss-120b` | Model that writes the answers |
+| `AGROGUARD_LLM_TOPIC_GUARD_ENABLED` | `true` | Turns the farming-only check on or off |
+| `AGROGUARD_LLM_TOPIC_GUARD_MODEL` | `openai/gpt-oss-20b` | Small model used for that check |
+
+Groq retires models from the free tier from time to time (the Llama 3.x
+models went on 2026-08-16). A `404 Not Found` from the chat usually means the
+model name is no longer available; check
+https://console.groq.com/docs/deprecations and update the two model settings.
+
+**Farming-only guardrails.** The chat only answers farming questions (crops,
+livestock, fisheries, soil, irrigation, pests and diseases, farm weather,
+machinery, selling produce):
+
+- Both system prompts (English and Burmese) carry the scope rules, refuse
+  other topics, and ignore requests to override them.
+- `app/services/topic_guard.py` asks the small model to label each new
+  question FARMING or OTHER before the main model runs. Off-topic questions
+  get a fixed polite refusal, in Burmese if the question is written in
+  Burmese, and the main model is never called. If the check itself fails,
+  the question goes through and the system prompt still applies.
+- Only the last 12 messages, each capped at 4,000 characters, are sent.
+
+Answers are asked for in a short, plain format (a direct answer, then up to
+five numbered points). The web app renders them with
+`apps/agroguard-web/src/components/ChatMessageText.jsx`, which turns the
+model's Markdown into lists and bold labels and hides stray symbols.
+
+Tests: `python -m pytest tests/test_chat_guardrails.py`.
+
 ## Available endpoints
 
 | Endpoint | Purpose |

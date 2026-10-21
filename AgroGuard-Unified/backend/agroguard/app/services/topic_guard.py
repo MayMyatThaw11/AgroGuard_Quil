@@ -63,12 +63,17 @@ REFUSAL_MY = (
 )
 
 
-def refusal_message(latest_user_message: str, language: str) -> str:
+def reply_language(latest_user_message: str, ui_language: str) -> str:
+    """The language to answer in: the one the user wrote in, else the UI's."""
     if _MYANMAR_SCRIPT.search(latest_user_message):
-        return REFUSAL_MY
+        return "my"
     if _LATIN_LETTER.search(latest_user_message):
-        return REFUSAL_EN
-    return REFUSAL_MY if language == "my" else REFUSAL_EN
+        return "en"
+    return ui_language
+
+
+def refusal_message(latest_user_message: str, language: str) -> str:
+    return REFUSAL_MY if reply_language(latest_user_message, language) == "my" else REFUSAL_EN
 
 
 def _transcript(messages: list[dict]) -> str:
@@ -102,7 +107,11 @@ async def is_farming_related(messages: list[dict], api_key: str) -> bool:
         ],
         "stream": False,
         "temperature": 0,
-        "max_tokens": 5,
+        # gpt-oss models reason before answering and that reasoning counts
+        # toward max_tokens, so leave room for it and keep it short.
+        "max_tokens": 300,
+        "reasoning_effort": "low",
+        "include_reasoning": False,
     }
 
     try:

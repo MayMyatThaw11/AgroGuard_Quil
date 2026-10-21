@@ -29,12 +29,12 @@ class Settings(BaseSettings):
     # Groq's free tier, via its OpenAI-compatible API. Any other
     # OpenAI-compatible /chat/completions provider works by changing these.
     llm_endpoint: str = "https://api.groq.com/openai/v1"
-    llm_model: str = "llama-3.3-70b-versatile"
+    llm_model: str = "openai/gpt-oss-120b"
     # Small, fast model that screens each chat question for farming relevance
     # before the main model answers. Set llm_topic_guard_enabled=false to rely
     # on the system prompt alone.
     llm_topic_guard_enabled: bool = True
-    llm_topic_guard_model: str = "llama-3.1-8b-instant"
+    llm_topic_guard_model: str = "openai/gpt-oss-20b"
     openweather_api_key: SecretStr | None = None
     openweather_base_url: str = "https://api.openweathermap.org"
 

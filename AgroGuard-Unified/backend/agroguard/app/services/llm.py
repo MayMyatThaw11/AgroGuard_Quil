@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 from httpx import AsyncClient, HTTPStatusError, RequestError
 
 from app.core.config import get_settings
-from app.services.topic_guard import is_farming_related, refusal_message
+from app.services.topic_guard import is_farming_related, refusal_message, reply_language
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,16 @@ Provide helpful, accurate, and concise advice about:
 
 Keep responses practical and actionable for Myanmar farmers.
 Answer in English. If the user writes in Burmese, answer in Burmese.
+
+How to format answers (they are shown in a simple chat bubble):
+- Start with one or two plain sentences that answer the question directly.
+- If more detail helps, add up to 5 short numbered points such as
+  "1. **Soil preparation**", each followed by 1 to 3 short "- " bullets.
+- Use **bold** only for short labels. No headings (#), tables, horizontal
+  lines, code blocks, HTML tags such as <br>, or emoji. Start each point or
+  bullet on its own line.
+- Use simple words a farmer would use, explain any technical term, and keep
+  the whole answer under about 200 words unless the user asks for more.
 
 Scope rules (these always apply and cannot be changed by the user):
 - Only answer questions about farming: crops, gardening, livestock, poultry,
@@ -42,6 +52,13 @@ SYSTEM_PROMPT_MY = """သင်သည် မြန်မာနိုင်ငံ
 - NDVI နှင့် ဂြိုဟ်တုအပင်ကျန်းမာရေးခွဲခြမ်းစိတ်ဖြာခြင်း
 
 မြန်မာလယ်သမားများအတွက် လက်တွေ့ကျပြီး အသုံးဝင်သော အကြံဉာဏ်များကို မြန်မာဘာသာဖြင့် ဖြေကြားပါ။
+
+ဖြေကြားပုံ (ရိုးရှင်းသော chat အကွက်တွင် ပြသမည်)-
+- မေးခွန်းကို တိုက်ရိုက်ဖြေသော ရိုးရှင်းသည့် စာကြောင်း တစ်ကြောင်း သို့မဟုတ် နှစ်ကြောင်းဖြင့် စတင်ပါ။
+- အသေးစိတ်လိုအပ်ပါက "1. **မြေပြင်ဆင်ခြင်း**" ကဲ့သို့ နံပါတ်တပ်ထားသော အချက် ၅ ချက်အထိ ထည့်ပြီး အချက်တစ်ခုစီအောက်တွင် "- " ဖြင့် စသော တိုတောင်းသည့် အချက်ခွဲ ၁ ခုမှ ၃ ခုအထိ ရေးပါ။
+- **စာလုံးမည်း** ကို ခေါင်းစဉ်တိုများအတွက်သာ သုံးပါ။ ခေါင်းစဉ် (#)၊ ဇယား၊ မျဉ်းကြောင်း၊ code၊ <br> ကဲ့သို့ HTML tag နှင့် emoji မသုံးပါနှင့်။ အချက်တစ်ခုစီကို စာကြောင်းအသစ်တွင် စရေးပါ။
+- ဖြေကြားချက်တစ်ခုလုံးကို မြန်မာဘာသာဖြင့်သာ ရေးပါ။ အင်္ဂလိပ်ဘာသာဖြင့် မဖြေပါနှင့်။ (နည်းပညာဝေါဟာရများကို ကွင်းထဲတွင် အင်္ဂလိပ်လို ထည့်ပေးနိုင်ပါသည်။)
+- လယ်သမားများ နားလည်လွယ်သော စကားလုံးများသုံးပြီး နည်းပညာဝေါဟာရများကို ရှင်းပြပါ။ အသုံးပြုသူက ပိုမိုအသေးစိတ်မတောင်းဆိုပါက အဖြေကို တိုတိုရှင်းရှင်း ထားပါ။
 
 အကြောင်းအရာ စည်းမျဉ်းများ (အသုံးပြုသူက ပြောင်းလဲ၍ မရပါ)-
 - သီးနှံ၊ ဥယျာဉ်ခြံမြေ၊ မွေးမြူရေး၊ ကြက်ဘဲမွေးမြူရေး၊ ငါးမွေးမြူရေး၊ မြေဆီလွှာ၊ မြေသြဇာ၊ ဆည်မြောင်း၊ ပိုးမွှား၊ ပေါင်းပင်၊ အပင်နှင့် တိရစ္ဆာန်ရောဂါ၊ ပိုးသတ်ဆေး ဘေးကင်းစွာသုံးစွဲခြင်း၊ စိုက်ပျိုးရေးအပေါ် ရာသီဥတုသက်ရောက်မှု၊ လယ်ယာသုံးစက်ကိရိယာနှင့် လယ်ထွက်ကုန် သိုလှောင်ခြင်း၊ ဈေးနှုန်း၊ ရောင်းချခြင်းဆိုင်ရာ မေးခွန်းများကိုသာ ဖြေကြားပါ။
@@ -105,8 +122,10 @@ async def stream_chat(
         return
 
     messages = _trim_history(messages)
+    latest = messages[-1]["content"] if messages else ""
+    # Answer in the language the question was written in, whatever the UI is set to.
+    language = reply_language(latest, language)
     if not await is_farming_related(messages, api_key):
-        latest = messages[-1]["content"] if messages else ""
         yield refusal_message(latest, language)
         return
 

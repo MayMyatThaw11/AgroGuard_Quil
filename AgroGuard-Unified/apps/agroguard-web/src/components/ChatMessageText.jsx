@@ -53,7 +53,15 @@ export function parseReply(content) {
   let afterBlank = false;
   let lastTableRow = null;
 
-  for (const rawLine of content.split(/\r?\n/)) {
+  // Models sometimes emit HTML line breaks; treat them as real ones and drop
+  // any other tags so they never show up as text.
+  const text = content
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/?[a-z][^>]*>/gi, '')
+    // "Label: - **Point**" squeezed onto one line: give the point its own line.
+    .replace(/:\s+-\s+(?=\*\*)/g, ':\n- ');
+
+  for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trimEnd();
     if (!line.trim()) {
       flushParagraph();
