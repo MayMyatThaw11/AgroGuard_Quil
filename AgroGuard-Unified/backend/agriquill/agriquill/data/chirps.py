@@ -27,6 +27,7 @@ _TYPES = {3: ("H", 2), 4: ("I", 4), 12: ("d", 8), 16: ("Q", 8), 2: ("s", 1)}
 _TAGS = {
     256: "width",
     257: "height",
+    258: "bits",
     259: "compression",
     317: "predictor",
     322: "tile_w",
@@ -80,7 +81,7 @@ def lzw_decode(data: bytes) -> bytes:
     return bytes(out)
 
 
-def parse_header(head: bytes, fetch_more: Any = None) -> dict[str, Any]:
+def parse_header(head: bytes, fetch_more: Any = None, checks: bool = True) -> dict[str, Any]:
     if head[:2] == b"II":
         bo = "<"
     elif head[:2] == b"MM":
@@ -125,13 +126,15 @@ def parse_header(head: bytes, fetch_more: Any = None) -> dict[str, Any]:
     for need in ("width", "height", "tile_w", "tile_h", "tile_offsets", "tile_bytes"):
         if need not in tags:
             raise ChirpsError(f"missing TIFF tag {need}")
+    tags["byte_order"] = bo
+    if not checks:
+        return tags
     if tags.get("compression") not in (1, 5):
         raise ChirpsError(f"unsupported compression {tags.get('compression')}")
     if tags.get("predictor", 1) != 1:
         raise ChirpsError("unsupported predictor")
     if tags.get("sample_format") != 3:
         raise ChirpsError("expected float samples")
-    tags["byte_order"] = bo
     return tags
 
 

@@ -178,3 +178,25 @@ def test_assets_in_build_contract_use_the_demo_syntax():
     )
     assert "asset S-01 { kind: sluice label: \"Outlet 'east'\" serves: [North-field] }" in text
     assert live.register(FARM, text, "tester")["is_valid"] is True
+
+
+def test_satellite_returns_a_scene_traced_series_per_bounded_parcel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agriquill.data import sentinel2
+
+    seen: list[list[list[float]]] = []
+
+    def fake(ring: list[list[float]], days: int = 60, client: Any = None) -> dict[str, Any]:
+        seen.append(ring)
+        return {"series": [{"scene_id": "S2X", "status": "clear", "ndvi": 0.7}], "missing": []}
+
+    monkeypatch.setattr(sentinel2, "paddy_series", fake)
+    assert onboard_farm(body()).status_code == 200
+    out = client.get(f"{BASE}/contracts/{FARM}/satellite?days=30", headers=ANN)
+    assert out.status_code == 200, out.text
+    parcels = out.json()["parcels"]
+    assert [p["id"] for p in parcels] == ["North-field"]
+    assert parcels[0]["series"][0]["scene_id"] == "S2X"
+    assert seen and seen[0][0] == seen[0][-1]
+    assert client.get(f"{BASE}/contracts/{FARM}/satellite").status_code in (401, 403)

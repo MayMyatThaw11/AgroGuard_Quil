@@ -393,6 +393,27 @@ export interface FarmMonitoring {
   missing?: { field: string; reason: string }[];
 }
 
+export interface SatelliteScene {
+  scene_id: string;
+  datetime: string;
+  status: 'clear' | 'cloudy' | 'outside' | 'unavailable';
+  ndvi: number | null;
+  ndwi: number | null;
+  clear_fraction?: number | null;
+  scene_cloud_pct?: number | null;
+  reason: string | null;
+}
+
+export interface FarmSatellite {
+  farm_id: string;
+  window_days: number;
+  parcels: { id: string; series: SatelliteScene[]; missing: { field: string; reason: string }[]; provider?: string }[];
+}
+
+export async function getSatellite(farmId: string, days = 60) {
+  return request<FarmSatellite>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/satellite?days=${days}`);
+}
+
 export async function getMonitoring(farmId: string) {
   return request<FarmMonitoring>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/monitoring`);
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
-import { getSummary, type FarmSummary, type MonitoringPaddy } from '../../lib/api.ts';
+import { getSatellite, getSummary, type FarmSatellite, type FarmSummary, type MonitoringPaddy } from '../../lib/api.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
 import { AWD_SAFE_DEPTH_CM, farmCentroid, readAgroguardLocal, type OwnStatus } from '../../lib/farmmap/ownFarms.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
@@ -69,6 +69,7 @@ function chartSummary(p: MonitoringPaddy): string {
 export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: number | null) => void; onFocus: () => void }> = ({ farm, onLink, onFocus }) => {
   const [summary, setSummary] = useState<FarmSummary | null>(null);
   const [health, setHealth] = useState<HealthUpdateSummary | null | 'error'>(null);
+  const [sat, setSat] = useState<FarmSatellite | 'loading' | 'error'>('loading');
   const [agField, setAgField] = useState<AgroguardField | null>(null);
   const [fieldDraft, setFieldDraft] = useState('1');
   const centre = useMemo(() => farmCentroid(farm.spec), [farm.spec]);
@@ -81,6 +82,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
     let alive = true;
     getSummary(farm.id).then((s) => alive && setSummary(s), () => alive && setSummary(null));
     latestHealthUpdate().then((h) => alive && setHealth(h), () => alive && setHealth('error'));
+    setSat('loading');
+    getSatellite(farm.id).then((s) => alive && setSat(s), () => alive && setSat('error'));
     return () => {
       alive = false;
     };
@@ -159,6 +162,27 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
         </DetailSection>
       )}
 
+      <DetailSection>
+        <AqSectionLabel aside="Sentinel-2">Satellite</AqSectionLabel>
+        {sat === 'loading' ? <p className="aq-fm-note">Reading Sentinel-2 scenes for your boundary…</p> : sat === 'error' ? (
+          <p className="aq-fm-note">Satellite data is unavailable right now. The rest of this panel is unaffected.</p>
+        ) : sat.parcels.length === 0 ? <p className="aq-fm-note">Add a closed boundary to read satellite data.</p> : sat.parcels.map((p) => {
+          const latest = [...p.series].reverse().find((s) => s.status === 'clear');
+          return (
+            <div key={p.id}>
+              {latest ? (
+                <KV k={`${p.id} NDVI · NDWI`} v={<>{latest.ndvi?.toFixed(2)} · {latest.ndwi?.toFixed(2)} <Prov level="measured" /></>} sub={latest.datetime.slice(0, 10)} />
+              ) : <KV k={p.id} v="No clear scene" sub={p.missing[0]?.reason} />}
+              <div className="aq-fm-badges" aria-label={`${p.id} scenes: ${p.series.map((s) => `${s.datetime.slice(5, 10)} ${s.status}`).join(', ')}`}>
+                {p.series.slice(-6).map((s) => (
+                  <AqBadge key={s.scene_id} tone={s.status === 'clear' ? 'accent' : 'neutral'}>{s.datetime.slice(5, 10)} {s.status === 'clear' ? s.ndvi?.toFixed(2) : 'cloud'}</AqBadge>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </DetailSection>
+
       {farm.fieldId === null ? (
         <DetailSection>
           <AqSectionLabel>AgroGuard field</AqSectionLabel>
@@ -196,6 +220,9 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           {health === 'error' ? <KV k="Health update" v="Unavailable" sub="service not reachable" /> : health ? (
             <KV k="Health update" v={`Looks like ${health.diseaseName ?? health.healthStatus}`} sub={`${health.detection?.confidence != null ? `${Math.round(health.detection.confidence)} % · ` : ''}${health.township ?? km(centre, health.latitude, health.longitude)} · ${ago(health.reportedAt)}`} />
           ) : null}
+          {sat !== 'loading' && sat !== 'error' ? sat.parcels.flatMap((p) => p.series.map((s) => (
+            <KV key={`${p.id}-${s.scene_id}`} k={s.datetime.slice(0, 10)} v={s.status === 'clear' ? `NDVI ${s.ndvi?.toFixed(2)} · NDWI ${s.ndwi?.toFixed(2)}` : s.status} sub={s.reason ?? s.scene_id} />
+          ))) : null}
           <UpdatedLine>Contract {farm.sha256.slice(0, 12)}</UpdatedLine>
           <AqButton variant="ghost" onClick={onFocus}>Fly to boundary</AqButton>
         </More>

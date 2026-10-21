@@ -1274,6 +1274,14 @@ async def contracts_monitoring(farm_id: str, caller: Caller | None = _READER) ->
     return await asyncio.to_thread(_live_call, live.monitoring, farm_id)
 
 
+@router.get("/contracts/{farm_id}/satellite")
+async def contracts_satellite(
+    farm_id: str, days: int = Query(60, ge=10, le=120), caller: Caller | None = _READER
+) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(_live_call, lambda f: live.satellite(f, days), farm_id)
+
+
 @router.get("/contracts/{farm_id}/summary")
 async def contracts_summary(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
     _see(caller, farm_id)

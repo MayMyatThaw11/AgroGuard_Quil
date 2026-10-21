@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     public_farms: str = "farm_ayeyarwady_demo"
     nasa_power_endpoint: str = "https://power.larc.nasa.gov/api/temporal/daily/point"
     chirps_base: str = "https://data.chc.ucsb.edu/products/CHIRPS-2.0"
+    earth_search_url: str = "https://earth-search.aws.element84.com/v1"
     crop_calendar_endpoint: str = "https://api-cropcalendar.apps.fao.org/api/v1"
     faostat_api: str = "https://faostatservices.fao.org/api/v1"
     faostat_bulk_url: str = (

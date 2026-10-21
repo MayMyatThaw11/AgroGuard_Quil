@@ -160,7 +160,7 @@ export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, on
       <DetailSection>
         <div className="aq-fm-tiles">
           <AqStatTile label="Area" value={String(farm.area)} unit={`ha · ${farm.fieldsN} fields`} />
-          <AqStatTile label="NDVI" value={farm.ndvi.toFixed(2)} tone={farm.ndvi < 0.5 ? 'warning' : 'default'} />
+          <AqStatTile label="NDVI · generated" value={farm.ndvi.toFixed(2)} tone={farm.ndvi < 0.5 ? 'warning' : 'default'} />
           <AqStatTile label="Soil moisture" value={String(farm.moisture)} unit="% vol" tone={farm.moisture < 20 ? 'warning' : 'default'} />
           {water !== null ? (
             <AqStatTile label="Water level" value={formatNumber(water)} unit="cm" tone={belowSafe ? 'alert' : water < -1 ? 'warning' : 'default'} />
