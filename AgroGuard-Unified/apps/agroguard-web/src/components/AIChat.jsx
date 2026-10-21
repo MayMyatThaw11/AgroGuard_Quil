@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageCircle, Send, Bot, User, Sparkles } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { API_BASE_URL } from '../api';
+import ChatMessageText from './ChatMessageText';
 
 export default function AIChat() {
   const { t, language } = useLanguage();
@@ -137,7 +138,7 @@ export default function AIChat() {
               {msg.role === 'user' ? <User size={20} color="white" /> : <Bot size={20} color="white" />}
             </div>
             <div className={`message-bubble ${msg.role === 'user' ? 'user-bubble' : 'bot-bubble'} ${isTyping && idx === messages.length - 1 && msg.role === 'assistant' ? 'streaming-cursor' : ''}`}>
-              {msg.content}
+              {msg.role === 'assistant' ? <ChatMessageText content={msg.content} /> : msg.content}
             </div>
           </div>
         ))}

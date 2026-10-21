@@ -408,3 +408,13 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   .health-card-media img { aspect-ratio: 4 / 3; }
   .health-conditions-grid { grid-template-columns: 1fr; }
 }
+/* AI chat replies: Markdown from the model rendered as plain sections and lists */
+.chat-reply { white-space: normal; }
+.chat-reply > * + * { margin-top: .6rem; }
+.chat-reply p { margin: 0; }
+.chat-reply-heading { color: var(--text); font-weight: 700; }
+.chat-reply-number { color: var(--primary); }
+.chat-reply ul { margin: .3rem 0 0; padding-left: 1.25rem; list-style: disc; }
+.chat-reply li + li { margin-top: .25rem; }
+.chat-reply li::marker { color: var(--primary); }
+.chat-reply strong { color: var(--text); font-weight: 600; }
