@@ -91,6 +91,9 @@ def test_onboard_registers_the_farm_and_imports_its_sheets():
     assert spec["farm"]["standard"] == "ASOA_ORGANIC"
     listed = client.get(f"{BASE}/contracts", headers=ANN).json()["contracts"]
     assert FARM in [c["farm_id"] for c in listed]
+    seeds = {c["farm_id"]: c["seed"] for c in listed}
+    assert seeds[FARM] is False
+    assert all(seeds[f] is True for f in live.SEEDS if f in seeds)
 
 
 def test_onboard_reads_a_kmz_sent_as_base64():

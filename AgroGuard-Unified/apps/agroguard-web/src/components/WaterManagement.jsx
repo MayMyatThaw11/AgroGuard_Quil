@@ -13,6 +13,7 @@ import {
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { useOnlineStatus } from '../lib/useOnlineStatus.js'
 import { DEMO_FIELD_ID } from '../api.js'
+import { saveWaterAdvisory } from '../lib/waterAdvisory.js'
 import LocationMap from './LocationMap.jsx'
 import {
   selectField,
@@ -502,6 +503,7 @@ export default function WaterManagement() {
 
       const result = await evaluateWaterAdvisory(payload)
       setAdvisoryResult(result)
+      saveWaterAdvisory(result, { mode: advisoryMode, cropType: advisoryCropType.trim() || null, fieldId })
     } catch (err) {
       console.error('Water advisory evaluate error:', err)
       const status = err.response?.status

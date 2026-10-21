@@ -235,6 +235,7 @@ export interface ContractListing {
   area_ha: number;
   herds: number;
   valid: boolean;
+  seed: boolean;
 }
 
 export async function listContracts() {
@@ -357,6 +358,43 @@ export async function addHerd(farmId: string, body: HerdRequest) {
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+export interface MonitoringFlag {
+  observed_at: string;
+  reading_cm: number;
+  predicted_cm: number;
+  kind: string;
+  meaning: string;
+}
+
+export interface MonitoringPaddy {
+  id: string;
+  scout: { value_cm: number; observed_at: string; reporter: string; age_h: number } | null;
+  model: {
+    depth_cm: number;
+    sigma_cm: number;
+    source: 'MEASURED' | 'DERIVED' | null;
+    flags: MonitoringFlag[];
+    series: number[];
+    series_dates: string[];
+    band: { p10: number[]; p50: number[]; p90: number[] } | null;
+    band_dates: string[];
+  } | null;
+  missing: { field: string; reason: string }[];
+}
+
+export interface FarmMonitoring {
+  farm_id: string;
+  status: string;
+  generated_at?: string;
+  coverage?: { sensor_ok: number; scout_72h: number; model: number; unknown: number; paddies: number };
+  paddies?: MonitoringPaddy[];
+  missing?: { field: string; reason: string }[];
+}
+
+export async function getMonitoring(farmId: string) {
+  return request<FarmMonitoring>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/monitoring`);
 }
 
 export async function getSummary(farmId: string) {

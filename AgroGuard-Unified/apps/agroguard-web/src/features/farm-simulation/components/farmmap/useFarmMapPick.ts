@@ -8,9 +8,10 @@ interface PickArgs {
   selectionRef: MutableRefObject<Selection | null>;
   onSelection: (selection: Selection | null) => void;
   onDismissRoute: () => void;
+  ownCentre: (farmId: string) => { lat: number; lon: number } | null;
 }
 
-export function useFarmMapPick({ engine, selectionRef, onSelection, onDismissRoute }: PickArgs) {
+export function useFarmMapPick({ engine, selectionRef, onSelection, onDismissRoute, ownCentre }: PickArgs) {
   return useCallback(
     (target: PickTarget | null, fromMap = false) => {
       if (!engine) return;
@@ -39,12 +40,18 @@ export function useFarmMapPick({ engine, selectionRef, onSelection, onDismissRou
         onSelection(null);
         engine.select(null);
         engine.fly({ center: [anchor.lon, anchor.lat], zoom: 10.6, duration: 3200 });
+      } else if (target.kind === 'own') {
+        onDismissRoute();
+        onSelection({ kind: 'own', id: target.farm });
+        engine.select(null);
+        const centre = ownCentre(target.farm);
+        if (centre && !fromMap) engine.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2600 });
       } else if (target.kind === 'coord') {
         engine.fly({ center: [target.lon, target.lat], zoom: 12, duration: 2800 });
       } else {
         engine.fly({ center: [target.country.lon, target.country.lat], zoom: 6.4, duration: 2800 });
       }
     },
-    [engine, selectionRef, onSelection, onDismissRoute],
+    [engine, selectionRef, onSelection, onDismissRoute, ownCentre],
   );
 }

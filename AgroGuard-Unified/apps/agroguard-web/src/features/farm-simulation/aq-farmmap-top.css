@@ -200,6 +200,13 @@
   width: var(--aq-fm-right-w);
 }
 
+@media (max-width: 639px) {
+  .aq-fm-right {
+    left: var(--aq-fm-gutter);
+    width: auto;
+  }
+}
+
 .aq-fm-left > *,
 .aq-fm-right > * {
   pointer-events: auto;

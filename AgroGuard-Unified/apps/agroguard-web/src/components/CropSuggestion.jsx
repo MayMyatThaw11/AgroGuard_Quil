@@ -20,20 +20,6 @@ import { API_BASE_URL } from '../api';
 import { saveCropConditions } from '../lib/cropConditions';
 import LocationMap from './LocationMap';
 
-const mockSuggestions = {
-  Rice: { icon: '🌾', match: 94, marketRate: 1450, yieldPerAcre: 2100, reason: 'Warm temperatures, balanced soil pH, and strong rainfall make these conditions well suited for rice.' },
-  Maize: { icon: '🌽', match: 89, marketRate: 980, yieldPerAcre: 1800, reason: 'The current temperature and soil conditions support strong maize establishment and healthy growth.' },
-  Chickpea: { icon: '🌱', match: 86, marketRate: 3200, yieldPerAcre: 850, reason: 'Low rainfall and near-neutral soil favor chickpea, which performs well in relatively dry conditions.' },
-};
-
-const cropDetails = {
-  ...mockSuggestions,
-  Corn: { icon: '🌽', match: 89, marketRate: 980, yieldPerAcre: 1800, reason: 'The current conditions support strong corn establishment and healthy growth.' },
-  Wheat: { icon: '🌾', match: 85, marketRate: 1250, yieldPerAcre: 1500, reason: 'Cooler temperatures make these conditions suitable for wheat.' },
-  Beans: { icon: '🌱', match: 84, marketRate: 2600, yieldPerAcre: 900, reason: 'Moderate rainfall and temperature provide suitable growing conditions for beans.' },
-  Sesame: { icon: '🌿', match: 88, marketRate: 3500, yieldPerAcre: 650, reason: 'Lower rainfall favors drought-tolerant sesame.' },
-};
-
 function AdvisoryIcon({ severity }) {
   if (severity === 'warning' || severity === 'danger') {
     return <TriangleAlert size={20} aria-hidden="true" />;
@@ -236,6 +222,11 @@ export default function CropSuggestion() {
       saveCropConditions(payload, {
         source: mode === 'auto' && weatherData ? 'satellite' : 'manual',
         region: weatherData?.region?.name_en || null,
+        crop,
+        confidencePercent: Number.isFinite(data.confidencePercent) ? data.confidencePercent : null,
+        modelInfo: data.modelInfo || null,
+        lat: pin?.lat ?? null,
+        lon: pin?.lon ?? null,
       });
       setSelectedRecommendationIndex(0);
       setExplanation(

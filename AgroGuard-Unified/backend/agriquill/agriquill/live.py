@@ -225,6 +225,7 @@ def listing() -> list[dict[str, Any]]:
                 "herds": len(spec.get("herds", [])),
                 "osm": [p["osm"] for p in spec["parcels"] if p.get("osm")],
                 "valid": loaded[1]["is_valid"],
+                "seed": farm_id in SEEDS,
             }
         )
     return out
@@ -327,7 +328,9 @@ def _paddy_depth(
         now=fused["now"],
         sigma_cm=fused["sigma_cm"],
         series=[p["depth_cm"] for p in fused["past"]],
+        series_dates=[p["date"] for p in fused["past"]],
         band=fused["band"],
+        band_dates=fused["band_dates"],
         flags=fused["flags"],
         method={
             "filter": "scalar Kalman filter over an hourly water balance",
@@ -624,6 +627,10 @@ def monitoring(
                     "sigma_cm": paddy.get("sigma_cm"),
                     "source": paddy.get("source"),
                     "flags": paddy.get("flags", []),
+                    "series": paddy.get("series", []),
+                    "series_dates": paddy.get("series_dates", []),
+                    "band": paddy.get("band"),
+                    "band_dates": paddy.get("band_dates", []),
                 }
                 if has_model
                 else None,

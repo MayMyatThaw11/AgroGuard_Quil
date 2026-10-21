@@ -55,6 +55,8 @@ function describe(info: HoverInfo): Copy {
       const p = data.poiById[info.id];
       return { title: p.label, sub: poiLine(p), extra: `${p.town}, ${p.country}` };
     }
+    case 'own':
+      return { title: `${info.label} · ${info.name}`, sub: info.parcel ? `Parcel ${info.parcel} · ${info.status}` : info.status, extra: 'Click to open' };
   }
 }
 

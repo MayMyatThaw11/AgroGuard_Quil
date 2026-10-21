@@ -16,13 +16,15 @@ interface SyncArgs {
   cinematic: boolean;
   focus: { lat: number; lon: number } | null;
   notify: (toast: ToastInput) => void;
+  picked: () => boolean;
 }
 
+const ESTABLISHING_MAX_ZOOM = 5;
 const FLY_IN_DELAY_MS = 3800;
 const REVEAL_DELAY_MS = 650;
 const FOCUS_ZOOM = 15.4;
 
-export function useFarmMapSync({ engine, boot, layers, view, filters, terrain, cinematic, focus, notify }: SyncArgs): boolean {
+export function useFarmMapSync({ engine, boot, layers, view, filters, terrain, cinematic, focus, notify, picked }: SyncArgs): boolean {
   const restoredFor = useRef<FarmMapEngine | null>(null);
   const [booted, setBooted] = useState(false);
 
@@ -35,12 +37,14 @@ export function useFarmMapSync({ engine, boot, layers, view, filters, terrain, c
     if (focus) {
       map.jumpTo({ center: [focus.lon, focus.lat], zoom: FOCUS_ZOOM, pitch: 0, bearing: 0 });
       notify({ tone: 'info', title: 'Back on the farm map', message: 'Keep scrolling out to see the region, the country and the whole globe.' });
-    } else if (saved) {
+    } else if (saved && !picked()) {
       map.jumpTo(saved);
-    } else {
+    } else if (!picked()) {
       engine.establishing();
       notify({ tone: 'info', title: 'Streaming the Ayeyarwady delta', message: 'Only the area in view loads. Pan or search to reveal more of ASEAN.' });
-      flyIn = window.setTimeout(() => engine.fly({ center: [95.62, 16.72], zoom: 10.4, duration: 5200 }), FLY_IN_DELAY_MS);
+      flyIn = window.setTimeout(() => {
+        if (map.getZoom() <= ESTABLISHING_MAX_ZOOM && !picked()) engine.fly({ center: [95.62, 16.72], zoom: 10.4, duration: 5200 });
+      }, FLY_IN_DELAY_MS);
     }
     const save = () => {
       const c = map.getCenter();

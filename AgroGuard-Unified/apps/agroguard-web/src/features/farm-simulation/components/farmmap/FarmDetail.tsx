@@ -132,6 +132,7 @@ export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, on
           </div>
         </div>
         <div className="aq-fm-badges">
+          <AqBadge>Illustrative farm</AqBadge>
           <AqBadge tone={tone}>{statusLabel}</AqBadge>
           <AqBadge>{crop.label}{stage ? ` · ${stage}` : ''}</AqBadge>
           {farm.organic ? <AqBadge tone="accent"><ShieldCheck size={12} aria-hidden="true" />ASOA organic</AqBadge> : null}

@@ -1,4 +1,5 @@
 import { Map as MapLibreMap, AttributionControl, setWorkerUrl } from 'maplibre-gl';
+import type { GeoJSONSource } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { basemapStyle } from '../basemapTheme.ts';
 import { basemapImage } from '../basemapImagesTheme.ts';
@@ -13,6 +14,7 @@ import { drawFog } from './fogOverlay.ts';
 import { bindEvents } from './interaction.ts';
 import { animateRouteFlow, clearRoute, planRoute, startGuide, stepGuide, stopGuide } from './routing.ts';
 import { setFilters, setLayers, setOffline, setView } from './viewModes.ts';
+import type { OwnFeatures } from '../ownFarms.ts';
 import type { EngineCallbacks, EngineContext, EngineState, FarmMapEngine } from './engineTypes.ts';
 
 const BOOT_TIMEOUT_MS = 20000;
@@ -54,6 +56,11 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
   const bootTimer = setTimeout(() => callbacks.onBootFail(), BOOT_TIMEOUT_MS);
   let unbind: (() => void) | null = null;
   let stopped = false;
+  let own: OwnFeatures = { polygons: [], points: [] };
+  const paintOwn = () => {
+    const source = map.getSource('aq-own') as GeoJSONSource | undefined;
+    source?.setData({ type: 'FeatureCollection', features: [...own.polygons, ...own.points] });
+  };
 
   const loop = (now: number) => {
     if (stopped) return;
@@ -81,6 +88,7 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     await registerMapIcons(map);
     if (stopped) return;
     addDataLayers(ctx);
+    paintOwn();
     unbind = bindEvents(ctx, () => stream(ctx));
     ctx.state.ready = true;
     setLayers(ctx, ctx.state.layers);
@@ -98,6 +106,10 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     overviewZoom: OVERVIEW_ZOOM,
     inView: () => farmsInView(ctx),
     setLayers: (flags) => setLayers(ctx, flags),
+    setOwnFarms: (features) => {
+      own = features;
+      if (ctx.state.ready) paintOwn();
+    },
     setView: (view) => setView(ctx, view),
     setFilters: (filters) => setFilters(ctx, filters),
     setOffline: (offline) => {

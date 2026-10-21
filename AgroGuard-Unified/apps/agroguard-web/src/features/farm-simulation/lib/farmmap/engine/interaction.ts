@@ -37,6 +37,7 @@ function setHoverState(ctx: EngineContext, id: number | null) {
 }
 
 function targetOf(layer: string, p: Props): HoverTarget {
+  if (layer === 'own-fill' || layer === 'own-point') return { kind: 'own', farm: text(p, 'farm'), parcel: text(p, 'parcel'), name: text(p, 'name'), label: text(p, 'kind'), status: text(p, 'status') };
   if (layer === 'farm-pins') return { kind: 'farm', id: text(p, 'id') };
   if (layer === 'clusters') return { kind: 'cluster', n: num(p, 'point_count') };
   if (layer === 'regions') return { kind: 'region', country: text(p, 'country'), n: num(p, 'n') };
@@ -95,7 +96,8 @@ function onClick(ctx: EngineContext, event: MapMouseEvent) {
     if (country) fly(ctx, { center: [country.lon, country.lat], zoom: 6.4 });
     return;
   }
-  if (layer === 'farm-pins') cb.onSelect({ kind: 'farm', id: text(p, 'id') });
+  if (layer === 'own-fill' || layer === 'own-point') cb.onSelect({ kind: 'own', farm: text(p, 'farm') });
+  else if (layer === 'farm-pins') cb.onSelect({ kind: 'farm', id: text(p, 'id') });
   else if (layer === 'paddies' || layer === 'crops') cb.onSelect({ kind: 'farm', id: text(p, 'farm'), field: text(p, 'id') });
   else cb.onSelect({ kind: 'poi', id: text(p, 'id') });
 }

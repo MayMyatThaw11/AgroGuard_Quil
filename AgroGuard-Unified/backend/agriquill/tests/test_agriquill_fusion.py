@@ -158,6 +158,13 @@ def test_monitoring_reports_every_layer_honestly():
     pd02 = next(p for p in out["paddies"] if p["id"] == "PD-02")
     assert pd02["scout"]["reporter"] == "Ko Min"
     assert pd02["model"]["depth_cm"] is not None and pd02["model"]["sigma_cm"] > 0
+    band = pd02["model"]["band"]
+    assert band["p50"] and len(band["p10"]) == len(band["p50"]) == len(band["p90"])
+    triples = zip(band["p10"], band["p50"], band["p90"], strict=True)
+    assert all(lo <= mid <= hi for lo, mid, hi in triples)
+    assert len(pd02["model"]["band_dates"]) == len(band["p50"])
+    assert len(pd02["model"]["series_dates"]) == len(pd02["model"]["series"])
+    assert all(p["model"] is None for p in out["paddies"] if p["id"] != "PD-02")
     assert pd02["satellite"]["status"] == "not_connected"
     assert out["coverage"]["model"] == 1 and out["coverage"]["unknown"] == 6
     assert "field_monitoring_status" in server.select_tools(False)

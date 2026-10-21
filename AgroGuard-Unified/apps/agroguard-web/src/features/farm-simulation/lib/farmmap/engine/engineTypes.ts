@@ -3,6 +3,7 @@ import type { FarmMap } from '../farmMapData.ts';
 import type { LayerFlags } from '../farmMapLayerKeys.ts';
 import type { ChunkData, CropId, Farm, FarmStatus, Position } from '../farmMapTypes.ts';
 import type { CountrySummary } from '../farmMapViewTypes.ts';
+import type { OwnFeatures } from '../ownFarms.ts';
 
 export type ChunkStatus = 'queued' | 'loading' | 'loaded' | 'error' | 'offline' | 'evicted';
 export type MapView = 'map' | 'sat';
@@ -52,7 +53,8 @@ export type HoverTarget =
   | { kind: 'region'; country: string; n: number }
   | { kind: 'field'; id: string; farm: string; stage: string | null; area: number; crop: CropId }
   | { kind: 'chunk'; st: ChunkStatus; key: string }
-  | { kind: 'poi'; id: string };
+  | { kind: 'poi'; id: string }
+  | { kind: 'own'; farm: string; parcel: string; name: string; label: string; status: string };
 
 export type HoverInfo = HoverTarget & { x: number; y: number };
 
@@ -61,7 +63,8 @@ export type PickTarget =
   | { kind: 'poi'; id: string }
   | { kind: 'place'; id: string }
   | { kind: 'coord'; lat: number; lon: number }
-  | { kind: 'country'; country: CountrySummary };
+  | { kind: 'country'; country: CountrySummary }
+  | { kind: 'own'; farm: string };
 
 export interface EngineCallbacks {
   onBoot: (step: 'style' | 'icons' | 'ready') => void;
@@ -161,6 +164,7 @@ export interface FarmMapEngine {
   overviewZoom: number;
   inView: () => Farm[];
   setLayers: (flags: LayerFlags) => void;
+  setOwnFarms: (features: OwnFeatures) => void;
   setView: (view: MapView) => void;
   setFilters: (filters: Filters) => void;
   setOffline: (offline: boolean) => void;

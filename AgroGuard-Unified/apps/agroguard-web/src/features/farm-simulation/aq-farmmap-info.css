@@ -136,6 +136,14 @@
   background: var(--aq-clay-500);
 }
 
+.aq-fm-flag.is-ok {
+  background: var(--aq-leaf-400);
+}
+
+.aq-fm-flag.is-unknown {
+  background: var(--aq-stone-300);
+}
+
 .aq-fm-share {
   display: flex;
   height: 8px;

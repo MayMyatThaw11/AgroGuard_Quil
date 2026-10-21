@@ -144,3 +144,76 @@ export async function explainCrop(
     }
   }
 }
+
+export interface AgroguardField {
+  id: number;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  regionCode: string | null;
+}
+
+export interface AssessmentFactor {
+  factor: string;
+  value: number | null;
+  range_min: number | null;
+  range_max: number | null;
+  unit: string | null;
+  status: string;
+}
+
+export interface FieldStatus {
+  fieldId: number;
+  latestAssessment: {
+    status: string;
+    healthScore: number;
+    primaryRisk: string | null;
+    recommendation: string | null;
+    cropProfileId: number | null;
+    evidence: { factors?: AssessmentFactor[] } | null;
+    createdAt: string;
+  } | null;
+  deviceCount: number;
+  activeDevices: number;
+  staleDevices: number;
+}
+
+export interface FieldAlert {
+  id: number;
+  severity: string;
+  riskType: string;
+  message: string;
+  status: string;
+  openedAt: string;
+}
+
+export interface HealthUpdateSummary {
+  id: string;
+  plantType: string;
+  healthStatus: string;
+  diseaseName: string | null;
+  isDiseased: boolean;
+  township: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  detection: { rawClassName: string | null; confidence: number | null; severity: string | null } | null;
+  reportedAt: string;
+}
+
+export async function fieldInfo(fieldId: number): Promise<AgroguardField> {
+  const out = await send<{ field: AgroguardField }>('/fields/select', json({ fieldId }));
+  return out.field;
+}
+
+export function fieldStatus(fieldId: number): Promise<FieldStatus> {
+  return send(`/fields/${fieldId}/current-status`, { method: 'GET' });
+}
+
+export function fieldAlerts(fieldId: number): Promise<FieldAlert[]> {
+  return send(`/fields/${fieldId}/alerts`, { method: 'GET' });
+}
+
+export async function latestHealthUpdate(): Promise<HealthUpdateSummary | null> {
+  const rows = await send<HealthUpdateSummary[]>('/health-updates?limit=1', { method: 'GET' });
+  return rows[0] ?? null;
+}

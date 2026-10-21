@@ -6,7 +6,7 @@ import type { PoiType } from './farmMapTypes.ts';
 
 export const OVERVIEW_ZOOM = 5.4;
 
-export const PLAIN_SOURCES = ['aq-soil', 'aq-fields', 'aq-bounds', 'aq-canals', 'aq-risk', 'aq-wx', 'aq-temps', 'aq-pois', 'aq-regions', 'aq-route', 'aq-route-pts', 'aq-veh', 'aq-sel'];
+export const PLAIN_SOURCES = ['aq-soil', 'aq-fields', 'aq-bounds', 'aq-canals', 'aq-risk', 'aq-wx', 'aq-temps', 'aq-pois', 'aq-regions', 'aq-route', 'aq-route-pts', 'aq-veh', 'aq-sel', 'aq-own'];
 
 export interface LayerEntry {
   spec: LayerSpecification;
@@ -29,7 +29,7 @@ export const LAYER_MAP: Record<LayerKey, string[]> = {
   livestock: ['poi-livestock'],
 };
 
-export const HOVER_LAYERS = ['farm-pins', 'clusters', 'regions', 'poi-market', 'poi-storage', 'poi-mill', 'poi-water', 'poi-station', 'poi-machine', 'poi-livestock', 'paddies', 'crops'];
+export const HOVER_LAYERS = ['farm-pins', 'clusters', 'regions', 'poi-market', 'poi-storage', 'poi-mill', 'poi-water', 'poi-station', 'poi-machine', 'poi-livestock', 'paddies', 'crops', 'own-fill', 'own-point'];
 
 const BEFORE = 'road-minor-case';
 const radius = zoomInterp(5, 18, 9, 40, 12, 70);
@@ -104,6 +104,16 @@ function pinLayers(): LayerEntry[] {
   ];
 }
 
+function ownLayers(): LayerEntry[] {
+  const color = ex('match', getProp('status'), 'ok', STATUS_COLOR.ok, 'watch', STATUS_COLOR.watch, 'risk', STATUS_COLOR.risk, MAP_COLOR.ownUnknown);
+  return [
+    { spec: { id: 'own-fill', type: 'fill', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), paint: { 'fill-color': color, 'fill-opacity': hoverOpacity(0.42) } } },
+    { spec: { id: 'own-line', type: 'line', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), layout: round, paint: { 'line-color': MAP_COLOR.ownLine, 'line-width': zoomInterp(8, 1.5, 16, 4) } } },
+    { spec: { id: 'own-point', type: 'circle', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Point'), paint: { 'circle-radius': 9, 'circle-color': color, 'circle-stroke-color': MAP_COLOR.ownLine, 'circle-stroke-width': 3 } } },
+    { spec: { id: 'own-label', type: 'symbol', source: 'aq-own', layout: { 'icon-image': 'aq-pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [3, 9, 3, 9], 'text-field': ex('concat', getProp('kind'), ' · ', getProp('name'), ' ', getProp('parcel')), 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true, 'symbol-placement': 'point', 'text-anchor': 'bottom', 'text-offset': [0, -2.2] }, paint: { 'text-color': MAP_COLOR.ink } } },
+  ];
+}
+
 export function buildDataLayers(): LayerEntry[] {
   const ground = groundLayers();
   const poiLayers = [
@@ -111,5 +121,5 @@ export function buildDataLayers(): LayerEntry[] {
     poiLayer('poi-mill', 'mill', 8.5), poiLayer('poi-market', 'market', 7.5), poiLayer('poi-livestock', 'livestock', 12),
     poiLayer('poi-machine', 'machine', 11.5),
   ];
-  return [...ground, ...overlayLayers(), ...poiLayers, ...pinLayers()];
+  return [...ground, ...overlayLayers(), ...poiLayers, ...pinLayers(), ...ownLayers()];
 }

@@ -109,6 +109,7 @@ def kalman_depth(
             else:
                 forward.append(
                     {
+                        "date": times[i][:10],
                         "p10": round(x - Z90 * sigma, 2),
                         "p50": round(x, 2),
                         "p90": round(x + Z90 * sigma, 2),
@@ -127,6 +128,7 @@ def kalman_depth(
             "p50": [f["p50"] for f in forward],
             "p90": [f["p90"] for f in forward],
         },
+        "band_dates": [f["date"] for f in forward],
         "updates": updates,
         "flags": flags,
     }

@@ -48,3 +48,14 @@ test('Farm map style: the basemap uses keyless public sources only', () => {
   const urls = JSON.stringify(style.sources);
   assert.ok(!/key=|apikey|access_token/i.test(urls));
 });
+
+test('Farm map style: your own farm draws above every seeded farm layer and is hoverable', () => {
+  const ownIds = ['own-fill', 'own-line', 'own-point', 'own-label'];
+  ownIds.forEach((id) => assert.ok(dataIds.includes(id), `${id} is missing`));
+  const seeded = ['paddies', 'crops', 'bounds', 'farm-pins', 'farm-labels'].map((id) => dataIds.indexOf(id));
+  const lowestOwn = Math.min(...ownIds.map((id) => dataIds.indexOf(id)));
+  assert.ok(seeded.every((i) => i < lowestOwn), 'a seeded layer draws above your farm');
+  assert.ok(HOVER_LAYERS.includes('own-fill') && HOVER_LAYERS.includes('own-point'));
+  assert.ok(PLAIN_SOURCES.includes('aq-own'));
+  dataLayers.filter((e) => ownIds.includes(e.spec.id)).forEach((e) => assert.equal(e.before, undefined));
+});

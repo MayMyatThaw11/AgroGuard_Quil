@@ -65,6 +65,8 @@ export const MAP_COLOR = {
   stone: '#6f7a74',
   stoneLine: '#dbe2dd',
   route: '#2563eb',
+  ownLine: '#141a16',
+  ownUnknown: '#8a948e',
   routeStart: '#17aa51',
   canalMain: '#0b9fa9',
   canalLateral: '#5bbcb9',

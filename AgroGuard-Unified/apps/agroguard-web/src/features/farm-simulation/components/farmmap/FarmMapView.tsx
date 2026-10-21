@@ -26,6 +26,10 @@ import { MapControls } from './MapControls.tsx';
 import { Minimap } from './Minimap.tsx';
 import { OfflineBanner } from './OfflineBanner.tsx';
 import { OverviewPanel } from './OverviewPanel.tsx';
+import { OwnFarmDetail } from './OwnFarmDetail.tsx';
+import { useOwnFarms } from './useOwnFarms.ts';
+import { farmCentroid } from '../../lib/farmmap/ownFarms.ts';
+import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { PoiDetail } from './PoiDetail.tsx';
 import { RoutePanel } from './RoutePanel.tsx';
 import { StatusStrip } from './StatusStrip.tsx';
@@ -100,7 +104,15 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const planner = useRoutePlanner({ engine, selection, onRestore: setSelection, onFocusRight: guideLayout, toast: push });
   const { route, guide } = planner;
 
-  const pickTarget = useFarmMapPick({ engine, selectionRef, onSelection: setSelection, onDismissRoute: planner.dismiss });
+  const own = useOwnFarms(engine);
+  const ownFarms = own.farms;
+  const yours = ownFarms.filter((f) => !f.seed);
+  const demos = ownFarms.filter((f) => f.seed);
+  const ownCentre = useCallback((farmId: string) => {
+    const found = ownFarms.find((f) => f.id === farmId);
+    return found ? farmCentroid(found.spec) : null;
+  }, [ownFarms]);
+  const pickTarget = useFarmMapPick({ engine, selectionRef, onSelection: setSelection, onDismissRoute: planner.dismiss, ownCentre });
   const pick = useCallback(
     (target: PickTarget | null, fromMap = false) => {
       setSpot(null);
@@ -131,7 +143,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
     else pick({ kind: 'poi', id: result.id });
   };
 
-  const booted = useFarmMapSync({ engine, boot, layers, view, filters, terrain, cinematic, focus, notify: push });
+  const booted = useFarmMapSync({ engine, boot, layers, view, filters, terrain, cinematic, focus, notify: push, picked: () => selectionRef.current !== null });
 
   const changeOffline = useCallback(
     (next: boolean) => {
@@ -186,6 +198,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const farm = selection?.kind === 'farm' ? data.farmById[selection.id] : null;
   const surroundings = useSurroundings(engine, farm?.lat ?? Number.NaN, farm?.lon ?? Number.NaN);
   const poi = selection?.kind === 'poi' ? data.poiById[selection.id] : null;
+  const ownFarm = selection?.kind === 'own' ? ownFarms.find((f) => f.id === selection.id) ?? null : null;
   const rightKey = route ? 'route' : selection ? `${selection.kind}-${selection.id}` : spot ? `site-${spot.lat}-${spot.lon}` : 'overview';
   const setLayer = (key: LayerKey, on: boolean) => setLayers((current) => ({ ...current, [key]: on }));
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
@@ -200,7 +213,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       <FarmMapTopBar
         view={view}
         farms={data.farms.length}
-        canRoute={!!selection && !route}
+        canRoute={!!selection && selection.kind !== 'own' && !route}
         searchRef={searchRef}
         onView={setView}
         onPick={pickSearch}
@@ -237,6 +250,19 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                 <RoutePanel route={route} onChange={planner.patch} onClose={planner.close} onStart={planner.start} />
               ) : farm && selection?.kind === 'farm' ? (
                 <FarmDetail farm={farm} field={selection.field} onRoute={planner.open} onFocus={() => engine?.focusFarm(farm)} onPick={pick} onOpenOps={onOpenOps} surroundings={surroundings} />
+              ) : ownFarm ? (
+                <OwnFarmDetail
+                  farm={ownFarm}
+                  onLink={(fieldId) => own.link(ownFarm.id, fieldId)}
+                  onFocus={() => {
+                    const centre = farmCentroid(ownFarm.spec);
+                    if (centre) engine?.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2200 });
+                  }}
+                />
+              ) : selection?.kind === 'own' ? (
+                <DetailSection>
+                  <p className="aq-fm-note">This farm is no longer listed. It may have been removed or the Farm Simulation API is not reachable.</p>
+                </DetailSection>
               ) : poi ? (
                 <PoiDetail poi={poi} onRoute={planner.open} onPick={pick} />
               ) : spot ? (
@@ -250,7 +276,23 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                   </DetailSection>
                 </>
               ) : (
-                <OverviewPanel farms={inView} stats={stats} onPick={pick} />
+                <>
+                  <DetailSection>
+                    <AqSectionLabel aside={own.error ? 'unavailable' : String(yours.length)}>Your farms</AqSectionLabel>
+                    {own.error ? <p className="aq-fm-note">Could not load your farms: {own.error}</p> : null}
+                    {!own.error && yours.length === 0 ? <p className="aq-fm-note">No farm onboarded yet. Import your boundary file to see a replica of your real farm here.</p> : null}
+                    {[...yours, ...demos].map((f) => (
+                      <button key={f.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'own', farm: f.id })}>
+                        <i className={`aq-fm-flag is-${f.status}`} aria-hidden="true" />
+                        <span className="aq-fm-near-copy">
+                          <span className="aq-fm-near-name">{f.spec.farm.name ?? f.id}</span>
+                          <span className="aq-fm-near-sub">{f.status === 'unknown' ? 'Unknown' : f.status} · {f.spec.parcels.length} parcels · {f.seed ? 'bundled demo contract' : 'from your boundary file'}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </DetailSection>
+                  <OverviewPanel farms={inView} stats={stats} onPick={pick} />
+                </>
               )}
             </div>
           </AqPanel>
