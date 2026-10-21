@@ -126,6 +126,7 @@ export default function AIChat() {
     <div className="chat-container">
       <div className="chat-header">
         <h1><MessageCircle size={28} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }}/> {t('chat.title')}</h1>
+        <a href="/council" style={{ marginRight: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', backgroundColor: 'rgba(22, 163, 74, 0.1)', border: '1px solid rgba(22, 163, 74, 0.3)', color: '#15803d', borderRadius: '20px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}><span>🌾 Alpha · ⚡ Lou · 💼 Qill Council</span><span style={{ fontSize: '11px', opacity: 0.8 }}>↗</span></a>
         <div className="llm-badge">
           <Sparkles size={14} /> {t('chat.powered')}
         </div>

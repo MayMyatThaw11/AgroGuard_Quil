@@ -22,6 +22,13 @@ export default {
       '/api': { target: API_TARGET, changeOrigin: true },
     },
   },
+  preview: {
+    proxy: {
+      ...farmSimulationProxy(API_TARGET, DISEASE_API_TARGET),
+      '/api/v1/ml': { target: DISEASE_API_TARGET, changeOrigin: true },
+      '/api': { target: API_TARGET, changeOrigin: true },
+    },
+  },
   build: {
     // Two pages in one app: AgroGuard itself, and the Farm Simulation page that
     // the /farm-simulation route shows inside the dashboard.

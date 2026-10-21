@@ -26,6 +26,7 @@ from app.api.v1.endpoints.water_forecast import router as water_forecast_router
 from app.api.v1.endpoints.water_irrigation import router as water_irrigation_router
 from app.api.v1.endpoints.water_scenario import router as water_scenario_router
 from app.api.v1.endpoints.water_weather import router as water_weather_router
+from app.api.v1.endpoints.council import router as council_router
 
 api_router = APIRouter()
 api_router.include_router(analytics_router)
@@ -54,4 +55,5 @@ api_router.include_router(water_forecast_router)
 api_router.include_router(water_irrigation_router)
 api_router.include_router(water_scenario_router)
 api_router.include_router(water_weather_router)
+api_router.include_router(council_router)
 

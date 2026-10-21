@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
 	ClipboardList,
 	CloudRain,
@@ -8,6 +9,11 @@ import {
 	Sprout,
 	TrendingUp,
 	TriangleAlert,
+	Scale,
+	ArrowRight,
+	Cpu,
+	Coins,
+	Zap,
 } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { API_BASE_URL } from '../api.js'
@@ -202,6 +208,159 @@ function Dashboard() {
 						</article>
 					)
 				})}
+			</section>
+
+			{/* AGROGUARD COUNCIL SUB BETA FEATURE CARD */}
+			<section className="rounded-3xl border border-(--ag-line) bg-(--ag-card) p-6 sm:p-7 shadow-xs space-y-5">
+				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-(--ag-line) pb-5">
+					<div className="space-y-1.5">
+						<div className="flex items-center gap-2 flex-wrap">
+							<span className="text-xs font-bold uppercase tracking-[0.18em] text-(--ag-accent)">
+								Frontier Multi-Agent Adjudication
+							</span>
+							<span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-0.5 text-[11px] font-bold text-emerald-800 border border-emerald-200/80">
+								<span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+								Sub Beta Feature
+							</span>
+							<span className="rounded-full bg-slate-950 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+								BETA
+							</span>
+						</div>
+						<h3 className="text-xl sm:text-2xl font-extrabold text-(--ag-text) flex items-center gap-2.5">
+							<Scale size={24} className="text-(--ag-accent)" />
+							<span>AgroGuard Council: Lou, Alpha & Qill</span>
+						</h3>
+						<p className={`text-xs sm:text-sm max-w-3xl ${muted}`}>
+							Constraint-driven multi-agent adjudication brain outthinking macro AgTech through ground-truth edge AI, generational agronomy, and IRL supply chain economics.
+						</p>
+					</div>
+
+					<Link
+						to="/council"
+						className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs transition-all hover:bg-emerald-700 hover:shadow-sm shrink-0"
+					>
+						<span>Open Council Console</span>
+						<ArrowRight size={16} />
+					</Link>
+				</div>
+
+				{/* High-contrast status pill (matching reference design Screen 5 dark card) */}
+				<div className="rounded-3xl bg-slate-950 p-5 sm:p-6 text-white shadow-sm space-y-4">
+					<div className="flex items-center justify-between gap-4 border-b border-slate-800/80 pb-3.5">
+						<div className="flex items-center gap-2 flex-wrap">
+							<span className="rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider">
+								Live Council Status
+							</span>
+							<span className="text-xs text-slate-300 font-medium">TYPE_2_LOCALIZED_STRESS Active</span>
+						</div>
+						<div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+							<span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+						</div>
+					</div>
+
+					<div className="space-y-1">
+						<h4 className="text-sm sm:text-base font-bold text-white tracking-tight">
+							Directive: Gravity Pre-Harvest Field Drainage & 21-Day PHI Chemical Lockout
+						</h4>
+						<p className="text-xs text-slate-400">
+							Tetens VPD: 0.54 kPa · Magnus Dew Point: 28.8 °C · 4/4 Sensor Consensus · Margin Advantage: +$236.21/ha
+						</p>
+					</div>
+
+					<div className="flex flex-wrap gap-2 text-[11px] font-mono pt-1">
+						<span className="rounded-full bg-slate-900 border border-slate-800 px-3 py-1 text-slate-300">
+							Lou: Edge Gate Clear
+						</span>
+						<span className="rounded-full bg-slate-900 border border-slate-800 px-3 py-1 text-slate-300">
+							Alpha: Bio Gate Armed
+						</span>
+						<span className="rounded-full bg-slate-900 border border-slate-800 px-3 py-1 text-slate-300">
+							Qill: 3x ROI Enforced
+						</span>
+					</div>
+				</div>
+
+				{/* 3 Domain Agents Summary Cards (Matching Reference Design Screen 9 Minimalist Grid) */}
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+					{/* Lou Card */}
+					<div className="rounded-2xl border border-(--ag-line) bg-(--ag-card-2) p-5 flex flex-col justify-between space-y-3">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div className="w-10 h-10 rounded-full bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
+									<Cpu size={18} />
+								</div>
+								<div>
+									<h4 className="text-sm font-bold text-(--ag-text)">Lou</h4>
+									<p className="text-[11px] text-sky-700 font-medium">Edge AI & Telemetry</p>
+								</div>
+							</div>
+							<span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+								APPROVE
+							</span>
+						</div>
+						<p className={`text-xs leading-relaxed ${muted}`}>
+							Ground-truth sensor validation outthinking satellite cloud cover. Detects clay shrinkage crack false alarms ($0 spend) and downlinks SX1262 LoRaWAN duty profile patches.
+						</p>
+					</div>
+
+					{/* Alpha Card */}
+					<div className="rounded-2xl border border-(--ag-line) bg-(--ag-card-2) p-5 flex flex-col justify-between space-y-3">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div className="w-10 h-10 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+									<Sprout size={18} />
+								</div>
+								<div>
+									<h4 className="text-sm font-bold text-(--ag-text)">Alpha</h4>
+									<p className="text-[11px] text-amber-800 font-medium">Generational Agronomist</p>
+								</div>
+							</div>
+							<span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+								APPROVE
+							</span>
+						</div>
+						<p className={`text-xs leading-relaxed ${muted}`}>
+							Muddy boots tactile prior enforcing 21-day Pre-Harvest Interval (PHI) biological guardrails. Replaces chemical panics with zero-cost perimeter gravity furrows and boot-heel tests.
+						</p>
+					</div>
+
+					{/* Qill Card */}
+					<div className="rounded-2xl border border-(--ag-line) bg-(--ag-card-2) p-5 flex flex-col justify-between space-y-3">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+									<Coins size={18} />
+								</div>
+								<div>
+									<h4 className="text-sm font-bold text-(--ag-text)">Qill</h4>
+									<p className="text-[11px] text-emerald-800 font-medium">Agri-Business Strategist</p>
+								</div>
+							</div>
+							<span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+								APPROVE
+							</span>
+						</div>
+						<p className={`text-xs leading-relaxed ${muted}`}>
+							Defends farmer working capital with strict 3x single-season ROI hurdles. Forward-contracts cooperative combine harvesters and locks Grade-1 export price premiums.
+						</p>
+					</div>
+				</div>
+
+				{/* 4 Failure Scenarios quick strip */}
+				<div className="rounded-2xl border border-dashed border-(--ag-line) p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+					<div className="flex items-center gap-2">
+						<Zap size={14} className="text-amber-500 shrink-0" />
+						<span className="font-semibold text-(--ag-text)">Interactive Test Harness:</span>
+						<span className={muted}>4 Ground Scenarios (Rain Threat, Clay Sensor Crack, Blight Risk, Fertilizer Spike)</span>
+					</div>
+					<Link
+						to="/council"
+						className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-800 hover:underline shrink-0"
+					>
+						<span>Explore Deliberation & AMCHAM Plan</span>
+						<ArrowRight size={14} />
+					</Link>
+				</div>
 			</section>
 
 			<section className={card}>

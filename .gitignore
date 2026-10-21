@@ -21,6 +21,7 @@ build/
 # keys.env.example templates are tracked
 .env
 .env.*
+*.env
 keys.env
 !.env.example
 !keys.env.example

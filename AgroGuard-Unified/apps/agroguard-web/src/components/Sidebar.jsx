@@ -1,4 +1,4 @@
-import { Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen, Droplets } from 'lucide-react'
+import { Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen, Droplets, Scale } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { useTheme } from '../contexts/ThemeContext.jsx'
@@ -11,6 +11,7 @@ const navItems = [
   { key: 'nav.disease', icon: ScanSearch, path: '/disease-detection' },
   { key: 'nav.water', icon: Droplets, path: '/water-management' },
   { key: 'nav.chat', icon: Bot, path: '/ai-chat' },
+  { key: 'nav.council', icon: Scale, path: '/council', badge: 'Beta' },
   { key: 'nav.iot', icon: RadioTower, path: '/iot-simulation' },
   { key: 'nav.updates', icon: HeartPulse, path: '/health-updates' },
   { key: 'nav.farmSimulation', icon: Box, path: '/farm-simulation' },
@@ -97,6 +98,13 @@ function Sidebar({ mobileSidebarOpen, collapsed, onClose, onToggleCollapsed }) {
             >
               <Icon size={18} className="shrink-0" />
               <span className={rail('lg:sr-only')}>{t(item.key)}</span>
+              {item.badge && (
+                <span
+                  className={`ml-auto rounded-full bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800 ${rail('lg:hidden')}`}
+                >
+                  {item.badge}
+                </span>
+              )}
             </NavLink>
           )
         })}

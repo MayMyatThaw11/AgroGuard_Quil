@@ -137,6 +137,7 @@ const translations = {
     "nav.ndvi": "NDVI Analysis",
     "nav.suggestion": "Crop Suggestion",
     "nav.chat": "AI Chat",
+    "nav.council": "AgroGuard Council",
     "nav.updates": "Health Updates",
 
     // Shared across Fertilizer / Water / Satellite / Export
@@ -717,6 +718,7 @@ const translations = {
     "nav.ndvi": "NDVI ဂြိုလ်တုပုံရိပ်",
     "nav.suggestion": "သီးနှံအကြံပြုချက်",
     "nav.chat": "AI စကားပြောခန်း",
+    "nav.council": "ကောင်စီ အကြံပြုချက် (Council)",
     "nav.updates": "ကျန်းမာရေးအပ်ဒိတ်များ",
 
     // Shared across Fertilizer / Water / Satellite / Export

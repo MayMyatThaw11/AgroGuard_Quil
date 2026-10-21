@@ -10,6 +10,7 @@ import DashboardLayout from './layouts/DashboardLayout.jsx'
 import DiseaseDetectionPage from './pages/DiseaseDetectionPage.jsx'
 import FarmSimulationPage from './pages/FarmSimulationPage.jsx'
 import PhotoReviewPage from './pages/PhotoReviewPage.jsx'
+import CouncilPage from './pages/CouncilPage.jsx'
 import LandingPage from './LandingPage.jsx'
 import './App.css'
 
@@ -24,6 +25,7 @@ function App() {
         <Route path="/disease-detection" element={<DiseaseDetectionPage />} />
         <Route path="/water-management" element={<WaterManagement />} />
         <Route path="/ai-chat" element={<AIChat />} />
+        <Route path="/council" element={<CouncilPage />} />
         <Route path="/health-updates" element={<HealthUpdates />} />
         <Route path="/photo-review" element={<PhotoReviewPage />} />
         <Route path="/iot-simulation" element={<IoTSimulation />} />
