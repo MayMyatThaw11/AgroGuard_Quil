@@ -26,8 +26,15 @@ class Settings(BaseSettings):
     telegram_polling_enabled: bool = True
 
     llm_api_key: SecretStr | None = None
-    llm_endpoint: str = "https://api.openai.com/v1"
-    llm_model: str = "gpt-4o"
+    # Groq's free tier, via its OpenAI-compatible API. Any other
+    # OpenAI-compatible /chat/completions provider works by changing these.
+    llm_endpoint: str = "https://api.groq.com/openai/v1"
+    llm_model: str = "llama-3.3-70b-versatile"
+    # Small, fast model that screens each chat question for farming relevance
+    # before the main model answers. Set llm_topic_guard_enabled=false to rely
+    # on the system prompt alone.
+    llm_topic_guard_enabled: bool = True
+    llm_topic_guard_model: str = "llama-3.1-8b-instant"
     openweather_api_key: SecretStr | None = None
     openweather_base_url: str = "https://api.openweathermap.org"
 
