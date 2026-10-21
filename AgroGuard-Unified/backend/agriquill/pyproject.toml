@@ -37,6 +37,7 @@ dev = [
     "pytest>=8,<10",
     "pytest-asyncio>=0.25,<2.0",
     "ruff>=0.9,<1.0",
+    "mypy>=1.13,<2.0",
 ]
 mcp = [
     "fastmcp>=4.0,<5.0",
@@ -60,3 +61,14 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+files = ["agriquill"]
+warn_redundant_casts = true
+no_implicit_optional = true
+# Run with: python -m mypy   (from backend/agriquill)
+
+[[tool.mypy.overrides]]
+# Libraries that ship no type information (or whose stubs aren't installed).
+module = ["h5py", "paramiko", "scipy.*", "joblib", "pandas", "pandas.*"]
+ignore_missing_imports = true

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -8,7 +9,7 @@ from typing import Any
 
 import numpy as np
 
-from . import crops, safety
+from . import crops, pest, safety
 from .config import get_settings
 
 DEFAULT_THRESHOLDS: dict[str, float] = {
@@ -177,6 +178,38 @@ class _Planner:
         )
 
 
+_NUMBER = re.compile(r"\d+(?:\.\d+)?")
+_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def _numbers(text: str) -> list[str]:
+    return _NUMBER.findall(_DATE.sub(" ", text).replace("m3", "m"))
+
+
+def untraced_numbers(task: Mapping[str, Any], ignore: Sequence[str] = ()) -> list[str]:
+    """Numbers a task states in its title or detail that no line of its evidence backs.
+
+    A number matches when it equals an evidence number at the precision it was written
+    (a "5 mm" in the text is backed by "5.3 mm" in the evidence). The task's own day
+    number, ISO dates and the names of fields, machines and standards are not quantities.
+    """
+    text = f"{task['title']} {task['detail']}"
+    for name in sorted(
+        {*ignore, task.get("paddy_id") or "", task.get("asset_id") or ""}, key=len, reverse=True
+    ):
+        if name:
+            text = text.replace(name, " ")
+    backing = [float(n) for line in task["evidence"] for n in _numbers(str(line))]
+    backing.append(float(task["day_offset"] + 1))
+    missing: list[str] = []
+    for written in _numbers(text):
+        places = len(written.split(".")[1]) if "." in written else 0
+        slack = 0.5 * 10**-places + 1e-9
+        if not any(abs(float(written) - v) <= slack for v in backing):
+            missing.append(written)
+    return list(dict.fromkeys(missing))
+
+
 def _first(values: Sequence[float], predicate: Any) -> int | None:
     for index, value in enumerate(values):
         if predicate(value):
@@ -258,7 +291,10 @@ def _water_steward(plan: _Planner) -> list[str]:
                         paddy_id=paddy.id,
                         day_offset=breach,
                         priority="low",
-                        evidence=[f"rain before threshold {rain_before:.1f} mm"],
+                        evidence=[
+                            f"p50 day {breach + 1}: {p50[breach]:.1f} cm",
+                            f"rain before threshold {rain_before:.1f} mm",
+                        ],
                     )
                 else:
                     when = max(breach - 1, 0)
@@ -286,6 +322,7 @@ def _water_steward(plan: _Planner) -> list[str]:
                         evidence=[
                             f"p50 day {breach + 1}: {p50[breach]:.1f} cm",
                             f"floor {floor:.0f} cm ({paddy.stage})",
+                            f"re-flood target {target:.0f} cm",
                             f"estimated volume {volume_m3:.0f} m3",
                             *([] if pump else [f"no pump registered for {paddy.id}"]),
                         ],
@@ -370,6 +407,54 @@ def _pest_watcher(plan: _Planner) -> int | None:
     return None
 
 
+def _rule_blast_dates(plan: _Planner) -> list[str]:
+    """Every day the daily blast rule calls risky, for comparison with the shadow model."""
+    low, high = plan.t["blast_temp_min_c"], plan.t["blast_temp_max_c"]
+    need = int(plan.t["blast_consecutive_days"])
+    run = 0
+    dates: list[str] = []
+    for offset, day in enumerate(plan.weather):
+        favourable = day.rh_pct >= plan.t["blast_rh_pct"] and low <= day.temp_c <= high
+        run = run + 1 if favourable else 0
+        if run >= need:
+            dates.append(plan.day(offset))
+    return dates
+
+
+def _blb_watcher(plan: _Planner) -> None:
+    """Bacterial leaf blight: a hard, windy rain wounds the leaves the germ gets in through."""
+    rice = [
+        p.id
+        for p in plan.paddies
+        if crops.get_crop(p.crop_id).category in RICE_CATEGORIES and p.stage != "Ripening"
+    ]
+    if not rice:
+        return
+    rain_limit, wind_limit = (
+        pest.PEST_THRESHOLDS["blb_rain_mm"],
+        pest.PEST_THRESHOLDS["blb_wind_ms"],
+    )
+    previous = False
+    for offset, day in enumerate(plan.weather):
+        storm = day.rain_mm >= rain_limit and day.wind_ms >= wind_limit
+        if storm and not previous:
+            plan.add(
+                "pest_watcher",
+                f"Storm advisory: check {', '.join(rice)} for leaf blight",
+                f"{day.rain_mm:.0f} mm of rain with {day.wind_ms:.1f} m/s wind is forecast on day "
+                f"{offset + 1}. Storms like this wound leaves and let bacterial leaf blight in. "
+                "After the storm, look for yellow to white streaks from the leaf tips, and ask "
+                "your agronomist before applying anything.",
+                day_offset=min(offset + 1, len(plan.weather) - 1),
+                priority="medium",
+                evidence=[
+                    f"day {offset + 1}: rain {day.rain_mm:.1f} mm, wind {day.wind_ms:.1f} m/s",
+                    f"storm limits {rain_limit:.0f} mm and {wind_limit:.1f} m/s (TO VERIFY)",
+                ],
+            )
+        previous = storm
+
+
 def _harvest_planner(plan: _Planner) -> None:
     horizon = len(plan.weather)
     need = int(plan.t["harvest_dry_days"])
@@ -407,8 +492,11 @@ def _harvest_planner(plan: _Planner) -> None:
             day_offset=window,
             priority="medium",
             evidence=[
-                f"day {i + 1}: {plan.weather[i].rain_mm:.1f} mm"
-                for i in range(window, window + need)
+                f"maturity within {early} days; {need} dry days needed",
+                *[
+                    f"day {i + 1}: {plan.weather[i].rain_mm:.1f} mm"
+                    for i in range(window, window + need)
+                ],
             ],
         )
     if waiting:
@@ -418,7 +506,10 @@ def _harvest_planner(plan: _Planner) -> None:
             f"{', '.join(waiting)} reach maturity in this horizon but no {need}-day dry run "
             "follows. Prepare tarpaulins and the drying floor, and check again tomorrow.",
             priority="medium",
-            evidence=[f"rain forecast: {[round(w.rain_mm, 1) for w in plan.weather]}"],
+            evidence=[
+                f"dry run needed: {need} days",
+                f"rain forecast: {[round(w.rain_mm, 1) for w in plan.weather]}",
+            ],
         )
 
 
@@ -452,7 +543,10 @@ def _drone_pilot(plan: _Planner, pest_day: int | None) -> None:
             day_offset=pest_day,
             priority="medium",
             blocked_reason="REJECTED_WIND_EXCEEDED",
-            evidence=[f"winds: {[round(w.wind_ms, 1) for w in plan.weather[pest_day:]]}"],
+            evidence=[
+                f"hard ceiling {ceiling} m/s",
+                f"winds: {[round(w.wind_ms, 1) for w in plan.weather[pest_day:]]}",
+            ],
         )
         return
     day = plan.weather[chosen]
@@ -489,6 +583,7 @@ def plan_operations(
     start: date,
     standard: str | None = None,
     thresholds: Mapping[str, float] | None = None,
+    hourly: Mapping[str, Sequence[Any]] | None = None,
 ) -> dict[str, Any]:
     if not weather:
         raise ValueError("a weather forecast is required")
@@ -497,9 +592,23 @@ def plan_operations(
     calm = _water_steward(plan)
     _crop_scout(plan)
     pest_day = _pest_watcher(plan)
+    _blb_watcher(plan)
     _harvest_planner(plan)
     _drone_pilot(plan, pest_day)
 
+    names = [
+        *(p.id for p in paddies),
+        *(a.id for a in assets),
+        *([standard] if standard else []),
+        *(safety.prohibited_for(standard) or ()),
+    ]
+    for task in plan.tasks:
+        missing = untraced_numbers(task, names)
+        task["numbers_checked"] = not missing
+        if missing and not task["blocked_reason"]:
+            task["blocked_reason"] = (
+                f"UNTRACED_NUMBER:{', '.join(missing)} in the text is not backed by the evidence"
+            )
     rank = {"high": 0, "medium": 1, "low": 2}
     plan.tasks.sort(key=lambda t: (t["day_offset"], rank[t["priority"]]))
     counts = {member["id"]: 0 for member in CREW}
@@ -510,6 +619,15 @@ def plan_operations(
         "crew": [{**member, "task_count": counts[member["id"]]} for member in CREW],
         "paddies_without_action": calm,
         "thresholds": {**resolved, "status": THRESHOLD_STATUS},
+        "pest_thresholds": {**pest.PEST_THRESHOLDS, "status": pest.PEST_STATUS},
+        "shadow": {
+            "blast": pest.shadow_blast(
+                hourly,
+                resolved["blast_temp_min_c"],
+                resolved["blast_temp_max_c"],
+                _rule_blast_dates(plan),
+            )
+        },
         "approval_policy": "Every actuation is a proposal. It runs only after an authenticated "
         "human approval through /actuation/approve.",
     }

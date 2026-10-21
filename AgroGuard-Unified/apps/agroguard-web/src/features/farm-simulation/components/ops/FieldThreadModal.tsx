@@ -4,6 +4,7 @@ import type { Mission } from '../../lib/fieldMissions.ts';
 import type { AgronomyContext } from '../../lib/agronomist.ts';
 import { useFieldMissionStore } from '../../store/fieldMissionStore.ts';
 import { AqButton, AqBadge } from '../aq/aqPrimitives.tsx';
+import { MissionApproval } from './MissionApproval.tsx';
 
 interface FieldThreadModalProps {
   mission: Mission;
@@ -65,6 +66,8 @@ export const FieldThreadModal: React.FC<FieldThreadModalProps> = ({ mission, con
             )}
           </div>
         )}
+
+        {mission.kind === 'command' && mission.phase === 'proposed' && <MissionApproval missionId={mission.id} />}
 
         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5 max-h-72">
           {mission.thread.map((item, idx) => {

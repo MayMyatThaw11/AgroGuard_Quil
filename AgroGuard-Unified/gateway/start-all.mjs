@@ -116,6 +116,10 @@ const processes = [
     command: agriquillPython,
     args: ['-m', 'uvicorn', 'agriquill.api.main:app', '--host', '127.0.0.1', '--port', String(apps.agriquill.apiPort)],
     cwd: apps.agriquill.backendDir,
+    // The API defaults to production, which has no built-in demo sign-in and
+    // refuses to start with no users configured. This launcher is local
+    // development, so say so unless the shell or gateway/.env already sets it.
+    env: { AGRIQUILL_ENVIRONMENT: process.env.AGRIQUILL_ENVIRONMENT ?? 'development' },
   },
   { name: 'gateway', command: process.execPath, args: [join(here, 'server.mjs')], cwd: here },
 ]

@@ -87,7 +87,7 @@ test('Field mission store: approving a proposed command queues and advances miss
     standard: 'ASEAN_ORGANIC_ASOA',
   });
 
-  const failure = store.approve(mission.id, '1234');
+  const failure = store.approve(mission.id, '1234', true);
   assert.equal(failure, null);
 
   const approved = useFieldMissionStore.getState().missions.find((m) => m.id === mission.id);

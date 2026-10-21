@@ -5,6 +5,8 @@ export const REPORTER_KEY = 'agriquill.reporter';
 export const WRONG_OWNER = 'That name does not own this code';
 export const STORAGE_BLOCKED = 'Your browser blocked saving the sign-in';
 export const WRONG_CODE = 'That access code is not right. Check it with your farm manager.';
+export const OFFLINE_UNSIGNED =
+  'The farm service cannot be reached, and nobody has signed in on this device. Connect and try again.';
 
 export interface Session {
   name: string;
@@ -39,6 +41,16 @@ function storedReporter(): string {
   } catch {
     return '';
   }
+}
+
+// Offline field work: when the server cannot be reached, carry on as the person who
+// already signed in on this device. With no stored sign-in there is nobody to carry on
+// as, so the caller must not show farm screens. The server still checks every request.
+export function resumeStoredSession(): Session | null {
+  const name = storedReporter();
+  if (!name || !accessCode()) return null;
+  active = { name, roles: [] };
+  return active;
 }
 
 export async function signIn(name: string, code: string): Promise<Session> {

@@ -122,6 +122,9 @@ export function blockedLabel(reason: string | null): string | null {
     const gate = detail.split(':')[0];
     return `No safe window: ${GATE_LABEL[gate] ?? gate} (${detail.slice(gate.length + 1) || 'all hours'})`;
   }
+  if (reason.startsWith('UNTRACED_NUMBER:')) {
+    return `Held: a number in this advice has no source (${reason.slice('UNTRACED_NUMBER:'.length)}). Ask your agronomist.`;
+  }
   if (reason.startsWith('NO_CAPACITY:')) return `No free crew or machine: ${reason.slice('NO_CAPACITY:'.length)}`;
   return reason;
 }

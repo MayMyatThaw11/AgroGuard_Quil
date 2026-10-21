@@ -145,7 +145,10 @@ def test_ml_crop_predict_and_plant_recommend():
     body = r1.json()
     assert isinstance(body["crop"], str) and body["crop"]
     assert 0 <= body["confidence_percent"] <= 100
-    assert body["accuracy_design_target"].startswith("95-98%")
+    assert body["validation"]["held_out_accuracy"] is None
+    assert body["validation"]["validated_on_field_data"] is False
+    retired = {"accuracy_design_target", "heldout_accuracy_on_bundled_synthetic_dataset"}
+    assert not retired & set(body)
     r2 = client.post(
         "/api/v1/agriquill/ml/plant-recommend",
         json={"soil_ph": 6.5, "rainfall_mm": 900, "temperature_c": 25.0, "limit": 3},

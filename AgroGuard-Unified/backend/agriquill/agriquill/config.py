@@ -2,15 +2,32 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 KEYS_FILE = str(BACKEND_DIR / "keys.env")
 
 
+DEVELOPMENT = "development"
+# Sign-in, approval and webhook secrets. API keys for data providers are left
+# alone: their blank values are matched by existing provider code.
+BLANK_MEANS_UNSET = (
+    "write_token",
+    "users",
+    "builtin_user",
+    "actuation_pin",
+    "telemetry_webhook_token",
+    "telemetry_ttn_token",
+    "telemetry_chirpstack_token",
+)
+
+
 class Settings(BaseSettings):
-    environment: str = "development"
+    # Fails closed: a forgotten variable means "production", where sign-in is
+    # mandatory and the built-in demo sign-in is off. Local runs set
+    # AGRIQUILL_ENVIRONMENT=development (npm run start does this itself).
+    environment: str = "production"
     soilgrids_endpoint: str = "https://rest.isric.org/soilgrids/v2.0/properties/query"
     openmeteo_endpoint: str = "https://api.open-meteo.com/v1/forecast"
     http_timeout_s: float = 30.0
@@ -26,13 +43,28 @@ class Settings(BaseSettings):
     job_interval_s: float = 0.0
     watch_interval_s: float = 0.0
     scheduler_time_limit_s: float = 5.0
+    # Shared fallback; prefer one token per network so one leak can't forge the other.
     telemetry_webhook_token: SecretStr | None = None
+    telemetry_ttn_token: SecretStr | None = None
+    telemetry_chirpstack_token: SecretStr | None = None
+    # The AgroGuard bridge posts readings for its own sensors ("agroguard:<id>"),
+    # which no farm contract declares. Only this named user may do that.
+    bridge_user: str = "agroguard-bridge"
+    bridge_device_prefix: str = "agroguard:"
+    # Actuation approval limits (in memory, per server process).
+    pin_failures_per_caller: int = 5
+    pin_failures_global: int = 20
+    pin_failure_window_s: float = 600.0
+    approvals_per_minute_per_caller: int = 5
+    approvals_per_minute_global: int = 30
     actuation_pin: SecretStr | None = None
     write_token: SecretStr | None = None
     users: SecretStr | None = None
     # Built-in Farm Simulation sign-in (name:code:roles[:farms]), always accepted
     # alongside AGRIQUILL_USERS. Override with AGRIQUILL_BUILTIN_USER, or set it
     # empty to turn it off.
+    # Honoured only when environment is "development": a code that is public in
+    # the source must never open a production server.
     builtin_user: SecretStr | None = SecretStr("Farm Manager:FARMSIM-2026:manager,crew:*")
     public_farms: str = "farm_ayeyarwady_demo"
     nasa_power_endpoint: str = "https://power.larc.nasa.gov/api/temporal/daily/point"
@@ -66,6 +98,17 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator(*BLANK_MEANS_UNSET, mode="before")
+    @classmethod
+    def _blank_is_unset(cls, value: object) -> object:
+        # "AGRIQUILL_WRITE_TOKEN=" as shipped in .env.example is not a configured
+        # secret. Without this a blank value looked set, and sign-in checks passed.
+        return None if isinstance(value, str) and not value.strip() else value
+
+    @property
+    def is_development(self) -> bool:
+        return self.environment.strip().lower() == DEVELOPMENT
 
 
 _settings: Settings | None = None

@@ -140,8 +140,7 @@ def test_frontend_farm_sites_match_the_committed_snapshot() -> None:
     from agriquill.data import farm_sites
 
     target = (
-        Path(__file__).resolve().parents[3]
-        / "apps/agriquill-ide/src/lib/livetwin/farmSites.ts"
+        Path(__file__).resolve().parents[3] / "apps/agriquill-ide/src/lib/livetwin/farmSites.ts"
     )
     assert target.read_text("utf-8") == farm_sites.to_typescript()
 

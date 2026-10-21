@@ -5,10 +5,13 @@ from app.services.agriculture_data import (
     crop_analysis,
     dashboard_data,
     dataset_summary,
+    ndvi_boundaries,
     ndvi_rainfall_correlation,
     ndvi_regions,
     ndvi_series,
 )
+from app.services.climate import ClimateUnavailableError
+from app.services.ndvi_environment import ndvi_environment_correlation
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -41,6 +44,21 @@ def get_crop_analysis():
 @router.get("/ndvi-regions")
 def get_ndvi_regions():
     return _run(ndvi_regions)
+
+
+@router.get("/ndvi-boundaries")
+def get_ndvi_boundaries():
+    return _run(ndvi_boundaries)
+
+
+@router.get("/ndvi-environment-correlation")
+async def get_ndvi_environment_correlation(pcode: str = Query(min_length=3, max_length=16)):
+    try:
+        return await ndvi_environment_correlation(pcode)
+    except AgricultureDatasetError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ClimateUnavailableError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 
 @router.get("/ndvi-data")

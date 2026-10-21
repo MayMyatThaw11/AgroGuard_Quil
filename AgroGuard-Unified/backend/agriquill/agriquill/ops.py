@@ -50,6 +50,7 @@ def build_plan(payload: Mapping[str, Any]) -> dict[str, Any]:
         start,
         payload.get("standard"),
         payload.get("threshold_overrides") or None,
+        payload.get("hourly"),
     )
     out = {"farm_id": payload["farm_id"], "forecast": result, **plan}
     hourly = payload.get("hourly")

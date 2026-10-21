@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 
-from . import contract, crops, live, safety, telemetry
+from . import contract, crops, geometry, live, safety, telemetry
 from .agronomy import RICE_KC, RICE_KC_SOURCE, STAGE_KC
 from .config import get_settings
 from .data import soil, weather
@@ -137,6 +137,9 @@ def read_boundaries(path: Path) -> dict[str, list[list[float]]]:
             raise ValueError(f"{path.name}: {name or key} needs at least three corners")
         if not all(-90 <= lat <= 90 and -180 <= lon <= 180 for lat, lon in ring):
             raise ValueError(f"{path.name}: {name or key} has a point outside the globe")
+        problem = geometry.ring_problem(ring)
+        if problem:
+            raise ValueError(f"{path.name}: {name or key} is not a usable field, {problem}")
         if key in out:
             raise ValueError(f"{path.name}: two boundaries are both named {key}")
         out[key] = ring
@@ -252,7 +255,7 @@ def build_contract(
                 )
             )
             drawn = contract.ring_area_ha(ring)
-            if area and abs(drawn - area) > 0.2 * area:
+            if geometry.area_mismatch(area, drawn):
                 notes.append(f"{pid}: field sheet says {area} ha, the boundary measures {drawn} ha")
         elif row.get("lat") is not None:
             points.append((row["lat"], row["lon"]))
@@ -574,10 +577,11 @@ def _spray_days(hourly: dict[str, list[Any]], spec: dict[str, Any]) -> dict[str,
         if hourly["wind_speed_10m"][i] is None or hourly["is_day"][i] == 0:
             continue
         days.setdefault(stamp[:10], 0)
-        if mask[i] is None:
+        failure = mask[i]
+        if failure is None:
             days[stamp[:10]] += 1
-        elif _gate_failed(mask[i]):
-            reasons[mask[i].split(":")[0]] += 1
+        elif _gate_failed(failure):
+            reasons[failure.split(":")[0]] += 1
     closed = sorted(d for d, open_hours in days.items() if open_hours == 0)
     return {
         "days": len(days),

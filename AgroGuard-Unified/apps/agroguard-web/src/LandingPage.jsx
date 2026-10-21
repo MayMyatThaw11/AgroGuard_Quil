@@ -73,7 +73,7 @@ const farmSimPoints = [
 const signals = [
   { label: 'Vegetation health', value: '0.71', icon: Leaf },
   { label: 'Crop condition match', value: '94%', icon: Sparkles },
-  { label: 'Field insights', value: 'Live', icon: LineChart },
+  { label: 'Field insights', value: 'Sample', icon: LineChart },
 ]
 
 const impactHighlights = [
@@ -268,10 +268,10 @@ function LandingPage() {
                 <div className="flex items-center justify-between border-b border-myanglow-sage/60 pb-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-myanglow-medium">Field intelligence</p>
-                    <h2 className="mt-2 text-xl font-semibold text-myanglow-navy">Farm overview</h2>
+                    <h2 className="mt-2 text-xl font-semibold text-myanglow-navy">Example farm overview</h2>
                   </div>
                   <span className="inline-flex items-center gap-2 rounded-full bg-myanglow-sage/50 px-3 py-1.5 text-xs font-semibold text-myanglow-darkGreen">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-myanglow-bright-lime" /> Active
+                    <span className="h-2 w-2 rounded-full bg-slate-400" /> Illustration
                   </span>
                 </div>
 
@@ -280,7 +280,7 @@ function LandingPage() {
                     <div key={label} className="rounded-2xl border border-myanglow-sage/70 bg-white p-4 shadow-sm">
                       <div className="flex items-center justify-between text-myanglow-forest">
                         <Icon size={18} />
-                        <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400">Insight</span>
+                        <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400">Example</span>
                       </div>
                       <p className="mt-5 text-2xl font-semibold text-myanglow-navy">{value}</p>
                       <p className="mt-1 text-xs text-slate-500">{label}</p>
@@ -293,7 +293,7 @@ function LandingPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-myanglow-medium">Vegetation trend</p>
-                        <p className="mt-2 text-sm text-slate-600">Healthy growth over six months</p>
+                        <p className="mt-2 text-sm text-slate-600">Example vegetation trend (illustration, not real data)</p>
                       </div>
                       <Radar size={24} className="text-myanglow-forest" />
                     </div>
@@ -306,9 +306,9 @@ function LandingPage() {
 
                   <div className="rounded-2xl bg-myanglow-navy p-5 text-white">
                     <Sprout size={25} className="text-myanglow-bright-lime" />
-                    <p className="mt-7 text-xs uppercase tracking-[0.2em] text-slate-400">Recommended</p>
+                    <p className="mt-7 text-xs uppercase tracking-[0.2em] text-slate-400">Example result</p>
                     <p className="mt-2 text-3xl font-semibold">Rice</p>
-                    <p className="mt-2 text-sm text-myanglow-sage">94% field match</p>
+                    <p className="mt-2 text-sm text-myanglow-sage">sample match score</p>
                   </div>
                 </div>
               </div>
@@ -394,7 +394,7 @@ function LandingPage() {
               </div>
               <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-myanglow-sage">
                 <span className="h-2 w-2 rounded-full bg-myanglow-bright-lime" />
-                Day 42 of 120
+                Example season, day 42 of 120
               </span>
             </div>
             <svg
@@ -450,7 +450,7 @@ function LandingPage() {
               <div className="impact-reveal impact-reveal-delayed grid grid-cols-3 gap-3">
                 {[
                   ['5', 'connected tools'],
-                  ['24/7', 'field visibility'],
+                  ['ASEAN', 'price data'],
                   ['1', 'simple workspace'],
                 ].map(([value, label]) => (
                   <div key={label} className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur-sm">

@@ -12,10 +12,23 @@ class CropSuggestionRequest(BaseModel):
     language: Literal["en", "my"] = "en"
 
 
+class ModelInfo(APIModel):
+    """What the suggestion is, so a screen can say so instead of implying more."""
+
+    name: str
+    trained_on: str
+    # False until the model is scored on real field outcomes.
+    validated_on_field_data: bool
+    # The scores rank crops against each other (the top one is always near the top of the
+    # scale); they are not a probability of success.
+    score_is_probability: bool
+
+
 class CropSuggestionResponse(APIModel):
     crop: str
     confidence_percent: float = Field(ge=0, le=100)
     recommendations: list["CropRecommendation"]
+    model_info: ModelInfo
 
 
 class CropRecommendation(APIModel):

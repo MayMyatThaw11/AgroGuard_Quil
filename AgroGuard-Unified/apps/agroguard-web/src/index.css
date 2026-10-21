@@ -178,3 +178,200 @@ body {
     height: 100dvh;
   }
 }
+
+/* Dashboard theme. The tokens are what the redesigned dashboard reads; the dark block also
+   re-points the Tailwind palette, so the other pages inside the dashboard shell follow it.
+   data-theme is set on the shell only, so the landing page and Farm Simulation are untouched. */
+:root {
+  --ag-bg: #f1f6f1;
+  --ag-card: #ffffff;
+  --ag-card-2: #e3ede5;
+  --ag-line: #d0dfd3;
+  --ag-text: #14261b;
+  --ag-muted: #46604f;
+  --ag-accent: #1d6a39;
+  --ag-bar: #2e8a4c;
+  --ag-warn-bg: #fff1e3;
+  --ag-warn-line: #c9722f;
+  --ag-warn: #8a3b07;
+  --ag-ok-bg: #e0f1e4;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ag-bg: #0f1a14;
+  --ag-card: #172a20;
+  --ag-card-2: #22392c;
+  --ag-line: #2c4636;
+  --ag-text: #eaf3ec;
+  --ag-muted: #a9c4b1;
+  --ag-accent: #8fd3a0;
+  --ag-bar: #8fd3a0;
+  --ag-warn-bg: #2b1d14;
+  --ag-warn-line: #c9722f;
+  --ag-warn: #ffd2a8;
+  --ag-ok-bg: #1d3a2a;
+
+  --color-white: #172a20;
+  --color-slate-50: #12201a;
+  --color-slate-100: #172a20;
+  --color-slate-200: #2c4636;
+  --color-slate-300: #3a5a45;
+  --color-slate-400: #86a08f;
+  --color-slate-500: #a9c4b1;
+  --color-slate-600: #c4d8ca;
+  --color-slate-700: #d9e8dd;
+  --color-slate-800: #e6f0e8;
+  --color-slate-900: #eaf3ec;
+  --color-gray-50: #12201a;
+  --color-gray-100: #172a20;
+  --color-gray-200: #2c4636;
+  --color-gray-300: #3a5a45;
+  --color-gray-400: #86a08f;
+  --color-gray-500: #a9c4b1;
+  --color-gray-600: #c4d8ca;
+  --color-gray-700: #d9e8dd;
+  --color-gray-800: #e6f0e8;
+  --color-gray-900: #eaf3ec;
+  --color-myanglow-navy: #eaf3ec;
+  --color-myanglow-sage: #2c4636;
+  --color-myanglow-forest: #8fd3a0;
+  --color-myanglow-medium: #8fd3a0;
+  --color-myanglow-dark-green: #8fd3a0;
+  --color-myanglow-darkGreen: #8fd3a0;
+  --color-mint-200: #22392c;
+  --color-emerald-50: #1d3a2a;
+  --color-emerald-100: #1d3a2a;
+  --color-emerald-700: #8fd3a0;
+  --color-green-50: #1d3a2a;
+  --color-green-100: #1d3a2a;
+  --color-green-700: #8fd3a0;
+  --color-amber-50: #2b1d14;
+  --color-amber-100: #2b1d14;
+  --color-amber-700: #ffd2a8;
+  --color-amber-800: #ffd2a8;
+  --color-rose-50: #3a1a19;
+  --color-rose-100: #3a1a19;
+  --color-rose-700: #ffb4b0;
+  --color-red-50: #3a1a19;
+  --color-red-100: #3a1a19;
+  --color-red-700: #ffb4b0;
+  --color-sky-50: #12333a;
+  --color-sky-100: #12333a;
+  --color-sky-700: #7fd6dd;
+}
+
+[data-theme="dark"] .glass-panel {
+  border-color: var(--ag-line);
+  background: var(--ag-card);
+  box-shadow: none;
+}
+
+[data-theme="dark"] .iot-simulation {
+  background: var(--ag-bg);
+}
+
+/* Burmese needs more line height than Latin to keep its stacked marks apart. */
+html:lang(my) body {
+  line-height: 1.75;
+}
+
+/* Dark mode for the pages styled in App.css. Those rules hard-code light colours, so each
+   family of them is re-pointed here; the --ag-* tokens keep it the same palette as the dashboard. */
+[data-theme="dark"] {
+  --text: #eaf3ec;
+  --text-muted: #a9c4b1;
+  --border: #2c4636;
+  --primary: #8fd3a0;
+  --secondary: #8fd3a0;
+}
+
+[data-theme="dark"] :is(
+  .btn-outline, .mode-toggle button.active, .ndvi-info-btn, .weather-card, .suggestion-crop-icon,
+  .suggestion-stats div, .suggestion-pop-card, .suggestion-close, .crop-detail,
+  .crop-calculator-card input, .bot-bubble, .starter-chip, .health-card-media button,
+  .photo-picker-btn, .location-map-card, .chat-input-container,
+  .form-group input, .form-group select, .form-group textarea, .ndvi-controls select
+) {
+  background: var(--ag-card);
+  color: var(--text);
+}
+
+[data-theme="dark"] :is(
+  .advisory-card, .suggestion-hero, .recommendation-option, .crop-stats > div,
+  .crop-calculator-card, .health-photo-preview, .health-card-media img, .health-stats > div,
+  .photo-picker, .photo-review-image, .health-note, .recommendation-bar, .mode-toggle,
+  .ai-explanation
+) {
+  background: var(--ag-card-2);
+}
+
+[data-theme="dark"] :is(.btn-outline:hover:not(:disabled), .suggestion-close:hover, .starter-chip:hover) {
+  background: var(--ag-card-2);
+}
+
+[data-theme="dark"] :is(.ndvi-info-btn:hover, .ndvi-info-btn.active, .photo-picker:hover, .photo-picker.is-dragging, .recommendation-option.active) {
+  background: #1d3a2a;
+}
+
+/* Filled green controls keep dark text: white on the light dark-mode green would not read. */
+[data-theme="dark"] :is(
+  .match-badge, .recommendation-rank, .user-bubble, .health-filter button.active, .photo-picker-btn.is-primary
+) {
+  background: var(--primary);
+  color: #0f1a14;
+}
+
+[data-theme="dark"] :is(.health-note-warn, .crop-model-note, .advisory-card.warning) {
+  background: var(--ag-warn-bg);
+  color: var(--ag-warn);
+}
+
+[data-theme="dark"] :is(
+  .api-error, .crop-suggestion-error, .health-note-error, .advisory-card.danger
+) {
+  border-color: #6a2b29;
+  background: #3a1a19;
+  color: #ffb4b0;
+}
+
+[data-theme="dark"] :is(.health-disease, .health-badge.is-diseased) {
+  color: #ffb4b0;
+}
+
+[data-theme="dark"] .health-badge.is-healthy {
+  background: rgba(143, 211, 160, 0.18);
+  color: #8fd3a0;
+}
+
+[data-theme="dark"] .ndvi-info-popover {
+  background: #12333a;
+  color: var(--text);
+}
+
+[data-theme="dark"] .ai-explanation,
+[data-theme="dark"] .bot-bubble {
+  color: var(--text);
+}
+
+[data-theme="dark"] .chat-input-container input {
+  background: var(--ag-card-2);
+  color: var(--text);
+}
+
+/* Map tiles are light by nature; dim them so the map does not glare against the dark page. */
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: brightness(0.72) contrast(1.05) saturate(0.85);
+}
+
+[data-theme="dark"] {
+  --ag-explainer: #12333a;
+  --ag-explainer-ink: #7fd6dd;
+}
+
+/* District outlines on the NDVI map keep their own colours; only the tooltip needs a dark skin. */
+[data-theme="dark"] .leaflet-tooltip {
+  border-color: var(--ag-line);
+  background: var(--ag-card);
+  color: var(--ag-text);
+}

@@ -152,11 +152,13 @@ def _effort(result: dict[str, Any]) -> dict[str, Any]:
         for name, rows in entry.items():
             dataset = name
             cells.extend(rows or [])
-    hours: Counter[str] = Counter()
+    hours: dict[str, float] = {}
     for cell in cells:
-        hours[cell.get("flag") or "unknown"] += float(cell["hours"])
+        flag = cell.get("flag") or "unknown"
+        hours[flag] = hours.get(flag, 0.0) + float(cell["hours"])
+    by_hours = sorted(hours.items(), key=lambda item: item[1], reverse=True)
     return {
-        "hours_by_flag": {flag: round(h, 1) for flag, h in hours.most_common()},
+        "hours_by_flag": {flag: round(h, 1) for flag, h in by_hours},
         "total_hours": round(sum(hours.values()), 1),
         "grid_cells": len(cells),
         "resolution_deg": 0.1,

@@ -524,6 +524,7 @@ def build_live(farm_id: str, client: Any = None) -> dict[str, Any]:
         today,
         spec["farm"]["standard"],
         contract.to_thresholds(spec) or None,
+        future,
     )
     sched_terms = contract.terms_for(spec).get("schedule", {})
     gates_by_paddy: dict[str | None, dict[str, Any]] = {
@@ -537,6 +538,8 @@ def build_live(farm_id: str, client: Any = None) -> dict[str, Any]:
         gates_by_paddy,
         sched_terms.get("durations_h"),
         sched_terms.get("crew"),
+        positions=contract.parcel_positions(spec),
+        travel_kmh=sched_terms.get("travel_kmh"),
     )
     return {
         "farm_id": farm_id,

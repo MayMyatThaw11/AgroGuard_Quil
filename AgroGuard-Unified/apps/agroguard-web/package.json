@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.farm-simulation.json",
+    "test:photo": "node --test \"tests/photo/*.test.js\"",
     "test:farm-sim": "node --test --experimental-strip-types --test-skip-pattern \"Acceptance Test 4\" \"tests/farm-simulation/*.test.ts\"",
     "test:farm-sim:integration": "node --test --experimental-strip-types \"tests/farm-simulation/integration/*.test.ts\"",
     "test:farm-sim:network": "node --test --experimental-strip-types --test-name-pattern \"Acceptance Test 4\" tests/farm-simulation/acceptance_gate.test.ts"
@@ -24,6 +25,7 @@
     "axios": "^1.18.1",
     "canvas-confetti": "^1.9.4",
     "chart.js": "^4.5.1",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.52.0",
     "luxon": "^3.7.2",
     "maplibre-gl": "6.14.0",

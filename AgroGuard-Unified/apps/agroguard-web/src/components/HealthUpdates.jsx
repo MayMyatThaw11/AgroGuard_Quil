@@ -1,17 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { API_BASE_URL, DEMO_FIELD_ID } from '../api';
 import { PLANT_GROUPS } from '../data/plantGroups';
 import { loadCropConditions } from '../lib/cropConditions';
+import PhotoPicker from './PhotoPicker';
+import { interpretDisease, isBackgroundClass } from '../lib/diseaseVerdict';
+import { checkPhotoQuality } from '../lib/photoQuality';
 
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const STATUS_OPTIONS = ['Healthy', 'Diseased', 'Pest Infested', 'Drought Stressed', 'Nutrient Deficiency'];
-
-// The disease service's healthStatus text is translated in Burmese mode, so
-// health is judged from its untranslated class name.
-const isBackgroundClass = (raw = '') => raw === '00_Background_Non_Plant' || raw.includes('Not_A_Plant');
-const isHealthyClass = (raw = '') => /healthy$/i.test(raw);
 
 // Update image URLs come back as /api/v1/...; resolve them against the
 // configured API base so a remote VITE_API_BASE_URL still works.
@@ -59,6 +55,8 @@ export default function HealthUpdates() {
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState('');
   const [detection, setDetection] = useState(null);
+  const [quality, setQuality] = useState(null);
+  const [consent, setConsent] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [message, setMessage] = useState(null); // { kind: 'info' | 'error', text }
   const [saving, setSaving] = useState(false);
@@ -66,7 +64,7 @@ export default function HealthUpdates() {
   // Group ids the disease service has a model for, from /ml/groups. Null
   // until it answers, and every group is offered meanwhile.
   const [readyGroups, setReadyGroups] = useState(null);
-  const fileRef = useRef(null);
+  const [pickerKey, setPickerKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -134,11 +132,13 @@ export default function HealthUpdates() {
     setPhoto(null);
     setPreview('');
     setDetection(null);
+    setQuality(null);
+    setConsent(false);
     setMessage(null);
-    if (fileRef.current) fileRef.current.value = '';
+    setPickerKey((key) => key + 1);
   };
 
-  const runDetection = async (file, group) => {
+  const runDetection = async (file, group, qualityReport) => {
     setDetecting(true);
     setMessage(null);
     try {
@@ -154,19 +154,26 @@ export default function HealthUpdates() {
       if (!response.ok) throw new Error(await readError(response, t('health.detectFailed')));
       const result = await response.json();
       setDetection(result);
-      if (isBackgroundClass(result.rawClassName)) {
+      // Only claim what the model can back up (see lib/diseaseVerdict.js): when it is not
+      // sure, the form is left for the farmer to fill in rather than pre-filled with a guess.
+      const verdict = interpretDisease(result, qualityReport);
+      if (verdict.kind === 'not_a_plant') {
         setMessage({ kind: 'error', text: t('health.notAPlant') });
         return;
       }
-      const healthy = isHealthyClass(result.rawClassName);
+      if (verdict.kind === 'unsure') {
+        setMessage({ kind: 'warn', text: `${t('photo.unsureTitle')}. ${t('photo.unsureBody')}` });
+        return;
+      }
       setFormData((current) => ({
         ...current,
         plant_type: result.plantName || current.plant_type,
-        health_status: healthy ? 'Healthy' : result.healthStatus || 'Diseased',
-        disease_name: healthy ? '' : result.detectedDisease || '',
-        is_diseased: !healthy,
+        health_status: verdict.healthy ? 'Healthy' : result.healthStatus || 'Diseased',
+        disease_name: verdict.healthy ? '' : result.detectedDisease || '',
+        is_diseased: !verdict.healthy,
       }));
-      setMessage({ kind: 'info', text: t('health.detected') });
+      const how = verdict.kind === 'confident' ? t('photo.fairlySure') : t('photo.notVerySure');
+      setMessage({ kind: verdict.kind === 'confident' ? 'info' : 'warn', text: `${t('health.detected')} (${how})` });
     } catch (error) {
       setMessage({ kind: 'error', text: error.message || t('health.detectFailed') });
     } finally {
@@ -174,22 +181,24 @@ export default function HealthUpdates() {
     }
   };
 
-  const handlePhoto = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!ACCEPTED_TYPES.includes(file.type) || file.size > MAX_FILE_SIZE) {
-      setMessage({ kind: 'error', text: t('health.photoHelp') });
-      e.target.value = '';
-      return;
-    }
+  const handlePhoto = async (file) => {
     setPhoto(file);
     setPreview(URL.createObjectURL(file));
-    runDetection(file, groupId);
+    setDetection(null);
+    setQuality(null);
+    // A blurry or dark photo is flagged, not blocked: the report can still be saved.
+    const report = await checkPhotoQuality(file);
+    setQuality(report);
+    runDetection(file, groupId, report);
+  };
+
+  const handleInvalidPhoto = () => {
+    setMessage({ kind: 'error', text: t('health.photoHelp') });
   };
 
   const handleGroup = (e) => {
     setGroupId(e.target.value);
-    if (photo) runDetection(photo, e.target.value);
+    if (photo) runDetection(photo, e.target.value, quality);
   };
 
   const conditionsPayload = () => ({
@@ -221,6 +230,7 @@ export default function HealthUpdates() {
             healthStatus: formData.health_status,
             diseaseName: formData.disease_name || null,
             isDiseased: formData.is_diseased,
+            consentToTrain: consent,
             township: formData.township || null,
             reportedBy: formData.reported_by,
             notes: formData.notes || null,
@@ -240,6 +250,7 @@ export default function HealthUpdates() {
           if (formData[key]) body.append(key, formData[key]);
         }
         body.append('is_diseased', String(formData.is_diseased));
+        body.append('consent_to_train', String(consent));
         for (const key of ['soil_ph', 'rainfall_mm', 'temperature_c']) {
           if (conditions[key] !== '') body.append(key, conditions[key]);
         }
@@ -274,6 +285,7 @@ export default function HealthUpdates() {
     setDetection(null);
     setMessage(null);
     setConditionsEdited(true);
+    setConsent(Boolean(update.consentToTrain));
     setFormData({
       plant_type: update.plantType,
       health_status: update.healthStatus,
@@ -330,24 +342,50 @@ export default function HealthUpdates() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="hu-photo">{t('health.photo')}</label>
-                  <input id="hu-photo" ref={fileRef} type="file" accept={ACCEPTED_TYPES.join(',')} onChange={handlePhoto} />
+                  <span className="health-field-label" id="hu-photo-label">{t('health.photo')}</span>
+                  <PhotoPicker
+                    key={pickerKey}
+                    inputId="hu-photo"
+                    onFile={handlePhoto}
+                    onInvalid={handleInvalidPhoto}
+                    disabled={detecting || saving}
+                  />
                   <small style={{ color: 'var(--text-muted)' }}>{t('health.photoHelp')}</small>
                   {preview && (
                     <img src={preview} alt={t('health.photo')} className="health-photo-preview" />
+                  )}
+                  {quality && !quality.ok && (
+                    <div className="health-note health-note-warn" role="alert">
+                      <strong>{t('photo.qualityTitle')}</strong>
+                      <ul>
+                        {quality.reasons.map((reason) => (
+                          <li key={reason}>{t(`photo.q.${reason}`)}</li>
+                        ))}
+                      </ul>
+                      <span>{t('photo.tips')}</span>
+                    </div>
                   )}
                 </div>
               </>
             )}
             {editingId && <p className="health-note">{t('health.photoKept')}</p>}
 
+            <fieldset className="health-consent">
+              <legend>{t('health.consentTitle')}</legend>
+              <p>{t('health.consentBody')}</p>
+              <label className="health-checkbox">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                {t('health.consentLabel')}
+              </label>
+            </fieldset>
+
             {detecting && <p className="health-note">{t('health.detecting')}</p>}
             {message && (
-              <p className={`health-note ${message.kind === 'error' ? 'health-note-error' : ''}`} role={message.kind === 'error' ? 'alert' : 'status'}>
+              <p
+                className={`health-note ${message.kind === 'error' ? 'health-note-error' : ''} ${message.kind === 'warn' ? 'health-note-warn' : ''}`}
+                role={message.kind === 'info' ? 'status' : 'alert'}
+              >
                 {message.text}
-                {detection && !isBackgroundClass(detection.rawClassName) && message.kind === 'info' && (
-                  <> ({Math.round(detection.confidenceScore)}% {t('health.confidence')})</>
-                )}
               </p>
             )}
 
@@ -406,6 +444,10 @@ export default function HealthUpdates() {
               <label htmlFor="hu-reporter">{t('health.reportedBy')}</label>
               <input id="hu-reporter" type="text" name="reported_by" value={formData.reported_by} onChange={handleChange} required />
             </div>
+
+            <p className="health-note" style={{ marginTop: 0 }}>
+              <a href="/photo-review">{t('photo.reviewLink')}</a>
+            </p>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving || detecting}>
@@ -483,13 +525,13 @@ export default function HealthUpdates() {
                           {translateStatus(update.healthStatus)}
                         </span>
                       </div>
-                      {update.diseaseName && <p className="health-disease">{update.diseaseName}</p>}
+                      {update.isDiseased && update.diseaseName && <p className="health-disease">{update.diseaseName}</p>}
                       <dl className="health-stats">
                         {update.segmentation && (
                           <div><dt>{t('health.affected')}</dt><dd>{update.segmentation.affectedPercent}%</dd></div>
                         )}
                         {update.detection?.confidence != null && (
-                          <div><dt>{t('health.confidence')}</dt><dd>{Math.round(update.detection.confidence)}%</dd></div>
+                          <div><dt>{t('photo.modelScore')}</dt><dd>{Math.round(update.detection.confidence)}%</dd></div>
                         )}
                         {c.soilPh != null && <div><dt>pH</dt><dd>{c.soilPh}</dd></div>}
                         {c.rainfallMm != null && <div><dt>{t('health.rainfall')}</dt><dd>{c.rainfallMm}</dd></div>}

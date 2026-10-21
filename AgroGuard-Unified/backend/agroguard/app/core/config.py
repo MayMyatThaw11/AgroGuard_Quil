@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # from the PostgreSQL database used by the rest of the API.
     mongo_url: str = "mongodb://localhost:27017"
     mongo_database: str = "agroguard"
+    # Protects the agronomist photo-review routes (the queue and labelling). Unset means
+    # those routes are off: reviewed labels become training data, so they need a gate.
+    review_token: SecretStr | None = None
     cors_origins: list[str] = ["http://localhost:5173"]
 
     telegram_bot_token: SecretStr | None = None
@@ -49,6 +52,12 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=False,
     )
+
+    @field_validator("review_token", mode="before")
+    @classmethod
+    def _blank_review_token_is_unset(cls, value: object) -> object:
+        # A blank AGROGUARD_REVIEW_TOKEN= must not look like a configured secret.
+        return None if isinstance(value, str) and not value.strip() else value
 
 
 @lru_cache

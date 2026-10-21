@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 from pathlib import Path
 
@@ -76,14 +77,58 @@ def crop_analysis() -> dict:
     }
 
 
+@lru_cache(maxsize=1)
+def load_regions() -> dict[str, dict]:
+    """State and district names (English and Burmese) with centre points, keyed by PCODE."""
+    path = DATA_DIR / "mmr_regions.csv"
+    try:
+        frame = pd.read_csv(path, keep_default_na=False)
+    except (OSError, ValueError) as exc:
+        raise AgricultureDatasetError(f"Unable to load region names: {path}") from exc
+    return {
+        row["pcode"]: {
+            "level": row["level"],
+            "state_pcode": row["state_pcode"] or None,
+            "name_en": row["name_en"],
+            "name_my": row["name_my"],
+            "latitude": float(row["latitude"]),
+            "longitude": float(row["longitude"]),
+        }
+        for row in frame.to_dict(orient="records")
+    }
+
+
 def ndvi_regions() -> list[dict]:
+    """Regions that have NDVI data, with names, level and centre point for the picker."""
     data = load_ndvi_data()
-    return (
+    names = load_regions()
+    regions = (
         data[["PCODE", "adm_id"]]
         .drop_duplicates()
         .sort_values(["PCODE", "adm_id"])
         .to_dict(orient="records")
     )
+    return [{**region, **names.get(region["PCODE"], {})} for region in regions]
+
+
+@lru_cache(maxsize=1)
+def ndvi_boundaries() -> dict:
+    """District outlines (thinned for the web) with their names, for the clickable map."""
+    path = DATA_DIR / "mmr_districts.geojson"
+    names = load_regions()
+    try:
+        source = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise AgricultureDatasetError(f"Unable to load district outlines: {path}") from exc
+    for feature in source["features"]:
+        pcode = feature["properties"]["pcode"]
+        feature["properties"] = {
+            "PCODE": pcode,
+            "state_pcode": feature["properties"]["state_pcode"],
+            "name_en": names.get(pcode, {}).get("name_en", pcode),
+            "name_my": names.get(pcode, {}).get("name_my", pcode),
+        }
+    return source
 
 
 def ndvi_series(pcode: str | None = None) -> dict:
@@ -115,8 +160,18 @@ def ndvi_rainfall_correlation() -> dict:
     months = list(range(1, 13))
     return {
         "labels": [
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
         ],
         "rainfall_mm": [round(float(rainfall.get(month, 0)), 2) for month in months],
         "ndvi_index": [round(float(vegetation.get(month, 0)), 4) for month in months],

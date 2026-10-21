@@ -1,224 +1,325 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, CloudRain, Leaf, MapPinned, Sprout, TrendingUp } from 'lucide-react'
+import {
+	ClipboardList,
+	CloudRain,
+	Globe2,
+	HeartPulse,
+	Leaf,
+	Sprout,
+	TrendingUp,
+	TriangleAlert,
+} from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
-import { API_BASE_URL, DEMO_FIELD_ID } from '../api.js'
+import { API_BASE_URL } from '../api.js'
+import { loadCropConditions } from '../lib/cropConditions.js'
+import { PLANT_GROUPS } from '../data/plantGroups.js'
 
-const overviewCards = [
-	{
-		key: 'dash.townships',
-		value: '112',
-		icon: MapPinned,
-		accent: 'text-emerald-700',
-		bg: 'bg-emerald-100',
-	},
-	{
-		key: 'dash.records',
-		value: '24,860',
-		icon: BarChart3,
-		accent: 'text-sky-700',
-		bg: 'bg-sky-100',
-	},
-	{
-		key: 'dash.yield',
-		value: '3.6 t/ha',
-		icon: Sprout,
-		accent: 'text-amber-700',
-		bg: 'bg-amber-100',
-	},
-	{
-		key: 'dash.rainfall',
-		value: '184 mm',
-		icon: CloudRain,
-		accent: 'text-indigo-700',
-		bg: 'bg-indigo-100',
-	},
-]
+// Every figure on this page comes from a real source and says which: the farm's own saved
+// health updates, FAOSTAT price and production tables, or the weather data used by the
+// last Crop Suggestion run. Where a source has nothing, the card says so instead of guessing.
+// Colours come from the --ag-* tokens in index.css, so the page follows light and dark mode.
 
-const cropDistribution = [
-	{ crop: 'Rice', percent: 42 },
-	{ crop: 'Maize', percent: 23 },
-	{ crop: 'Pulses', percent: 19 },
-	{ crop: 'Sesame', percent: 16 },
-]
+const COUNTRY_MM = {
+	'Brunei Darussalam': 'ဘရူနိုင်း',
+	Cambodia: 'ကမ္ဘောဒီးယား',
+	Indonesia: 'အင်ဒိုနီးရှား',
+	"Lao People's Democratic Republic": 'လာအို',
+	Malaysia: 'မလေးရှား',
+	Philippines: 'ဖိလစ်ပိုင်',
+	Singapore: 'စင်ကာပူ',
+	Thailand: 'ထိုင်း',
+	'Viet Nam': 'ဗီယက်နမ်',
+}
+const PLANT_MM = Object.fromEntries(
+	PLANT_GROUPS.flatMap((group) => group.crops.flatMap((c) => [[c.en, c.my], [c.id, c.my]])),
+)
+const STATUS_KEYS = { Healthy: 'status.healthy', Diseased: 'status.diseased', 'Pest Infested': 'status.pest', 'Drought Stressed': 'status.drought' }
 
-const yieldByCrop = [
-	{ crop: 'Rice', yield: 4.1 },
-	{ crop: 'Maize', yield: 3.2 },
-	{ crop: 'Pulses', yield: 2.6 },
-	{ crop: 'Sesame', yield: 1.9 },
-]
+const card = 'rounded-3xl bg-(--ag-card) p-5 sm:p-6'
+const muted = 'text-(--ag-muted)'
+
+const number = (value, digits = 0) =>
+	value == null ? null : Number(value).toLocaleString(undefined, { maximumFractionDigits: digits })
+
+function Source({ children }) {
+	return <p className={`mt-4 text-xs ${muted}`}>{children}</p>
+}
+
+function NoData({ children }) {
+	return <p className={`rounded-2xl bg-(--ag-card-2) px-4 py-6 text-center text-sm ${muted}`}>{children}</p>
+}
+
+function CardTitle({ icon: Icon, children }) {
+	return (
+		<div className="flex items-center gap-2 text-(--ag-text)">
+			<Icon size={18} className="text-(--ag-accent)" aria-hidden="true" />
+			<h3 className="text-base font-bold">{children}</h3>
+		</div>
+	)
+}
+
+function Bar({ percent }) {
+	return (
+		<div className="h-3 rounded-full bg-(--ag-card-2)">
+			<div className="h-3 rounded-full bg-(--ag-bar)" style={{ width: `${Math.max(2, Math.min(100, percent))}%` }} />
+		</div>
+	)
+}
+
+function Trend({ points }) {
+	if (points.length < 2) return null
+	const values = points.map((p) => p.medianUsdPerTonne)
+	const [low, high] = [Math.min(...values), Math.max(...values)]
+	const span = high - low || 1
+	const path = points
+		.map((p, i) => {
+			const x = (i / (points.length - 1)) * 300
+			const y = 56 - ((p.medianUsdPerTonne - low) / span) * 52
+			return `${x.toFixed(1)},${y.toFixed(1)}`
+		})
+		.join(' ')
+	const first = points[0]
+	const last = points[points.length - 1]
+	return (
+		<div className="mt-5">
+			<svg
+				viewBox="0 0 300 60"
+				className="h-20 w-full"
+				role="img"
+				aria-label={`ASEAN median price, ${first.year}: $${number(first.medianUsdPerTonne)}, ${last.year}: $${number(last.medianUsdPerTonne)}`}
+			>
+				<polyline points={path} fill="none" stroke="var(--ag-accent)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+			</svg>
+			<div className={`flex justify-between text-xs ${muted}`}>
+				<span>
+					{first.year} · ${number(first.medianUsdPerTonne)}
+				</span>
+				<span>
+					{last.year} · ${number(last.medianUsdPerTonne)}
+				</span>
+			</div>
+		</div>
+	)
+}
 
 function Dashboard() {
-	const { t } = useLanguage()
-	const [stats, setStats] = useState(null)
-	const [growth, setGrowth] = useState([])
-	const [growthScenario, setGrowthScenario] = useState('healthy')
+	const { t, language } = useLanguage()
+	const [crop, setCrop] = useState('Rice (Paddy)')
+	const [data, setData] = useState(null)
+	const [failed, setFailed] = useState(false)
+	const burmese = language === 'my'
+	const country = (name) => (burmese && COUNTRY_MM[name]) || name
+	const plant = (name) => (burmese && PLANT_MM[name]) || name
+	const status = (name) => (STATUS_KEYS[name] ? t(STATUS_KEYS[name]) : name)
+	const conditions = useMemo(() => loadCropConditions(), [])
 
 	useEffect(() => {
 		let active = true
-		Promise.all([
-			fetch(`${API_BASE_URL}/dashboard/stats`).then((response) => response.ok ? response.json() : null),
-			fetch(`${API_BASE_URL}/fields/${DEMO_FIELD_ID}/growth/timeline`).then((response) => response.ok ? response.json() : []),
-		]).then(([nextStats, nextGrowth]) => {
-			if (!active) return
-			setStats(nextStats)
-			setGrowth(nextGrowth || [])
-		}).catch(() => {
-			if (!active) return
-			setStats(null)
-			setGrowth([])
-		})
-		return () => { active = false }
-	}, [])
-
-	// The dashboard schema names the yield field `yield_`.
-	const overviewYield = stats?.overview?.yield_ ?? stats?.overview?.yield
-	const overviewCards = useMemo(() => [
-		{ key: 'dash.townships', value: stats ? String(stats.totalFields ?? stats.overview?.townships ?? 0) : '112', icon: MapPinned, accent: 'text-emerald-700', bg: 'bg-emerald-100' },
-		{ key: 'dash.records', value: stats ? String(stats.totalAssessments ?? stats.overview?.records ?? 0) : '24,860', icon: BarChart3, accent: 'text-sky-700', bg: 'bg-sky-100' },
-		{ key: 'dash.yield', value: overviewYield && overviewYield !== 'demo' ? `${overviewYield} t/ha` : 'Demo rules', icon: Sprout, accent: 'text-amber-700', bg: 'bg-amber-100' },
-		{ key: 'dash.rainfall', value: stats?.overview?.rainfall && stats.overview.rainfall !== 'seeded' ? `${stats.overview.rainfall} mm` : 'Seeded', icon: CloudRain, accent: 'text-indigo-700', bg: 'bg-indigo-100' },
-	], [stats])
-	const fieldStatus = stats?.fieldStatuses?.[0]
-	const cropItems = stats?.cropDistribution?.length ? stats.cropDistribution : cropDistribution
-	const yieldItems = stats?.yieldByCrop?.length ? stats.yieldByCrop : yieldByCrop
-
-	const startGrowth = async () => {
-		try {
-			const response = await fetch(`${API_BASE_URL}/fields/${DEMO_FIELD_ID}/growth/start`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ scenario: growthScenario }),
+		fetch(`${API_BASE_URL}/dashboard/stats?crop=${encodeURIComponent(crop)}`)
+			.then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+			.then((next) => {
+				if (!active) return
+				setData(next)
+				setFailed(false)
 			})
-			if (response.ok) setGrowth(await response.json())
-		} catch {
-			// Keep the last replay visible when the optional API is unavailable.
+			.catch(() => active && setFailed(true))
+		return () => {
+			active = false
 		}
-	}
+	}, [crop])
+
+	const records = data?.records
+	const myanmar = data?.myanmar
+	const rice = myanmar?.crops?.find((c) => c.crop === 'Rice')
+	const prices = data?.prices
+	const topPrice = prices?.countries?.[0]?.usdPerTonne || 1
+	const waiting = data ? t('dash.noData') : '…'
+
+	const tiles = [
+		{
+			key: 'dash.records',
+			value: records?.available ? number(records.total) : null,
+			note: records?.available ? records.source : records ? t('dash.dbDown') : '',
+			icon: ClipboardList,
+		},
+		{
+			key: 'dash.diseased',
+			value: records?.available ? number(records.diseased) : null,
+			note: records?.available ? records.source : records ? t('dash.dbDown') : '',
+			icon: TriangleAlert,
+			warn: records?.available && records.diseased > 0,
+		},
+		{
+			key: 'dash.yield',
+			value: rice?.yieldTPerHa != null ? `${rice.yieldTPerHa} t/ha` : null,
+			note: rice ? `${rice.crop}, Myanmar, ${myanmar.year} · ${myanmar.source}` : '',
+			icon: Sprout,
+		},
+		{
+			key: 'dash.rainfall',
+			value: conditions ? `${number(conditions.rainfall_mm)} mm` : null,
+			note: conditions ? t('dash.rainfallFrom') : t('dash.runCrop'),
+			icon: CloudRain,
+		},
+	]
 
 	return (
-		<div className="space-y-6">
-			<section className="rounded-[2rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl">
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<div>
-						<p className="text-xs font-semibold uppercase tracking-[0.4em] text-myanglow-medium">
-							AgroGuard Analytics
-						</p>
-						<h2 className="mt-3 text-3xl font-semibold text-myanglow-navy">{t('dash.title')}</h2>
-						<p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-							{t('dash.subtitle')}
-						</p>
-					</div>
-
-					<div className="inline-flex items-center gap-2 rounded-full border border-myanglow-sage bg-myanglow-sage/40 px-4 py-2 text-sm font-medium text-myanglow-darkGreen">
-						<TrendingUp size={16} />
-						Last 30 days trend
-					</div>
+		<div className="space-y-4">
+			<section className="flex flex-wrap items-end justify-between gap-3 px-1">
+				<div>
+					<p className="text-xs font-bold uppercase tracking-[0.18em] text-(--ag-accent)">AgroGuard</p>
+					<h2 className="mt-1 text-3xl font-extrabold leading-tight text-(--ag-text)">{t('dash.title')}</h2>
+					<p className={`mt-2 max-w-3xl text-sm sm:text-base ${muted}`}>{t('dash.subtitle')}</p>
 				</div>
+				<span className={`inline-flex items-center gap-2 rounded-full border border-(--ag-line) px-3 py-1.5 text-xs font-semibold ${muted}`}>
+					<Globe2 size={14} aria-hidden="true" />
+					{t('dash.asean')}
+				</span>
 			</section>
 
-			<section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-				<article className="rounded-[1.8rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_16px_50px_rgba(20,26,22,0.08)] backdrop-blur-xl">
-					<div className="flex items-start justify-between gap-4">
-						<div>
-							<p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-medium">Live assessment</p>
-							<h3 className="mt-2 text-xl font-semibold text-myanglow-navy">{fieldStatus?.fieldName || 'Demo field'}</h3>
-						</div>
-						<span className={`rounded-full px-3 py-1 text-xs font-semibold ${fieldStatus?.status === 'critical' ? 'bg-red-100 text-red-700' : fieldStatus?.status === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-							{fieldStatus?.status || 'healthy'}
-						</span>
-					</div>
-					<p className="mt-4 text-sm leading-6 text-slate-600">{fieldStatus?.recommendation || 'Assessment recommendation will appear when the backend is available.'}</p>
-					{fieldStatus?.healthScore != null ? <p className="mt-4 text-sm font-semibold text-myanglow-forest">Health score: {fieldStatus.healthScore}/100</p> : null}
-				</article>
+			{failed && (
+				<p role="alert" className="rounded-2xl border border-(--ag-warn-line) bg-(--ag-warn-bg) px-4 py-3 text-sm text-(--ag-warn)">
+					{t('dash.loadFailed')}
+				</p>
+			)}
 
-				<article className="rounded-[1.8rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_16px_50px_rgba(20,26,22,0.08)] backdrop-blur-xl">
-					<div className="flex flex-wrap items-center justify-between gap-3">
-						<div>
-							<p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-medium">Growth comparison</p>
-							<h3 className="mt-2 text-xl font-semibold text-myanglow-navy">Illustrative 12-month replay</h3>
-						</div>
-						<div className="flex gap-2">
-							<select value={growthScenario} onChange={(event) => setGrowthScenario(event.target.value)} className="rounded-xl border border-myanglow-sage bg-white px-3 py-2 text-sm">
-								<option value="healthy">Healthy</option>
-								<option value="dry-soil">Dry soil</option>
-								<option value="heat-stress">Heat stress</option>
-							</select>
-							<button type="button" onClick={startGrowth} className="rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Replay</button>
-						</div>
-					</div>
-					<div className="mt-4 grid gap-3 sm:grid-cols-2">
-						{growth.map((simulation) => {
-							const lastEvent = simulation.events?.[simulation.events.length - 1]
-							return <div key={simulation.id} className="rounded-xl border border-myanglow-sage/60 bg-myanglow-sage/20 p-3"><p className="text-sm font-semibold text-myanglow-navy">{simulation.scenarioType.replace('_', ' ')}</p><p className="mt-1 text-xs text-slate-500">{simulation.isIllustrative ? 'Illustrative' : 'Measured'} · {lastEvent?.growthStage || 'Preparing'}</p><p className="mt-2 text-lg font-semibold text-myanglow-forest">{lastEvent?.healthIndex ?? '—'}/100</p></div>
-						})}
-					</div>
-				</article>
-			</section>
-
-			<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-				{overviewCards.map((card) => {
-					const Icon = card.icon
+			<section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+				{tiles.map((tile) => {
+					const Icon = tile.icon
 					return (
 						<article
-							key={card.key}
-							className="rounded-[1.6rem] border border-[#e6ebe7] bg-white p-5 shadow-[0_14px_40px_rgba(20,26,22,0.08)] backdrop-blur-xl"
+							key={tile.key}
+							className={`rounded-2xl p-4 ${tile.warn ? 'border border-(--ag-warn-line) bg-(--ag-warn-bg)' : 'bg-(--ag-card)'}`}
 						>
-							<div className="flex items-center justify-between gap-3">
-								<p className="text-sm font-medium text-slate-500">{t(card.key)}</p>
-								<span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${card.bg} ${card.accent}`}>
-									<Icon size={18} />
-								</span>
+							<div className={`flex items-center gap-2 text-xs font-semibold ${tile.warn ? 'text-(--ag-warn)' : muted}`}>
+								<Icon size={16} className={tile.warn ? '' : 'text-(--ag-accent)'} aria-hidden="true" />
+								{t(tile.key)}
 							</div>
-							<p className="mt-4 text-3xl font-semibold text-myanglow-navy">{card.value}</p>
+							<p className={`mt-2 font-extrabold leading-tight ${tile.value ? 'text-3xl' : 'text-lg'} ${tile.warn ? 'text-(--ag-warn)' : tile.value ? 'text-(--ag-text)' : muted}`}>
+								{tile.value ?? waiting}
+							</p>
+							{tile.note ? <p className={`mt-2 text-xs ${tile.warn ? 'text-(--ag-warn)' : muted}`}>{tile.note}</p> : null}
 						</article>
 					)
 				})}
 			</section>
 
-			<section className="grid gap-6 xl:grid-cols-2">
-				<article className="rounded-[1.8rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_16px_50px_rgba(20,26,22,0.08)] backdrop-blur-xl">
-					<div className="mb-5 flex items-center gap-2 text-myanglow-navy">
-						<Leaf size={18} />
-						<h3 className="text-lg font-semibold">{t('dash.cropDist')}</h3>
-					</div>
-
-					<div className="space-y-4">
-						{cropItems.map((item) => (
-							<div key={item.crop} className="space-y-1">
-								<div className="flex items-center justify-between text-sm">
-									<span className="font-medium text-slate-700">{item.crop}</span>
-									<span className="text-slate-500">{item.percent}%</span>
-								</div>
-								<div className="h-2 rounded-full bg-myanglow-sage/35">
-									<div
-										className="h-2 rounded-full bg-myanglow-forest"
-										style={{ width: `${item.percent}%` }}
-									/>
-								</div>
-							</div>
+			<section className={card}>
+				<div className="flex flex-wrap items-center justify-between gap-3">
+					<CardTitle icon={TrendingUp}>{t('dash.priceTitle')}</CardTitle>
+					<select
+						value={crop}
+						onChange={(event) => setCrop(event.target.value)}
+						aria-label={t('dash.priceCrop')}
+						className="rounded-xl border border-(--ag-line) bg-(--ag-card-2) px-3 py-2 text-sm text-(--ag-text)"
+					>
+						{(data?.priceCrops || [crop]).map((name) => (
+							<option key={name} value={name}>
+								{(burmese && data?.priceCropNamesMm?.[name]) || name}
+							</option>
 						))}
+					</select>
+				</div>
+				{prices?.countries?.length ? (
+					<>
+						<div className="mt-5 space-y-3">
+							{prices.countries.map((item) => (
+								<div key={item.country} className="space-y-1">
+									<div className="flex items-center justify-between text-sm">
+										<span className="font-semibold text-(--ag-text)">{country(item.country)}</span>
+										<span className={muted}>
+											${number(item.usdPerTonne)} / t · {item.year}
+										</span>
+									</div>
+									<Bar percent={(item.usdPerTonne / topPrice) * 100} />
+								</div>
+							))}
+						</div>
+						<Trend points={prices.trend} />
+					</>
+				) : (
+					<div className="mt-5">
+						<NoData>{data ? t('dash.noPrices') : '…'}</NoData>
 					</div>
+				)}
+				<Source>
+					{prices?.source} · {t('dash.priceNote')}
+				</Source>
+			</section>
+
+			<section className="grid gap-4 xl:grid-cols-2">
+				<article className={card}>
+					<div className="mb-5">
+						<CardTitle icon={Leaf}>{t('dash.cropDist')}</CardTitle>
+					</div>
+					{myanmar?.crops?.length ? (
+						<div className="space-y-4">
+							{myanmar.crops.map((item) => (
+								<div key={item.crop} className="space-y-1">
+									<div className="flex items-center justify-between text-sm">
+										<span className="font-semibold text-(--ag-text)">{(burmese && item.cropMm) || item.crop}</span>
+										<span className={muted}>{item.sharePercent}%</span>
+									</div>
+									<Bar percent={item.sharePercent} />
+								</div>
+							))}
+							<p className={`text-xs ${muted}`}>
+								{t('dash.otherCrops')}: {myanmar.otherSharePercent}%
+							</p>
+						</div>
+					) : (
+						<NoData>{waiting}</NoData>
+					)}
+					<Source>
+						{myanmar?.source} · {myanmar?.year} · {t('dash.areaShare')}
+					</Source>
 				</article>
 
-				<article className="rounded-[1.8rem] border border-[#e6ebe7] bg-white p-6 shadow-[0_16px_50px_rgba(20,26,22,0.08)] backdrop-blur-xl">
-					<div className="mb-5 flex items-center gap-2 text-myanglow-navy">
-						<BarChart3 size={18} />
-						<h3 className="text-lg font-semibold">{t('dash.avgYieldCrop')}</h3>
+				<article className={card}>
+					<div className="mb-5">
+						<CardTitle icon={Sprout}>{t('dash.avgYieldCrop')}</CardTitle>
 					</div>
-
-					<div className="space-y-3">
-						{yieldItems.map((item) => (
-							<div
-								key={item.crop}
-								className="flex items-center justify-between rounded-xl border border-myanglow-sage/50 bg-myanglow-sage/20 px-4 py-3"
-							>
-								<span className="font-medium text-slate-700">{item.crop}</span>
-								<span className="text-sm font-semibold text-myanglow-navy">{item.yield_ ?? item.yield} t/ha</span>
-							</div>
-						))}
-					</div>
+					{myanmar?.crops?.length ? (
+						<div className="space-y-2">
+							{myanmar.crops.map((item) => (
+								<div key={item.crop} className="flex items-center justify-between rounded-2xl bg-(--ag-card-2) px-4 py-3">
+									<span className="font-semibold text-(--ag-text)">{(burmese && item.cropMm) || item.crop}</span>
+									<span className="text-sm font-bold text-(--ag-text)">
+										{item.yieldTPerHa != null ? `${item.yieldTPerHa} t/ha` : t('dash.noData')}
+									</span>
+								</div>
+							))}
+						</div>
+					) : (
+						<NoData>{waiting}</NoData>
+					)}
+					<Source>
+						{myanmar?.source} · {myanmar?.year}
+					</Source>
 				</article>
+			</section>
+
+			<section className={card}>
+				<div className="mb-4">
+					<CardTitle icon={HeartPulse}>{t('dash.recent')}</CardTitle>
+				</div>
+				{records?.recent?.length ? (
+					<ul className="divide-y divide-(--ag-line)">
+						{records.recent.map((item, i) => (
+							<li key={`${item.reportedAt}-${i}`} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+								<span className="font-semibold text-(--ag-text)">
+									{plant(item.plantType)} · {item.diseaseName || status(item.healthStatus)}
+								</span>
+								<span className={muted}>
+									{[item.township, item.reportedAt ? new Date(item.reportedAt).toLocaleDateString() : null].filter(Boolean).join(' · ')}
+								</span>
+							</li>
+						))}
+					</ul>
+				) : (
+					<NoData>{!records ? '…' : !records.available ? t('dash.dbDown') : t('dash.noUpdates')}</NoData>
+				)}
+				<Source>{records?.source}</Source>
 			</section>
 		</div>
 	)

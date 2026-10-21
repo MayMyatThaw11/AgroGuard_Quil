@@ -32,10 +32,18 @@ export interface CropRecommendation {
   priceSource: string;
 }
 
+export interface CropModelInfo {
+  name: string;
+  trainedOn: string;
+  validatedOnFieldData: boolean;
+  scoreIsProbability: boolean;
+}
+
 export interface CropSuggestion {
   crop: string;
   confidencePercent: number;
   recommendations: CropRecommendation[];
+  modelInfo?: CropModelInfo;
 }
 
 export interface LocationWeather {

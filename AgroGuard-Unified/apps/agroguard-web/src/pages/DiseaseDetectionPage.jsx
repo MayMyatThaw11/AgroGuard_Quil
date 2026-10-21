@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   HelpCircle,
   ImagePlus,
+  Camera,
   Info,
   Layers,
   Loader2,
@@ -18,6 +19,11 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { API_BASE_URL } from '../api.js'
+import CameraCapture from '../components/CameraCapture.jsx'
+import DiseaseVerdict from '../components/DiseaseVerdict.jsx'
+import PhotoQualityNotice from '../components/PhotoQualityNotice.jsx'
+import { interpretDisease } from '../lib/diseaseVerdict.js'
+import { checkPhotoQuality } from '../lib/photoQuality.js'
 import { PLANT_GROUPS } from '../data/plantGroups.js'
 
 const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp']
@@ -27,7 +33,7 @@ const GUIDE_STORAGE_KEY = 'myanglow_plant_group_guide_seen_v1'
 function SectionCard({ title, action, children, className = '' }) {
   return (
     <section
-      className={`rounded-[2rem] border border-[#e6ebe7] bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 ${className}`}
+      className={`rounded-[2rem] border border-(--ag-line) bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 ${className}`}
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-myanglow-navy sm:text-xl">{title}</h2>
@@ -52,8 +58,14 @@ function DiseaseDetectionPage() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [validationError, setValidationError] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState(null)
+  // The photo-quality check: the last report (kept so a poor photo weakens the verdict),
+  // and the report currently blocking the analysis until the person retakes or carries on.
+  const [photoQuality, setPhotoQuality] = useState(null)
+  const [qualityIssue, setQualityIssue] = useState(null)
   // What the disease service can diagnose: { [groupId]: { available, crops: { [cropId]: leafAndFruit } } }.
   // Null until it answers, and the full PLANT_GROUPS list shows meanwhile.
   const [groupSupport, setGroupSupport] = useState(null)
@@ -149,7 +161,7 @@ function DiseaseDetectionPage() {
   // Automatically re-fetch translated result if user switches English <-> Burmese while viewing a result
   useEffect(() => {
     if (analysisResult && selectedFile && selectedGroup && !isAnalyzing) {
-      runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language)
+      runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language, { skipQuality: true })
     }
   }, [language])
 
@@ -176,9 +188,10 @@ function DiseaseDetectionPage() {
     }
   }
 
-  const handleFileChange = (event) => {
-    const nextFile = event.target.files?.[0]
-    if (!nextFile) return
+  // One path for every way an image can arrive (file picker, drag and drop,
+  // camera capture): same type and size checks, same state updates.
+  const acceptFile = (nextFile) => {
+    if (!nextFile) return false
 
     if (!acceptedTypes.includes(nextFile.type)) {
       setValidationError(
@@ -187,8 +200,7 @@ function DiseaseDetectionPage() {
           : 'Please upload a JPG, PNG, or WEBP plant image.'
       )
       setSelectedFile(null)
-      event.target.value = ''
-      return
+      return false
     }
 
     if (nextFile.size > maxFileSize) {
@@ -198,20 +210,68 @@ function DiseaseDetectionPage() {
           : 'Please choose an image smaller than 8 MB.'
       )
       setSelectedFile(null)
-      event.target.value = ''
-      return
+      return false
     }
 
     setValidationError('')
     setSelectedFile(nextFile)
     setAnalysisResult(null)
+    setPhotoQuality(null)
+    setQualityIssue(null)
+    return true
   }
 
-  const runPredictionRequest = async (fileToUse, groupToUse, cropToUse, activeLang) => {
+  const handleFileChange = (event) => {
+    const nextFile = event.target.files?.[0]
+    if (!nextFile) return
+    if (!acceptFile(nextFile)) event.target.value = ''
+  }
+
+  const handleDrop = (event) => {
+    event.preventDefault()
+    setIsDragging(false)
+    const dropped = event.dataTransfer?.files?.[0]
+    if (!dropped) return
+    if (inputRef.current) inputRef.current.value = ''
+    acceptFile(dropped)
+  }
+
+  const handleDragOver = (event) => {
+    // Without preventDefault the browser refuses the drop and opens the image instead.
+    event.preventDefault()
+    if (!isDragging) setIsDragging(true)
+  }
+
+  const handleDragLeave = (event) => {
+    // dragleave also fires when moving onto a child element; only clear when leaving the zone.
+    if (!event.currentTarget.contains(event.relatedTarget)) setIsDragging(false)
+  }
+
+  const handleCameraCapture = (file) => {
+    setIsCameraOpen(false)
+    if (inputRef.current) inputRef.current.value = ''
+    acceptFile(file)
+  }
+
+  const runPredictionRequest = async (fileToUse, groupToUse, cropToUse, activeLang, options = {}) => {
     setValidationError('')
     setIsAnalyzing(true)
 
     try {
+      // Look at the photo before asking the model: a blurry, dark or blank picture gets a
+      // retake prompt, not a confident wrong answer. If the check itself is unavailable
+      // (null) the analysis goes ahead as before.
+      if (!options.skipQuality) {
+        const quality = await checkPhotoQuality(fileToUse)
+        setPhotoQuality(quality)
+        if (quality && !quality.ok) {
+          setQualityIssue(quality)
+          setAnalysisResult(null)
+          return
+        }
+        setQualityIssue(null)
+      }
+
       const formData = new FormData()
       formData.append('file', fileToUse)
       formData.append('group_id', groupToUse)
@@ -270,10 +330,28 @@ function DiseaseDetectionPage() {
     await runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language)
   }
 
+  // Back to choosing a photo. If the bad photo came from the camera, reopen the camera.
+  const handleRetake = () => {
+    const fromCamera = selectedFile?.name?.startsWith('camera-')
+    setSelectedFile(null)
+    setPhotoQuality(null)
+    setQualityIssue(null)
+    setAnalysisResult(null)
+    if (inputRef.current) inputRef.current.value = ''
+    if (fromCamera) setIsCameraOpen(true)
+  }
+
+  const handleUseAnyway = () => {
+    setQualityIssue(null)
+    runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language, { skipQuality: true })
+  }
+
   const handleReset = () => {
     setSelectedGroup('')
     setSelectedCrop('')
     setSelectedFile(null)
+    setPhotoQuality(null)
+    setQualityIssue(null)
     setPreviewUrl('')
     setValidationError('')
     setIsAnalyzing(false)
@@ -284,6 +362,8 @@ function DiseaseDetectionPage() {
     }
   }
 
+  const verdict = analysisResult ? interpretDisease(analysisResult, photoQuality) : null
+
   const scoreGradient = analysisResult
     ? {
         background: `conic-gradient(#17aa51 0 ${analysisResult.healthScore}%, rgba(154, 163, 157, 0.35) ${analysisResult.healthScore}% 100%)`,
@@ -293,7 +373,7 @@ function DiseaseDetectionPage() {
   return (
     <div className="space-y-6">
       {/* HERO HEADER */}
-      <section className="rounded-[2rem] border border-[#e6ebe7] bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
+      <section className="rounded-[2rem] border border-(--ag-line) bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.45em] text-myanglow-medium">
@@ -434,7 +514,15 @@ function DiseaseDetectionPage() {
             <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               <label
                 htmlFor="plant-image"
-                className="group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-myanglow-sage bg-[#fafbfa] p-6 text-center transition hover:border-myanglow-medium hover:bg-myanglow-sage/30"
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed p-6 text-center transition ${
+                  isDragging
+                    ? 'border-myanglow-medium bg-myanglow-sage/50'
+                    : 'border-myanglow-sage bg-(--ag-card-2) hover:border-myanglow-medium hover:bg-myanglow-sage/30'
+                }`}
               >
                 <input
                   ref={inputRef}
@@ -448,15 +536,31 @@ function DiseaseDetectionPage() {
                   <ImagePlus size={28} />
                 </div>
                 <p className="mt-4 text-lg font-semibold text-myanglow-navy">
-                  {t('disease.uploadPrompt')}
+                  {isDragging ? t('disease.dropHere') : t('disease.uploadPrompt')}
                 </p>
                 <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
                   {t('disease.formats')}
                 </p>
-                <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-emerald-500">
-                  <UploadCloud size={16} />
-                  {t('disease.choose')}
-                </span>
+                <p className="mt-2 text-xs text-slate-500">{t('disease.orDrag')}</p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-emerald-500">
+                    <UploadCloud size={16} />
+                    {t('disease.choose')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      // Inside the <label>: don't let this click also open the file dialog.
+                      event.preventDefault()
+                      event.stopPropagation()
+                      setIsCameraOpen(true)
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border border-emerald-500 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                  >
+                    <Camera size={16} />
+                    {t('disease.useCamera')}
+                  </button>
+                </div>
               </label>
 
               <div className="overflow-hidden rounded-[1.5rem] border border-myanglow-sage/70 bg-white p-4">
@@ -474,7 +578,7 @@ function DiseaseDetectionPage() {
                   </span>
                 </div>
 
-                <div className="mt-4 flex min-h-[18rem] items-center justify-center rounded-[1.3rem] bg-[#f4f6f3] p-3">
+                <div className="mt-4 flex min-h-[18rem] items-center justify-center rounded-[1.3rem] bg-(--ag-card-2) p-3">
                   {previewUrl ? (
                     <img
                       src={previewUrl}
@@ -540,8 +644,13 @@ function DiseaseDetectionPage() {
                   {t('disease.analyzing')}
                 </p>
               </div>
+            ) : qualityIssue ? (
+              <PhotoQualityNotice quality={qualityIssue} onRetake={handleRetake} onUseAnyway={handleUseAnyway} />
             ) : analysisResult ? (
               <div className="space-y-5">
+                <DiseaseVerdict verdict={verdict} result={analysisResult} onRetake={handleRetake} />
+                {verdict.showDetails && (
+                <>
                 <div className="flex flex-col gap-5 rounded-[1.5rem] border border-myanglow-sage/70 bg-white p-4 sm:flex-row sm:items-center">
                   <div className="flex shrink-0 items-center justify-center">
                     <div
@@ -616,6 +725,8 @@ function DiseaseDetectionPage() {
                     accent="text-myanglow-muted"
                   />
                 </div>
+                </>
+                )}
               </div>
             ) : (
               <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-myanglow-sage bg-myanglow-sage/15 px-6 py-10 text-center">
@@ -782,6 +893,10 @@ function DiseaseDetectionPage() {
           </div>
         </div>
       ) : null}
+
+      {isCameraOpen && (
+        <CameraCapture onCapture={handleCameraCapture} onClose={() => setIsCameraOpen(false)} />
+      )}
     </div>
   )
 }

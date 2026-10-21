@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import geometry
 from .config import get_settings
 
 TOKEN = re.compile(
@@ -290,6 +291,8 @@ def _section(block: Block, kind: str, diags: list[dict[str, Any]]) -> dict[str, 
         if kind == "schedule":
             if key == "crew":
                 out["crew"] = int(f.value) if isinstance(f.value, float) else None
+            elif key == "travel_kmh":
+                out["travel_kmh"] = float(f.value) if isinstance(f.value, float) else None
             else:
                 out.setdefault("durations_h", {})[key] = _convert(f, "h", diags, key)
             continue
@@ -468,6 +471,20 @@ def ring_area_ha(ring: list[list[float]]) -> float:
     return round(abs(twice) / 2 / 10000.0, 3)
 
 
+def parcel_positions(spec: dict[str, Any]) -> dict[str, tuple[float, float]]:
+    """Where each field is, as the centre of its drawn boundary; fields without one are left out."""
+    out: dict[str, tuple[float, float]] = {}
+    for parcel in spec.get("parcels", []):
+        ring = parcel.get("boundary")
+        if ring:
+            corners = ring[:-1]
+            out[parcel["id"]] = (
+                sum(p[0] for p in corners) / len(corners),
+                sum(p[1] for p in corners) / len(corners),
+            )
+    return out
+
+
 def _boundary(block: Block, diags: list[dict[str, Any]]) -> list[list[float]] | None:
     f = block.fields.get("boundary")
     if f is None:
@@ -498,7 +515,21 @@ def _boundary(block: Block, diags: list[dict[str, Any]]) -> list[list[float]] | 
             )
         )
         return None
-    return [[float(p[0]), float(p[1])] for p in ring]
+    clean = [[float(p[0]), float(p[1])] for p in ring]
+    problem = geometry.ring_problem(clean)
+    if problem:
+        diags.append(
+            _diag(
+                "AGRI-E033",
+                "ERROR",
+                f.line,
+                f.col,
+                f"parcel {block.name}: boundary is not a usable field, {problem}.",
+                "Redraw the outline so its edges do not cross, or re-export it from the map.",
+            )
+        )
+        return None
+    return clean
 
 
 def _herd(block: Block, contract: dict[str, Any], diags: list[dict[str, Any]]) -> dict[str, Any]:
@@ -592,6 +623,21 @@ def _build(root: Block, diags: list[dict[str, Any]]) -> dict[str, Any] | None:
     for block in parcels:
         area = block.fields.get("area")
         boundary = _boundary(block, diags)
+        if area is not None and boundary:
+            declared = _convert(area, "ha", diags, "area")
+            drawn = ring_area_ha(boundary)
+            if isinstance(declared, float) and geometry.area_mismatch(declared, drawn):
+                diags.append(
+                    _diag(
+                        "AGRI-W033",
+                        "WARNING",
+                        area.line,
+                        area.col,
+                        f"parcel {block.name}: area says {declared} ha, the boundary measures "
+                        f"{drawn} ha.",
+                        "Check which is right; plans use the declared area.",
+                    )
+                )
         contract["parcels"].append(
             {
                 "id": block.name,

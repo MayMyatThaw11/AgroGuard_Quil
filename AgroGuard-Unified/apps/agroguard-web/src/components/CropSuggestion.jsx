@@ -18,6 +18,7 @@ import {
 import { useLanguage } from '../contexts/LanguageContext';
 import { API_BASE_URL } from '../api';
 import { saveCropConditions } from '../lib/cropConditions';
+import LocationMap from './LocationMap';
 
 const mockSuggestions = {
   Rice: { icon: '🌾', match: 94, marketRate: 1450, yieldPerAcre: 2100, reason: 'Warm temperatures, balanced soil pH, and strong rainfall make these conditions well suited for rice.' },
@@ -58,11 +59,14 @@ export default function CropSuggestion() {
   const [locStatus, setLocStatus] = useState('idle'); // idle | detecting | fetching | done | error
   const [weatherData, setWeatherData] = useState(null);
   const [locError, setLocError] = useState(null);
+  const [pin, setPin] = useState(null); // { lat, lon } chosen on the map or detected
+  const locRequestRef = useRef(0); // lets a newer location lookup supersede a slower, older one
   
   // ML prediction state
   const [suggestion, setSuggestion] = useState(null);
   const [predictionConfidence, setPredictionConfidence] = useState(null);
   const [predictionRecommendations, setPredictionRecommendations] = useState([]);
+  const [modelInfo, setModelInfo] = useState(null);
   const [selectedRecommendationIndex, setSelectedRecommendationIndex] = useState(0);
   const [explanation, setExplanation] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,7 +85,41 @@ export default function CropSuggestion() {
     });
   };
 
-  // ─── Auto-Detect Location ──────────────────────────────────────
+  // ─── Location → climate + soil ────────────────────────────────
+  // One path for "Detect my location" and a click on the map: ask the backend
+  // (NASA POWER climate + SoilGrids pH) about the point and fill the form.
+  const loadLocation = async (latitude, longitude) => {
+    const requestId = ++locRequestRef.current;
+    setPin({ lat: latitude, lon: longitude });
+    setLocStatus('fetching');
+    setLocError(null);
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/location-weather`, {
+        latitude,
+        longitude,
+        language
+      });
+      if (requestId !== locRequestRef.current) return; // a newer pick superseded this one
+
+      const data = response.data;
+      setWeatherData(data);
+      setFormData((current) => ({
+        // No pH for this point (cities, water, outside Myanmar): keep the user's value.
+        soil_pH: data.current.soil_pH_estimate ?? current.soil_pH,
+        rainfall_mm: data.current.rainfall_annual_mm ?? Math.round(data.current.rainfall_7d_mm * 52),
+        temperature_c: data.current.temperature_c
+      }));
+      setLocStatus('done');
+    } catch (err) {
+      if (requestId !== locRequestRef.current) return;
+      console.error('Weather fetch error:', err);
+      setWeatherData(null);
+      setLocError(err.response?.data?.detail || t('loc.error'));
+      setLocStatus('error');
+    }
+  };
+
   const detectLocation = () => {
     if (!navigator.geolocation) {
       setLocError(t('loc.error'));
@@ -91,37 +129,9 @@ export default function CropSuggestion() {
 
     setLocStatus('detecting');
     setLocError(null);
-    setWeatherData(null);
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setLocStatus('fetching');
-
-        try {
-          const response = await axios.post(`${API_BASE_URL}/location-weather`, {
-            latitude,
-            longitude,
-            language
-          });
-
-          const data = response.data;
-          setWeatherData(data);
-
-          // Auto-fill form with satellite data
-          setFormData({
-            soil_pH: data.current.soil_pH_estimate,
-            rainfall_mm: data.current.rainfall_7d_mm,
-            temperature_c: data.current.temperature_c
-          });
-
-          setLocStatus('done');
-        } catch (err) {
-          console.error('Weather fetch error:', err);
-          setLocError(t('loc.error'));
-          setLocStatus('error');
-        }
-      },
+      (position) => loadLocation(position.coords.latitude, position.coords.longitude),
       (err) => {
         console.error('Geolocation error:', err);
         if (err.code === err.PERMISSION_DENIED) {
@@ -221,6 +231,7 @@ export default function CropSuggestion() {
       setSuggestion(crop);
       setPredictionConfidence(data.confidencePercent);
       setPredictionRecommendations(data.recommendations || []);
+      setModelInfo(data.modelInfo || null);
       // Remember these conditions so Health Updates can pre-fill them.
       saveCropConditions(payload, {
         source: mode === 'auto' && weatherData ? 'satellite' : 'manual',
@@ -287,8 +298,23 @@ export default function CropSuggestion() {
                 )}
               </button>
 
+              <div className="location-map-card">
+                <div className="location-map-head">
+                  <div>
+                    <strong>{t('loc.mapTitle')}</strong>
+                    <p>{t('loc.mapHelp')}</p>
+                  </div>
+                  {pin && (
+                    <span className="location-map-coords">
+                      {pin.lat.toFixed(4)}, {pin.lon.toFixed(4)}
+                    </span>
+                  )}
+                </div>
+                <LocationMap pin={pin} onPick={loadLocation} label={t('loc.mapTitle')} />
+              </div>
+
               {locError && (
-                <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>
+                <p role="alert" style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '0.75rem', textAlign: 'center' }}>
                   {locError}
                 </p>
               )}
@@ -312,9 +338,9 @@ export default function CropSuggestion() {
                     </div>
                     <div className="weather-card">
                       <div className="weather-icon">🌧️</div>
-                      <div className="weather-label">{t('loc.rain7d')}</div>
+                      <div className="weather-label">{t('loc.rainAnnual')}</div>
                       <div className="weather-value">
-                        {weatherData.current.rainfall_7d_mm}<span className="weather-unit">mm</span>
+                        {weatherData.current.rainfall_annual_mm ?? '—'}<span className="weather-unit">mm</span>
                       </div>
                     </div>
                     {weatherData.current.humidity_pct && (
@@ -330,7 +356,7 @@ export default function CropSuggestion() {
                       <div className="weather-icon">🧪</div>
                       <div className="weather-label">{t('loc.soilPh')}</div>
                       <div className="weather-value">
-                        {weatherData.current.soil_pH_estimate}
+                        {weatherData.current.soil_pH_estimate ?? '—'}
                       </div>
                     </div>
                   </div>
@@ -341,8 +367,15 @@ export default function CropSuggestion() {
                     </span>
                   </div>
 
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '0.4rem' }}>
+                    {t('loc.rainNote')}
+                  </p>
+
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                    {t('loc.phNote')}
+                    {{
+                      soilgrids: t('loc.phNoteSoilgrids'),
+                      regional_estimate: t('loc.phNoteRegional'),
+                    }[weatherData.current.soil_ph_source] || t('loc.phNoteNone')}
                   </p>
                 </div>
               )}
@@ -456,21 +489,23 @@ export default function CropSuggestion() {
                     <span style={{ width: `${recommendation.suitabilityPercent}%` }} />
                   </span>
                   <span className="recommendation-meta">
-                    <span>{recommendation.suitabilityPercent}% fit</span>
+                    <span>{t('crop.matchScore')} {Math.round(recommendation.suitabilityPercent)}</span>
                     <span>{Number(recommendation.marketPriceMmkPerKg).toLocaleString()} MMK/kg</span>
                   </span>
                 </button>
               ))}
             </div>
 
+            {modelInfo && !modelInfo.validatedOnFieldData && (
+              <p className="crop-model-note">{t('crop.modelNote')}</p>
+            )}
+
             <div className="crop-detail">
               <div className="crop-detail-head">
                 <h3>{selectedRecommendation.crop}</h3>
-                <span className="match-badge">{selectedRecommendation.suitabilityPercent}% suitable</span>
+                <span className="match-badge">{t('crop.matchScore')} {Math.round(selectedRecommendation.suitabilityPercent)}</span>
               </div>
-              <p className="crop-detail-reason">
-                A good fit for your soil pH, rainfall and temperature.
-              </p>
+              <p className="crop-detail-reason">{t('crop.rankedReason')}</p>
               <dl className="crop-stats">
                 <div>
                   <dt>Price</dt>
