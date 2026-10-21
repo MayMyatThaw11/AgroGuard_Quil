@@ -21,7 +21,7 @@ CROP_CALENDAR = "FAO Crop Calendar (cropcalendar.apps.fao.org)"
 REQUEST_GAP_S = 1.0
 BATCH = 5000
 
-COUNTRIES = {
+COUNTRIES: dict[str, dict[str, Any]] = {
     "BRN": {"fao": 26, "m49": "096", "iso2": "BN", "name": "Brunei Darussalam"},
     "KHM": {"fao": 115, "m49": "116", "iso2": "KH", "name": "Cambodia"},
     "IDN": {"fao": 101, "m49": "360", "iso2": "ID", "name": "Indonesia"},

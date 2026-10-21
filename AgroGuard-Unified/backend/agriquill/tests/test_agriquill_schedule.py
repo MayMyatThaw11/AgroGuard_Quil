@@ -106,3 +106,40 @@ def test_advisory_tasks_are_not_scheduled():
     advisory = {"id": "a", "agent": "pest_watcher", "date": str(START), "actuation": None}
     out = schedule.solve([advisory], hourly())
     assert out["tasks"][0]["schedule"]["status"] == "advisory"
+
+
+FAR = {"PD-1": (16.0, 95.0), "PD-2": (16.0, 95.09)}  # about 9.6 km apart
+NEAR = {"PD-1": (16.0, 95.0), "PD-2": (16.0, 95.0005)}  # about 50 m apart
+
+
+def two_stops():
+    return [task(f"w{i}", 0, "irrigation_valve", f"P-0{i}", paddy=f"PD-{i}") for i in (1, 2)]
+
+
+def spans(out):
+    return sorted(
+        (t["schedule"]["start_index"], t["schedule"]["duration_h"], t["paddy_id"])
+        for t in out["tasks"]
+    )
+
+
+def test_one_crew_leaves_time_to_get_between_fields():
+    out = schedule.solve(two_stops(), hourly(days=2), crew=1, positions=FAR, travel_kmh=5.0)
+    first, second = spans(out)
+    assert second[0] - (first[0] + first[1]) >= schedule.travel_hours(FAR["PD-1"], FAR["PD-2"], 5)
+    assert schedule.travel_hours(FAR["PD-1"], FAR["PD-2"], 5) == 2
+    later = next(t for t in out["tasks"] if t["schedule"]["start_index"] == second[0])
+    assert later["schedule"]["travel_h_before"] == 2
+    assert later["schedule"]["travel_from"] == first[2]
+
+
+def test_nearby_fields_and_unknown_positions_cost_no_travel():
+    for positions in (NEAR, {}, None):
+        out = schedule.solve(two_stops(), hourly(days=2), crew=1, positions=positions)
+        assert all("travel_h_before" not in t["schedule"] for t in out["tasks"])
+    assert schedule.travel_hours(NEAR["PD-1"], NEAR["PD-2"], 5) == 0
+    assert schedule.travel_hours(None, NEAR["PD-2"], 5) == 0
+
+
+def test_faster_travel_shortens_the_gap():
+    assert schedule.travel_hours(FAR["PD-1"], FAR["PD-2"], 20) == 0

@@ -117,7 +117,7 @@ const CropPanel: React.FC<{ lang: Lang }> = ({ lang }) => {
                 <button key={r.cropKey} type="button" role="tab" aria-selected={i === picked}
                   onClick={() => { setPicked(i); setExplanation(''); }}
                   className={`rounded border px-3 py-1 text-sm ${i === picked ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-[var(--border-default)] text-[var(--text-secondary)]'}`}>
-                  {r.crop} · {Math.round(r.suitabilityPercent)}%
+                  {r.crop} · match {Math.round(r.suitabilityPercent)}
                 </button>
               ))}
             </div>
@@ -129,6 +129,13 @@ const CropPanel: React.FC<{ lang: Lang }> = ({ lang }) => {
               <div><dt className={label}>Yield</dt><dd>{money(chosen.yieldPerAcreKg)} kg/acre</dd></div>
               <div><dt className={label}>Revenue</dt><dd>{chosen.estGrossRevenueUsdPerHa > 0 ? `$${money(chosen.estGrossRevenueUsdPerHa)}/ha` : '—'}</dd></div>
             </dl>
+            {result?.modelInfo && !result.modelInfo.validatedOnFieldData && (
+              <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+                Match scores only rank these crops against each other. They are not a chance of success.
+                The model learned from {result.modelInfo.trainedOn} and has not been tested on real
+                Myanmar yields, so check with an agronomist.
+              </p>
+            )}
             {chosen.priceSource && (
               <p className="mt-2 text-xs text-[var(--text-tertiary)]">
                 Price source: {chosen.priceSource}{chosen.priceUsdPerKg > 0 && ` · about $${chosen.priceUsdPerKg.toFixed(2)}/kg`}

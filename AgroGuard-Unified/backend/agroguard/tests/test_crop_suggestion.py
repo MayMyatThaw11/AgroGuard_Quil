@@ -50,6 +50,14 @@ async def test_crop_suggestion() -> None:
 
     assert response.status_code == 200
     assert response.json() == {
+        "modelInfo": {
+            "name": "ASEAN Top-50 Gaussian Naive Bayes",
+            "trainedOn": (
+                "synthetic samples drawn from crop range tables (FAO EcoCrop and ASEAN rules)"
+            ),
+            "validatedOnFieldData": False,
+            "scoreIsProbability": False,
+        },
         "crop": "Rice",
         "confidencePercent": 94.5,
         "recommendations": [

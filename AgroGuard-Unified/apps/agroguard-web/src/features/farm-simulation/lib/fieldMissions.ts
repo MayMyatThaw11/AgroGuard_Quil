@@ -1,4 +1,9 @@
-import { checkHumanApproval, checkProhibitedInputs, checkWindCeiling } from './safety.ts';
+import {
+  MIN_APPROVAL_PIN_LENGTH,
+  checkHumanApproval,
+  checkProhibitedInputs,
+  checkWindCeiling,
+} from './safety.ts';
 
 export type MachineId = 'D-01' | 'R-02' | 'T-01';
 export type MissionKind = 'command' | 'note';
@@ -138,6 +143,12 @@ export function createMission(input: CreateMissionInput): Mission {
     blockedReason,
     thread,
   };
+}
+
+// The approval button stays disabled until a person has ticked the confirmation and
+// typed a PIN. Neither is ever pre-filled.
+export function approvalReady(confirmed: boolean, pin: string): boolean {
+  return confirmed && pin.trim().length >= MIN_APPROVAL_PIN_LENGTH;
 }
 
 export function approveMission(

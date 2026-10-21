@@ -20,6 +20,10 @@ import {
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { API_BASE_URL } from '../api.js'
 import CameraCapture from '../components/CameraCapture.jsx'
+import DiseaseVerdict from '../components/DiseaseVerdict.jsx'
+import PhotoQualityNotice from '../components/PhotoQualityNotice.jsx'
+import { interpretDisease } from '../lib/diseaseVerdict.js'
+import { checkPhotoQuality } from '../lib/photoQuality.js'
 import { PLANT_GROUPS } from '../data/plantGroups.js'
 
 const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp']
@@ -58,6 +62,10 @@ function DiseaseDetectionPage() {
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState(null)
+  // The photo-quality check: the last report (kept so a poor photo weakens the verdict),
+  // and the report currently blocking the analysis until the person retakes or carries on.
+  const [photoQuality, setPhotoQuality] = useState(null)
+  const [qualityIssue, setQualityIssue] = useState(null)
   // What the disease service can diagnose: { [groupId]: { available, crops: { [cropId]: leafAndFruit } } }.
   // Null until it answers, and the full PLANT_GROUPS list shows meanwhile.
   const [groupSupport, setGroupSupport] = useState(null)
@@ -153,7 +161,7 @@ function DiseaseDetectionPage() {
   // Automatically re-fetch translated result if user switches English <-> Burmese while viewing a result
   useEffect(() => {
     if (analysisResult && selectedFile && selectedGroup && !isAnalyzing) {
-      runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language)
+      runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language, { skipQuality: true })
     }
   }, [language])
 
@@ -208,6 +216,8 @@ function DiseaseDetectionPage() {
     setValidationError('')
     setSelectedFile(nextFile)
     setAnalysisResult(null)
+    setPhotoQuality(null)
+    setQualityIssue(null)
     return true
   }
 
@@ -243,11 +253,25 @@ function DiseaseDetectionPage() {
     acceptFile(file)
   }
 
-  const runPredictionRequest = async (fileToUse, groupToUse, cropToUse, activeLang) => {
+  const runPredictionRequest = async (fileToUse, groupToUse, cropToUse, activeLang, options = {}) => {
     setValidationError('')
     setIsAnalyzing(true)
 
     try {
+      // Look at the photo before asking the model: a blurry, dark or blank picture gets a
+      // retake prompt, not a confident wrong answer. If the check itself is unavailable
+      // (null) the analysis goes ahead as before.
+      if (!options.skipQuality) {
+        const quality = await checkPhotoQuality(fileToUse)
+        setPhotoQuality(quality)
+        if (quality && !quality.ok) {
+          setQualityIssue(quality)
+          setAnalysisResult(null)
+          return
+        }
+        setQualityIssue(null)
+      }
+
       const formData = new FormData()
       formData.append('file', fileToUse)
       formData.append('group_id', groupToUse)
@@ -306,10 +330,28 @@ function DiseaseDetectionPage() {
     await runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language)
   }
 
+  // Back to choosing a photo. If the bad photo came from the camera, reopen the camera.
+  const handleRetake = () => {
+    const fromCamera = selectedFile?.name?.startsWith('camera-')
+    setSelectedFile(null)
+    setPhotoQuality(null)
+    setQualityIssue(null)
+    setAnalysisResult(null)
+    if (inputRef.current) inputRef.current.value = ''
+    if (fromCamera) setIsCameraOpen(true)
+  }
+
+  const handleUseAnyway = () => {
+    setQualityIssue(null)
+    runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language, { skipQuality: true })
+  }
+
   const handleReset = () => {
     setSelectedGroup('')
     setSelectedCrop('')
     setSelectedFile(null)
+    setPhotoQuality(null)
+    setQualityIssue(null)
     setPreviewUrl('')
     setValidationError('')
     setIsAnalyzing(false)
@@ -319,6 +361,8 @@ function DiseaseDetectionPage() {
       inputRef.current.value = ''
     }
   }
+
+  const verdict = analysisResult ? interpretDisease(analysisResult, photoQuality) : null
 
   const scoreGradient = analysisResult
     ? {
@@ -600,8 +644,13 @@ function DiseaseDetectionPage() {
                   {t('disease.analyzing')}
                 </p>
               </div>
+            ) : qualityIssue ? (
+              <PhotoQualityNotice quality={qualityIssue} onRetake={handleRetake} onUseAnyway={handleUseAnyway} />
             ) : analysisResult ? (
               <div className="space-y-5">
+                <DiseaseVerdict verdict={verdict} result={analysisResult} onRetake={handleRetake} />
+                {verdict.showDetails && (
+                <>
                 <div className="flex flex-col gap-5 rounded-[1.5rem] border border-myanglow-sage/70 bg-white p-4 sm:flex-row sm:items-center">
                   <div className="flex shrink-0 items-center justify-center">
                     <div
@@ -676,6 +725,8 @@ function DiseaseDetectionPage() {
                     accent="text-myanglow-muted"
                   />
                 </div>
+                </>
+                )}
               </div>
             ) : (
               <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-myanglow-sage bg-myanglow-sage/15 px-6 py-10 text-center">

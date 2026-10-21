@@ -9,7 +9,11 @@ STULL_SOURCE = (
     "Stull 2011, Wet-Bulb Temperature from Relative Humidity and Air Temperature, "
     "J. Appl. Meteor. Climatol. 50, doi:10.1175/JAMC-D-11-0143.1"
 )
-DEFAULT_GATES = {"max_wind_ms": 5.5, "delta_t_c": (2.0, 8.0), "max_rain_6h_mm": 10.0}
+DEFAULT_GATES: dict[str, Any] = {
+    "max_wind_ms": 5.5,
+    "delta_t_c": (2.0, 8.0),
+    "max_rain_6h_mm": 10.0,
+}
 WASHOUT_HOURS = 6
 GATED_KINDS = {
     "spray": ("wind", "delta_t", "washout"),

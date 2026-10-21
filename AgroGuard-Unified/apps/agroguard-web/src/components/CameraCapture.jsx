@@ -118,6 +118,17 @@ export default function CameraCapture({ onCapture, onClose }) {
             muted
             className={`h-full w-full object-cover ${status === 'live' ? '' : 'invisible'}`}
           />
+          {status === 'live' && (
+            <>
+              <div
+                className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-dashed border-white/80"
+                aria-hidden="true"
+              />
+              <p className="pointer-events-none absolute inset-x-0 bottom-2 px-4 text-center text-xs text-white drop-shadow">
+                {t('photo.frame')}
+              </p>
+            </>
+          )}
           {status === 'starting' && (
             <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-white">
               <Loader2 size={18} className="animate-spin" /> {t('disease.cameraStarting')}

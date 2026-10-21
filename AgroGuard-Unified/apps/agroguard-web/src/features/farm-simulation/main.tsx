@@ -6,8 +6,7 @@ import { SignIn } from './components/SignIn.tsx';
 import { FieldApp } from './components/field/FieldApp.tsx';
 import { StoryApp } from './components/story/StoryApp.tsx';
 import { bootPaddySettings } from './lib/paddySettingsBoot.ts';
-import { ApiError } from './lib/apiError.ts';
-import { currentSession, type SessionState } from './lib/session.ts';
+import { checkSession } from './lib/sessionGate.ts';
 import './index.css';
 
 bootPaddySettings();
@@ -15,13 +14,8 @@ bootPaddySettings();
 const params = new URLSearchParams(window.location.search);
 const fieldFarm = params.has('field') ? params.get('farm') || 'farm_ayeyarwady_demo' : null;
 
-type Gate = SessionState | { error: string };
-
-const checkSession = (): Promise<Gate> =>
-  currentSession().catch((err: unknown): Gate => (err instanceof ApiError ? { error: err.message } : { open: true }));
-
 const Root: React.FC = () => {
-  const [session, setSession] = useState<Gate | undefined>(undefined);
+  const [session, setSession] = useState<Awaited<ReturnType<typeof checkSession>> | undefined>(undefined);
   const refresh = () => void checkSession().then(setSession);
 
   useEffect(refresh, []);

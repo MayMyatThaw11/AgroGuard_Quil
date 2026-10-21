@@ -8,6 +8,7 @@ import NDVIAnalysis from './components/NDVIAnalysis.jsx'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
 import DiseaseDetectionPage from './pages/DiseaseDetectionPage.jsx'
 import FarmSimulationPage from './pages/FarmSimulationPage.jsx'
+import PhotoReviewPage from './pages/PhotoReviewPage.jsx'
 import LandingPage from './LandingPage.jsx'
 import './App.css'
 
@@ -22,6 +23,7 @@ function App() {
         <Route path="/disease-detection" element={<DiseaseDetectionPage />} />
         <Route path="/ai-chat" element={<AIChat />} />
         <Route path="/health-updates" element={<HealthUpdates />} />
+        <Route path="/photo-review" element={<PhotoReviewPage />} />
         <Route path="/iot-simulation" element={<IoTSimulation />} />
         <Route path="/farm-simulation" element={<FarmSimulationPage />} />
       </Route>

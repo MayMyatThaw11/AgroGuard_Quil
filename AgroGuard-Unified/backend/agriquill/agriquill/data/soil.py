@@ -94,7 +94,11 @@ async def fetch_soil(lat: float, lon: float) -> dict[str, Any]:
     cached = _CACHE.get(key)
     if cached is not None:
         return cached
-    params: list[tuple[str, str]] = [("lat", str(lat)), ("lon", str(lon)), ("value", "mean")]
+    params: list[tuple[str, str | int | float | bool | None]] = [
+        ("lat", str(lat)),
+        ("lon", str(lon)),
+        ("value", "mean"),
+    ]
     for prop in ["clay", "sand", "silt", "phh2o", "soc", "cec"]:
         params.append(("property", prop))
     for d in SOIL_DEPTHS:

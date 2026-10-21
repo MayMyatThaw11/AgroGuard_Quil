@@ -123,6 +123,8 @@ export interface CrewTask {
   requires_human_approval: boolean;
   blocked_reason: string | null;
   evidence: string[];
+  /** False when a number in the text is not backed by the evidence; the task is then held. */
+  numbers_checked?: boolean;
   schedule?: TaskSchedule;
 }
 
@@ -134,6 +136,9 @@ export interface TaskSchedule {
   gates?: string;
   start?: string;
   end?: string;
+  /** Hours of travel to reach this task from the previous one on the same crew or machine. */
+  travel_h_before?: number;
+  travel_from?: string | null;
 }
 
 export interface ScheduleSummary {

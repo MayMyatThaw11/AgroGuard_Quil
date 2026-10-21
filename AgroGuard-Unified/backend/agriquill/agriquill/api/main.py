@@ -88,8 +88,25 @@ def parse_users(raw: str) -> list[User]:
 
 
 def _user_entries(settings: Settings) -> str:
-    entries = [s.get_secret_value() for s in (settings.users, settings.builtin_user) if s]
-    return ";".join(entries)
+    sources = [settings.users]
+    if settings.is_development:
+        sources.append(settings.builtin_user)
+    return ";".join(s.get_secret_value() for s in sources if s)
+
+
+def require_sign_in_configured(settings: Settings) -> None:
+    """Refuse to serve outside development with no way to sign in.
+
+    The alternative is an open API that treats every request as a full-access caller.
+    """
+    if settings.is_development:
+        return
+    if settings.write_token is None and not _user_entries(settings):
+        raise RuntimeError(
+            f"AGRIQUILL_ENVIRONMENT is {settings.environment!r} and no sign-in is configured. "
+            "Set AGRIQUILL_USERS (or AGRIQUILL_WRITE_TOKEN), or set "
+            "AGRIQUILL_ENVIRONMENT=development for local use."
+        )
 
 
 def _same(given: str | None, expected: str) -> bool:
@@ -113,6 +130,9 @@ def _reader(
     if shared is not None and _same(token, shared.get_secret_value()):
         return Caller(None, ROLES)
     if shared is None and not users:
+        if not settings.is_development:
+            # Startup refuses this state; guard anyway so a runtime change can't open the API.
+            raise HTTPException(status_code=503, detail="server sign-in is not configured")
         return Caller(None, ROLES)
     if token is None:
         return None
@@ -373,7 +393,22 @@ async def actuation_approve(req: ActuationReq, caller: Caller = _AS_MANAGER) -> 
         operator_confirmed=req.operator_confirmed,
         challenge_token=req.challenge_token,
         requested_minutes=req.requested_minutes,
+        rate_key=caller.name or "shared-token",
+        farm_key=req.farm_id,
     )
+    failure = verdict["failure"]
+    if failure and failure["code"] == safety.RATE_LIMITED:
+        _ledger().append(
+            "actuation_rate_limited",
+            {
+                "target": req.target,
+                "caller": caller.name,
+                **({"farm_id": req.farm_id} if req.farm_id else {}),
+            },
+        )
+        raise HTTPException(
+            status_code=429, detail=failure["detail"], headers={"Retry-After": "60"}
+        )
     entry = _ledger().append(
         "actuation_evaluated",
         {
@@ -841,15 +876,44 @@ async def gfw_vessels(
     return await asyncio.to_thread(gfw_marine.vessel_search, q, limit)
 
 
-def _webhook_token(token: str | None) -> None:
-    expected = get_settings().telemetry_webhook_token
+def _webhook_token(token: str | None, network: str) -> None:
+    """Check the webhook token for one LoRaWAN network.
+
+    Each network has its own token so a leak from one can't forge the other. The
+    shared telemetry_webhook_token still works for a network with no token of its own.
+    """
+    settings = get_settings()
+    expected = (
+        settings.telemetry_ttn_token if network == "ttn" else settings.telemetry_chirpstack_token
+    ) or settings.telemetry_webhook_token
     if expected is None:
         raise HTTPException(status_code=503, detail="telemetry webhook token is not configured")
     if token is None or not hmac.compare_digest(token, expected.get_secret_value()):
         raise HTTPException(status_code=401, detail="invalid telemetry token")
 
 
+def _require_declared_device(device_id: str, caller: Caller | None = None) -> None:
+    """Only sensors a farm contract declares may report, so a made-up ID can't write readings.
+
+    The AgroGuard bridge is the one exception: its own sensors ("agroguard:<id>") are
+    on no contract, and only the bridge user may report them.
+    """
+    if _device_farms(device_id):
+        return
+    settings = get_settings()
+    if (
+        caller is not None
+        and caller.name == settings.bridge_user
+        and device_id.startswith(settings.bridge_device_prefix)
+    ):
+        return
+    raise HTTPException(
+        status_code=403, detail=f"sensor {device_id} is not declared on any farm contract"
+    )
+
+
 def _ingest(parsed: tuple[str, str, dict[str, Any]], source: str) -> dict[str, Any]:
+    _require_declared_device(parsed[0])
     try:
         return telemetry.ingest(parsed[0], parsed[1], parsed[2], source)
     except telemetry.TelemetryError as exc:
@@ -861,7 +925,7 @@ async def telemetry_ttn(
     body: dict[str, Any] = _TASKS_BODY,
     token: str | None = Header(None, alias="X-AgriQuill-Token"),
 ) -> dict[str, Any]:
-    _webhook_token(token)
+    _webhook_token(token, "ttn")
     try:
         parsed = telemetry.parse_ttn(body)
     except telemetry.TelemetryError as exc:
@@ -875,7 +939,7 @@ async def telemetry_chirpstack(
     event: str = Query("up"),
     token: str | None = Header(None, alias="X-AgriQuill-Token"),
 ) -> dict[str, Any]:
-    _webhook_token(token)
+    _webhook_token(token, "chirpstack")
     if event != "up":
         return {"ignored": event}
     try:
@@ -911,6 +975,7 @@ async def telemetry_manual(req: ManualReadingReq, caller: Caller = _AS_CREW) -> 
     if not req.reporter.strip():
         raise HTTPException(status_code=422, detail="a named person must report the reading")
     _named(caller, req.reporter)
+    await asyncio.to_thread(_require_declared_device, req.device_id, caller)
     if caller.farms is not None and not _device_farms(req.device_id) & caller.farms:
         raise HTTPException(
             status_code=403, detail=f"sensor {req.device_id} is not on a farm this code can use"
@@ -1275,6 +1340,7 @@ async def knowledge_search(
 
 @asynccontextmanager
 async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+    require_sign_in_configured(get_settings())
     async with jobs.background():
         yield
 

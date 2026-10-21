@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -10,6 +11,8 @@ from .gates import DEFAULT_GATES, window_mask
 PRIORITY_WEIGHT = {"high": 100, "medium": 30, "low": 10}
 SLACK_DAYS = {"irrigate": 1, "drain": 1, "scout": 2, "harvest": 2, "spray": 3}
 DEFAULT_DURATION_H = 1
+# Walking pace along the bunds; a farm that drives or rides declares travel_kmh. TO VERIFY.
+DEFAULT_TRAVEL_KMH = 5.0
 
 
 def task_kind(task: Mapping[str, Any]) -> str | None:
@@ -35,6 +38,21 @@ def gate_kind(task: Mapping[str, Any], kind: str) -> str:
     if (task.get("actuation") or {}).get("target") == "drone":
         return "flight"
     return "any"
+
+
+def travel_hours(a: tuple[float, float] | None, b: tuple[float, float] | None, kmh: float) -> int:
+    """Whole hours to get from one field to another, rounded to the hourly grid.
+
+    Under half an hour counts as zero: the forecast is hourly, so a finer gap is not modelled.
+    """
+    if a is None or b is None or kmh <= 0:
+        return 0
+    lat1, lon1, lat2, lon2 = map(math.radians, (*a, *b))
+    h = math.sin((lat2 - lat1) / 2) ** 2 + (
+        math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+    )
+    km = 2 * 6371.0088 * math.asin(math.sqrt(h))
+    return int(km / kmh + 0.5)
 
 
 def _day_index(times: Sequence[str]) -> dict[str, list[int]]:
@@ -86,6 +104,8 @@ def solve(
     durations_h: Mapping[str, float] | None = None,
     crew: int | None = None,
     preferred_hour: int = 6,
+    positions: Mapping[str, tuple[float, float]] | None = None,
+    travel_kmh: float | None = None,
 ) -> dict[str, Any]:
     from ortools.sat.python import cp_model
 
@@ -117,13 +137,15 @@ def solve(
         if reason:
             task["blocked_reason"] = reason
             continue
-        start = model.NewIntVarFromDomain(cp_model.Domain.FromValues(allowed), f"s{len(jobs)}")
-        present = model.NewBoolVar(f"p{len(jobs)}")
-        interval = model.NewOptionalFixedSizeIntervalVar(start, duration, present, f"i{len(jobs)}")
+        start = model.new_int_var_from_domain(cp_model.Domain.FromValues(allowed), f"s{len(jobs)}")
+        present = model.new_bool_var(f"p{len(jobs)}")
+        interval = model.new_optional_fixed_size_interval_var(
+            start, duration, present, f"i{len(jobs)}"
+        )
         day_start = _day_index(times).get(task["date"], [0])[0]
         target = min(day_start + preferred_hour, horizon - 1)
-        lateness = model.NewIntVar(0, horizon, f"l{len(jobs)}")
-        model.AddAbsEquality(lateness, start - target)
+        lateness = model.new_int_var(0, horizon, f"l{len(jobs)}")
+        model.add_abs_equality(lateness, start - target)
         jobs.append(
             {
                 "task": task,
@@ -140,10 +162,42 @@ def solve(
         if asset:
             by_asset.setdefault(asset, []).append(job["interval"])
     for intervals in by_asset.values():
-        model.AddNoOverlap(intervals)
+        model.add_no_overlap(intervals)
+    speed = travel_kmh or DEFAULT_TRAVEL_KMH
+    # One crew member, or one machine, cannot be in two fields at once: leave the drive between.
+    groups: list[list[dict[str, Any]]] = []
+    if crew == 1:
+        groups.append(jobs)
+    else:
+        groups.extend(
+            [j for j in jobs if j["task"].get("asset_id") == asset]
+            for asset in {j["task"].get("asset_id") for j in jobs if j["task"].get("asset_id")}
+        )
+    for group in groups:
+        for n, first in enumerate(group):
+            for second in group[n + 1 :]:
+                gap = travel_hours(
+                    (positions or {}).get(first["task"].get("paddy_id") or ""),
+                    (positions or {}).get(second["task"].get("paddy_id") or ""),
+                    speed,
+                )
+                if gap <= 0 or first["task"].get("paddy_id") == second["task"].get("paddy_id"):
+                    continue
+                order = model.new_bool_var(f"o{id(first)}_{id(second)}")
+                both = [first["present"], second["present"]]
+                model.add(
+                    first["start"] + first["task"]["schedule"]["duration_h"] + gap
+                    <= second["start"]
+                ).only_enforce_if([*both, order])
+                model.add(
+                    second["start"] + second["task"]["schedule"]["duration_h"] + gap
+                    <= first["start"]
+                ).only_enforce_if([*both, order.Not()])
+                first.setdefault("gaps", {})[id(second)] = gap
+                second.setdefault("gaps", {})[id(first)] = gap
     if crew:
-        model.AddCumulative([j["interval"] for j in jobs], [1] * len(jobs), crew)
-    model.Maximize(
+        model.add_cumulative([j["interval"] for j in jobs], [1] * len(jobs), crew)
+    model.maximize(
         sum(j["weight"] * horizon * j["present"] for j in jobs) - sum(j["lateness"] for j in jobs)
     )
     solver = cp_model.CpSolver()
@@ -180,6 +234,7 @@ def solve(
         else:
             sched["status"] = "unscheduled"
             job["task"]["blocked_reason"] = "NO_CAPACITY:asset or crew busy in every allowed hour"
+    _mark_travel(groups, solver)
     return {
         "tasks": out,
         "summary": {
@@ -187,8 +242,23 @@ def solve(
             "solver": "CP-SAT (OR-Tools)",
             "horizon_h": horizon,
             "crew": crew,
+            "travel_kmh": speed,
             "scheduled": sum(1 for t in out if t["schedule"]["status"] == "scheduled"),
             "blocked": sum(1 for t in out if t["schedule"]["status"] == "blocked"),
             "objective": solver.ObjectiveValue(),
         },
     }
+
+
+def _mark_travel(groups: Sequence[Sequence[dict[str, Any]]], solver: Any) -> None:
+    """Tell each scheduled task how long the drive to it takes, for the day view."""
+    for group in groups:
+        done = sorted(
+            (j for j in group if solver.Value(j["present"])), key=lambda j: solver.Value(j["start"])
+        )
+        for before, after in zip(done, done[1:], strict=False):
+            gap = after.get("gaps", {}).get(id(before))
+            if gap:
+                sched = after["task"]["schedule"]
+                sched["travel_h_before"] = max(sched.get("travel_h_before", 0), gap)
+                sched["travel_from"] = before["task"].get("paddy_id")

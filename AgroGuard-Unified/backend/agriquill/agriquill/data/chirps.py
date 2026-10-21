@@ -413,7 +413,7 @@ def spi3(series: list[dict[str, Any]], month: int) -> float | None:
         keys = [_shift(year, month, -k) for k in range(3)]
         parts = [values.get(k) for k in keys]
         if all(p is not None for p in parts):
-            totals[year] = float(sum(parts))
+            totals[year] = float(sum(p for p in parts if p is not None))
     latest_year = max((int(p[:4]) for p in values if int(p[5:7]) == month), default=None)
     if latest_year is None:
         return None
@@ -421,7 +421,7 @@ def spi3(series: list[dict[str, Any]], month: int) -> float | None:
     parts = [values.get(k) for k in keys]
     if any(p is None for p in parts):
         return None
-    current = float(sum(parts))
+    current = float(sum(p for p in parts if p is not None))
     base = np.array([v for y, v in totals.items() if BASELINE[0] <= y <= BASELINE[1]])
     if len(base) < 25:
         return None

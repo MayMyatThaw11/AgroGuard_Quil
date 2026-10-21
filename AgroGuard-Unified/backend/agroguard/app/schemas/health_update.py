@@ -42,6 +42,26 @@ class Segmentation(APIModel):
     clusters: list[ClusterInfo]
 
 
+class PhotoQuality(APIModel):
+    """The photo-quality check that ran when the photo was saved."""
+
+    ok: bool
+    reasons: list[str] = []
+    metrics: dict[str, float] = {}
+
+
+class StoredReview(APIModel):
+    """An agronomist's verdict on the photo, once it has been through the review queue."""
+
+    reviewer: str
+    usable: bool
+    plant: str | None = None
+    condition: str | None = None
+    is_healthy: bool | None = None
+    note: str | None = None
+    reviewed_at: datetime
+
+
 class HealthUpdateUpdate(APIModel):
     plant_type: str | None = None
     health_status: str | None = None
@@ -51,6 +71,8 @@ class HealthUpdateUpdate(APIModel):
     reported_by: str | None = None
     notes: str | None = None
     conditions: GrowingConditions | None = None
+    # A farmer can withdraw consent later; the photo then leaves the review queue and exports.
+    consent_to_train: bool | None = None
 
 
 class HealthUpdateResponse(APIModel):
@@ -67,6 +89,10 @@ class HealthUpdateResponse(APIModel):
     conditions: GrowingConditions
     detection: DiseaseDetection | None = None
     segmentation: Segmentation | None = None
+    quality: PhotoQuality | None = None
+    # Whether the farmer agreed to agronomists using this photo to improve disease checks.
+    consent_to_train: bool = False
+    review: StoredReview | None = None
     image_url: str | None = None
     mask_url: str | None = None
     reported_at: datetime

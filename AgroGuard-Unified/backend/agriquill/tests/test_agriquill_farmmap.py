@@ -127,8 +127,15 @@ def test_osm_ring_reads_a_closed_way_and_rejects_anything_else():
 
 def test_site_contract_carries_the_osm_boundary(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(live, "osm_ring", lambda osm, client=None: RING)
-    site = {"osm": "way/9", "name": "F", "lat": 16.73, "lon": 95.598, "area_ha": 0.3,
-            "country_iso2": "MM", "crop_id": "rice_lowland"}
+    site = {
+        "osm": "way/9",
+        "name": "F",
+        "lat": 16.73,
+        "lon": 95.598,
+        "area_ha": 0.3,
+        "country_iso2": "MM",
+        "crop_id": "rice_lowland",
+    }
     out = live.create_from_site(site, "Daw Hla")
     assert out["contract"]["parcels"][0]["boundary"] == RING
 

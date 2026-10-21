@@ -1,14 +1,13 @@
 from functools import lru_cache
 from math import exp
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 
 DATA_PATH = Path(__file__).resolve().parent / "data" / "plants.csv"
 MYANMAR_DATA_PATH = Path(__file__).resolve().parent / "data" / "plants_mm.csv"
-TOWNSHIP_DATA_PATH = (
-    Path(__file__).resolve().parent / "data" / "township_agricultural_data.csv"
-)
+TOWNSHIP_DATA_PATH = Path(__file__).resolve().parent / "data" / "township_agricultural_data.csv"
 _CROP_NAMES_MY = {
     "Rice": "စပါး",
     "Wheat": "ဂျုံ",
@@ -50,49 +49,33 @@ def recommend_plants(
     plants = _load_plants().copy()
     if crop_only:
         agricultural_uses = (
-            "culinary|food|fruit|salad|spice|medicinal|juice|dessert|"
-            "pickle|edible|cooking"
+            "culinary|food|fruit|salad|spice|medicinal|juice|dessert|pickle|edible|cooking"
         )
         plants = plants[
-            plants["plant_group"]
-            .astype(str)
-            .str.casefold()
-            .isin({"vegetable", "fruit"})
-            & plants["Uses"]
-            .astype(str)
-            .str.contains(agricultural_uses, case=False, regex=True)
-            & ~plants["plant_name"]
-            .astype(str)
-            .str.contains("tree|wood", case=False, regex=True)
+            plants["plant_group"].astype(str).str.casefold().isin({"vegetable", "fruit"})
+            & plants["Uses"].astype(str).str.contains(agricultural_uses, case=False, regex=True)
+            & ~plants["plant_name"].astype(str).str.contains("tree|wood", case=False, regex=True)
         ].copy()
     midpoint = (plants["lowest_temp"] + plants["highest_temp"]) / 2
     half_range = ((plants["highest_temp"] - plants["lowest_temp"]) / 2).clip(lower=1)
     temperature_difference = (midpoint - temperature_c).abs()
     temperature_score = 100 - (temperature_difference / half_range * 50)
     outside_range = temperature_difference > half_range
-    temperature_score.loc[outside_range] = (
-        50 - ((temperature_difference.loc[outside_range] - half_range.loc[outside_range]) * 15)
+    temperature_score.loc[outside_range] = 50 - (
+        (temperature_difference.loc[outside_range] - half_range.loc[outside_range]) * 15
     )
     ph_penalty = abs(6.5 - soil_ph) * 8
-    water_need = pd.to_numeric(
-        plants["water_necessity (1Lcup/day)"], errors="coerce"
-    ).fillna(1)
+    water_need = pd.to_numeric(plants["water_necessity (1Lcup/day)"], errors="coerce").fillna(1)
     water_penalty = ((water_need > 2) & (rainfall_mm < 20)).astype(int) * 10
-    plants["match_score"] = (
-        temperature_score - ph_penalty - water_penalty
-    ).clip(15, 98)
+    plants["match_score"] = (temperature_score - ph_penalty - water_penalty).clip(15, 98)
 
     viable = plants[
-        (temperature_c >= plants["lowest_temp"] - 2)
-        & (temperature_c <= plants["highest_temp"] + 2)
+        (temperature_c >= plants["lowest_temp"] - 2) & (temperature_c <= plants["highest_temp"] + 2)
     ]
     if viable.empty:
         viable = plants
 
-    ranked = (
-        viable.sort_values("match_score", ascending=False)
-        .drop_duplicates("plant_name")
-    )
+    ranked = viable.sort_values("match_score", ascending=False).drop_duplicates("plant_name")
     best = ranked.head(limit)
     localized: dict[object, tuple[str, str]] = {}
     if language == "my":
@@ -160,9 +143,9 @@ def recommend_crops(
     for recommendation in recommendations:
         crop_key = str(recommendation["name_en"]).casefold()
         crop_history = history[history["crop_key"] == crop_key]
-        raw_plant_price = str(
-            recommendation.get("market_price_mmk_per_kg", "")
-        ).replace(",", "").strip()
+        raw_plant_price = (
+            str(recommendation.get("market_price_mmk_per_kg", "")).replace(",", "").strip()
+        )
         try:
             plant_price = round(float(raw_plant_price)) if raw_plant_price else 0
         except ValueError:
@@ -182,11 +165,7 @@ def recommend_crops(
         )
         township_price = round(float(prices.mean())) if not prices.empty else 0
         recommendation["market_price_mmk_per_kg"] = plant_price or township_price
-        township_yield = (
-            round(float(yields.mean()) * 404.686, 1)
-            if not yields.empty
-            else 0
-        )
+        township_yield = round(float(yields.mean()) * 404.686, 1) if not yields.empty else 0
         recommendation["yield_per_acre_kg"] = township_yield
 
     feature_names = ["soil_pH", "rainfall_mm", "temperature_c"]
@@ -196,15 +175,11 @@ def recommend_crops(
     )
     scales = history[feature_names].std().replace(0, 1)
     history["distance"] = (
-        ((history[feature_names] - conditions) / scales)
-        .pow(2)
-        .sum(axis=1)
-        .pow(0.5)
+        ((history[feature_names] - conditions) / scales).pow(2).sum(axis=1).pow(0.5)
     )
     township_candidates: list[dict[str, object]] = []
     existing_names = {
-        str(recommendation["name_en"]).casefold()
-        for recommendation in recommendations
+        str(recommendation["name_en"]).casefold() for recommendation in recommendations
     }
     for crop, group in history.groupby("best_crop"):
         crop_name = str(crop)
@@ -226,26 +201,17 @@ def recommend_crops(
         township_candidates.append(
             {
                 "name": (
-                    _CROP_NAMES_MY.get(crop_name, crop_name)
-                    if language == "my"
-                    else crop_name
+                    _CROP_NAMES_MY.get(crop_name, crop_name) if language == "my" else crop_name
                 ),
                 "name_en": crop_name,
                 "match_score": round(suitability, 1),
                 "estimated_capacity": 0,
                 "description": (
-                    f"{crop_name} is supported by similar township soil "
-                    "and climate records."
+                    f"{crop_name} is supported by similar township soil and climate records."
                 ),
-                "market_price_mmk_per_kg": (
-                    round(float(prices.mean()))
-                    if not prices.empty
-                    else 0
-                ),
+                "market_price_mmk_per_kg": (round(float(prices.mean())) if not prices.empty else 0),
                 "yield_per_acre_kg": (
-                    round(float(yields.mean()) * 404.686, 1)
-                    if not yields.empty
-                    else 0
+                    round(float(yields.mean()) * 404.686, 1) if not yields.empty else 0
                 ),
             }
         )
@@ -254,6 +220,6 @@ def recommend_crops(
 
     return sorted(
         recommendations,
-        key=lambda recommendation: float(recommendation["match_score"]),
+        key=lambda recommendation: float(cast(float, recommendation["match_score"])),
         reverse=True,
     )[:limit]

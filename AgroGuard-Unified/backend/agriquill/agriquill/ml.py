@@ -5,10 +5,9 @@ from typing import Any
 
 # The trained models (RandomForest crop model) are AgroGuard's originally,
 # vendored into agriquill/ml_models/ as a self-contained copy (see below).
-# AgriQill surfaces them with input validation, latency, and an explicit
-# accuracy note. Accuracy figures are computed on the bundled synthetic
-# township dataset and are NOT a field-validated estimate; the Beta design
-# target remains 95-98% and is marked TO VERIFY.
+# AgriQill surfaces them with input validation and latency. It reports no
+# accuracy figure: the only data bundled is synthetic, so an accuracy measured on
+# it would only show the model matching the tables that made the data.
 try:  # own copy of AgroGuard's trained artifacts — kept self-contained so
     # AgriQill doesn't depend on AgroGuard's backend being present (they're
     # two independently deployable processes; see docs/RECONCILIATION.md).
@@ -21,10 +20,16 @@ except Exception as exc:  # artifact missing or incompatible env
     _ML_AVAILABLE = False
     _ML_ERROR = str(exc)
 
-# Held-out accuracy of the RandomForest crop model on the bundled synthetic
-# township CSV split (200 rows) is 1.0. Marked synthetic, not field-validated.
-CROP_MODEL_HELDOUT_ACCURACY_SYNTHETIC = 1.0
-ACCURACY_DESIGN_TARGET = "95-98% (design target, TO VERIFY on field data)"
+# Shown with every prediction. held_out_accuracy stays null until the model is
+# scored on real field outcomes, by township, and never holds a synthetic figure.
+VALIDATION = {
+    "held_out_accuracy": None,
+    "validated_on_field_data": False,
+    "reason": (
+        "Not measured yet. The bundled training rows are synthetic, so any accuracy "
+        "computed on them would only mirror the tables that generated them."
+    ),
+}
 
 
 def available() -> tuple[bool, str | None]:
@@ -53,8 +58,7 @@ def crop_predict(soil_ph: float, rainfall_mm: float, temperature_c: float) -> di
         "crop": crop,
         "confidence_percent": confidence,
         "alternatives": [{"crop": c, "score": s} for c, s in alternatives],
-        "heldout_accuracy_on_bundled_synthetic_dataset": CROP_MODEL_HELDOUT_ACCURACY_SYNTHETIC,
-        "accuracy_design_target": ACCURACY_DESIGN_TARGET,
+        "validation": VALIDATION,
         "measured_latency_ms": elapsed_ms,
     }
 
@@ -72,6 +76,6 @@ def plant_recommend(
     elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
     return {
         "recommendations": items,
-        "accuracy_design_target": ACCURACY_DESIGN_TARGET,
+        "validation": VALIDATION,
         "measured_latency_ms": elapsed_ms,
     }

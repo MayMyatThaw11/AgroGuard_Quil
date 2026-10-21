@@ -48,7 +48,7 @@ export interface FieldMissionState {
   composerDraft: ComposerDraft | null;
   dispatchCommand: (args: DispatchCommandArgs) => Mission;
   addNote: (args: AddNoteArgs) => Mission;
-  approve: (id: string, pin: string) => string | null;
+  approve: (id: string, pin: string, confirmed: boolean) => string | null;
   replyToThread: (id: string, text: string, context: AgronomyContext) => void;
   tick: (now?: number) => void;
   setOpenThreadId: (id: string | null) => void;
@@ -120,10 +120,10 @@ export const useFieldMissionStore = create<FieldMissionState>((set, get) => ({
     return mission;
   },
 
-  approve: (id, pin) => {
+  approve: (id, pin, confirmed) => {
     const mission = get().missions.find((m) => m.id === id);
     if (!mission) return 'Mission not found';
-    const result = approveMission(mission, { pin, confirmed: true });
+    const result = approveMission(mission, { pin, confirmed });
     if (result.failure) return result.failure;
     set((state) => ({
       missions: state.missions.map((m) => (m.id === id ? result.mission : m)),

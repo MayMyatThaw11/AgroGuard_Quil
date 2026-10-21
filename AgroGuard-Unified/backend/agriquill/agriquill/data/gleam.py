@@ -109,7 +109,7 @@ def _transient(exc: Exception) -> bool:
 @contextmanager
 def _sftp() -> Iterator[paramiko.SFTPClient]:
     s = get_settings()
-    if not configured():
+    if not configured() or s.gleam_password is None:
         raise GleamError("AGRIQUILL_GLEAM_USER and AGRIQUILL_GLEAM_PASSWORD are not set")
     with _SLOTS:
         transport = paramiko.Transport((s.gleam_host, s.gleam_port))

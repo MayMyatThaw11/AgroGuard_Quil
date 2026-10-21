@@ -33,7 +33,9 @@ def _leaf_png() -> bytes:
 
 @pytest_asyncio.fixture
 async def mongo_db(monkeypatch):
-    client = AsyncMongoClient(get_settings().mongo_url, serverSelectionTimeoutMS=1500, tz_aware=True)
+    client = AsyncMongoClient(
+        get_settings().mongo_url, serverSelectionTimeoutMS=1500, tz_aware=True
+    )
     try:
         await client.admin.command("ping")
     except ConnectionFailure:

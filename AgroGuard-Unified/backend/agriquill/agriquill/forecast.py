@@ -324,15 +324,15 @@ def forecast(
     started = time.perf_counter()
     min_length = cfg.window + 2 * cfg.horizon + 4
     if len(rain) < min_length:
-        per_series = {}
+        damped_bands: dict[str, dict[str, list[float]]] = {}
         for s, target in zip(series, targets, strict=True):
             sigma = float(np.std(np.diff(target))) if len(target) > 2 else 0.5
-            per_series[s.id] = _band(_damped(target, cfg.horizon), sigma)
+            damped_bands[s.id] = _band(_damped(target, cfg.horizon), sigma)
         return {
             "method": METHOD_FALLBACK,
             "fallback_reason": f"history shorter than {min_length} days",
             "horizon_days": cfg.horizon,
-            "series": per_series,
+            "series": damped_bands,
             "backtest": None,
             "compute_ms": round((time.perf_counter() - started) * 1000, 1),
             "provenance": "modelled",

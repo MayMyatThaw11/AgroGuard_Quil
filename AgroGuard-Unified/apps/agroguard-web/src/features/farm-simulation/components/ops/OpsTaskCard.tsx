@@ -231,6 +231,14 @@ export const OpsTaskCard: React.FC<OpsTaskCardProps> = ({ task, standard, weathe
           {task.schedule.assumed_duration ? ' (duration assumed: not in the contract)' : ''}
         </p>
       )}
+      {task.schedule?.status === 'scheduled' && task.schedule.travel_h_before ? (
+        <p className="mt-1 text-[11px] text-(--ops-ink-3)">
+          Allow {task.schedule.travel_h_before} h to get here from {task.schedule.travel_from ?? 'the last field'}.
+        </p>
+      ) : null}
+      {task.numbers_checked && !task.blocked_reason && (
+        <p className="mt-1 text-[11px] text-(--ops-ink-3)">✓ Every number here is backed by the evidence below.</p>
+      )}
       {task.blocked_reason && (
         <p className="mt-1 text-[11px] font-semibold text-(--ops-red)">{blockedLabel(task.blocked_reason)}</p>
       )}

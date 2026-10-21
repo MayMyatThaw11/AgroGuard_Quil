@@ -33,39 +33,104 @@ def weather_forecast(latitude: float, longitude: float) -> dict[str, Any]:
     return asyncio.run(fetch_weather(latitude, longitude))
 
 
-def drone_spray_guard(current_wind_speed_ms: float) -> dict[str, Any]:
+def _server_wind(farm_id: str) -> tuple[float | None, str]:
+    """Wind the server can vouch for: the on-site anemometer (reading at most 30 min old),
+    else today's forecast maximum from Open-Meteo (stricter than any single hour)."""
+    onsite = live.fresh_wind(farm_id)
+    if onsite is not None:
+        return float(onsite["value"]), "on-site anemometer"
+    loaded = live.load(farm_id)
+    spec = loaded[1]["contract"] if loaded else None
+    if spec is None:
+        return None, "unavailable"
+    lat, lon = spec["farm"]["location"]
     try:
-        safety.check_wind(current_wind_speed_ms)
+        forecast = asyncio.run(fetch_weather(lat, lon))
+    except Exception:
+        return None, "unavailable"
+    return float(forecast["daily"][0]["wind_speed_max_ms"]), "Open-Meteo forecast maximum today"
+
+
+def drone_spray_guard(current_wind_speed_ms: float, farm_id: str | None = None) -> dict[str, Any]:
+    """Halt a mission if wind is over the ceiling.
+
+    The agent's own wind figure is never trusted alone: with a farm_id the server also reads
+    its on-site or forecast wind and the higher value decides. With no farm_id only the
+    agent's figure can be checked, and the answer says so (wind_verified is false).
+    """
+    wind = current_wind_speed_ms
+    source = "agent-supplied"
+    verified = False
+    if farm_id:
+        server, server_source = _server_wind(farm_id)
+        if server is None:
+            detail = f"no on-site or forecast wind available for farm {farm_id}"
+            _ledger().append(
+                "drone_spray_rejected", {"farm_id": farm_id, "code": "REJECTED_INVALID_TELEMETRY"}
+            )
+            return {
+                "status": "REJECTED_INVALID_TELEMETRY",
+                "permitted": False,
+                "detail": detail,
+                "wind_verified": False,
+            }
+        if server >= wind:
+            wind, source = server, server_source
+        verified = True
+    try:
+        safety.check_wind(wind)
     except safety.SafetyError as exc:
         _ledger().append(
-            "drone_spray_rejected", {"wind_speed_ms": current_wind_speed_ms, "code": exc.code}
+            "drone_spray_rejected",
+            {"wind_speed_ms": wind, "code": exc.code, **({"farm_id": farm_id} if farm_id else {})},
         )
-        return {"status": exc.code, "permitted": False, "detail": exc.detail}
-    _ledger().append("drone_spray_permitted", {"wind_speed_ms": current_wind_speed_ms})
-    return {"status": "PERMITTED", "permitted": True}
+        return {
+            "status": exc.code,
+            "permitted": False,
+            "detail": exc.detail,
+            "wind_used": {"value_ms": wind, "source": source},
+            "wind_verified": verified,
+        }
+    _ledger().append(
+        "drone_spray_permitted",
+        {"wind_speed_ms": wind, **({"farm_id": farm_id} if farm_id else {})},
+    )
+    return {
+        "status": "PERMITTED",
+        "permitted": True,
+        "wind_used": {"value_ms": wind, "source": source},
+        "wind_verified": verified,
+    }
 
 
 def lorawan_actuate(
     *,
     device_id: str,
     command: str,
-    approval_pin: str,
     wind_speed_ms: float | None = None,
     declared_inputs: list[str] | None = None,
     standard: str | None = None,
     requested_minutes: float | None = None,
-    operator_confirmed: bool = False,
-    challenge_token: str | None = None,
+    **human_only: Any,
 ) -> dict[str, Any]:
+    """Phase A only: run the safety gates and ask a named person to approve in the app.
+
+    This tool can never complete an actuation. The PIN, the confirmation and the
+    one-time token belong to the person approving, so none of them can be passed here
+    and no token is returned.
+    """
+    if human_only:
+        raise ValueError(
+            f"lorawan_actuate does not accept {sorted(human_only)}: a named person approves "
+            "actuation in the app (/actuation/approve), never an agent"
+        )
     verdict = safety.evaluate_actuation(
         "irrigation_valve",
         wind_speed_ms=wind_speed_ms,
         declared_inputs=declared_inputs,
         standard=standard,
-        approval_pin=approval_pin,
-        operator_confirmed=operator_confirmed,
-        challenge_token=challenge_token,
         requested_minutes=requested_minutes,
+        issue_token=False,
     )
     _ledger().append(
         "lorawan_actuate",
@@ -76,19 +141,16 @@ def lorawan_actuate(
             "failure": verdict["failure"],
         },
     )
-    if verdict["status"] != "PERMITTED":
-        return {
-            "status": verdict["status"],
-            "failure": verdict["failure"],
-            "challenge_token": verdict.get("challenge_token"),
-            "notes": verdict["notes"],
-            "downlink": None,
-        }
     return {
-        "status": "APPROVED_TRANSMITTED",
+        "status": verdict["status"],
+        "failure": verdict["failure"],
         "notes": verdict["notes"],
-        "downlink": {"device_id": device_id, "command": command},
-        "ledger_commit_hash": _ledger().head_hash(),
+        "downlink": None,
+        "next_step": (
+            "Gates passed. A named person must approve this job in the app before anything is sent."
+            if verdict["status"] == "PENDING_APPROVAL"
+            else None
+        ),
     }
 
 
@@ -715,31 +777,36 @@ TOOLS = {
         "impl": farm_location,
     },
     "drone_spray_guard": {
-        "description": "Hard halt mission if wind > 5.5 m/s.",
+        "description": "Hard halt mission if wind > 5.5 m/s. With farm_id the server also reads "
+        "its own wind (on-site anemometer, else today's forecast maximum) and the higher value "
+        "decides; without it only your figure is checked and the result says it is unverified.",
         "input_schema": {
             "type": "object",
-            "properties": {"current_wind_speed_ms": {"type": "number"}},
+            "properties": {
+                "current_wind_speed_ms": {"type": "number"},
+                "farm_id": {"type": "string"},
+            },
             "required": ["current_wind_speed_ms"],
         },
-        "fn": lambda a: drone_spray_guard(a["current_wind_speed_ms"]),
+        "fn": lambda a: drone_spray_guard(a["current_wind_speed_ms"], a.get("farm_id")),
         "impl": drone_spray_guard,
     },
     "lorawan_actuate": {
-        "description": "Human-approved LoRaWAN actuation with safety gates + ledger receipt.",
+        "description": "Ask for a LoRaWAN actuation: runs the safety gates and records a ledger "
+        "receipt, then waits for a named person to approve in the app. It never sends anything "
+        "and takes no PIN, confirmation or token.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "device_id": {"type": "string"},
                 "command": {"type": "string"},
-                "approval_pin": {"type": "string"},
                 "wind_speed_ms": {"type": "number"},
                 "declared_inputs": {"type": "array", "items": {"type": "string"}},
                 "standard": {"type": "string"},
                 "requested_minutes": {"type": "number"},
-                "operator_confirmed": {"type": "boolean"},
-                "challenge_token": {"type": "string"},
             },
-            "required": ["device_id", "command", "approval_pin"],
+            "required": ["device_id", "command"],
+            "additionalProperties": False,
         },
         "fn": lambda a: lorawan_actuate(**a),
         "impl": lorawan_actuate,

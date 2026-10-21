@@ -211,30 +211,21 @@ def test_live_anemometer_overrides_a_calm_request_at_transmission():
     assert phase_a["wind_used"]["value_ms"] == 7.2
 
 
-def test_mcp_lorawan_actuate_needs_the_token_too():
+def test_mcp_lorawan_actuate_can_no_longer_complete_an_approval():
+    # It used to take the PIN, the confirmation and the token from the agent, so an
+    # agent that held a PIN could finish an actuation. Phase B now belongs to people.
+    with pytest.raises(ValueError, match="never an agent"):
+        tools.lorawan_actuate(
+            device_id="valve-1",
+            command="open",
+            approval_pin="1234",
+            operator_confirmed=True,
+            challenge_token="tok_anything",
+        )
     out = tools.lorawan_actuate(
         device_id="valve-1",
         command="open",
-        approval_pin="1234",
-        standard="ASEAN_ORGANIC_ASOA",
-        requested_minutes=30,
-        operator_confirmed=True,
-    )
-    assert out["status"] == "REJECTED" and out["downlink"] is None
-    first = tools.lorawan_actuate(
-        device_id="valve-1",
-        command="open",
-        approval_pin="1234",
         standard="ASEAN_ORGANIC_ASOA",
         requested_minutes=30,
     )
-    ok = tools.lorawan_actuate(
-        device_id="valve-1",
-        command="open",
-        approval_pin="1234",
-        standard="ASEAN_ORGANIC_ASOA",
-        requested_minutes=30,
-        operator_confirmed=True,
-        challenge_token=first["challenge_token"],
-    )
-    assert ok["status"] == "APPROVED_TRANSMITTED"
+    assert out["status"] == "PENDING_APPROVAL" and out["downlink"] is None

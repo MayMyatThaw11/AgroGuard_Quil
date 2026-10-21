@@ -14,6 +14,16 @@ from app.schemas.crop_suggestion import (
 
 router = APIRouter(tags=["crop-suggestion"])
 
+# The ASEAN Top-50 Gaussian Naive Bayes model. Its training rows are drawn uniformly from
+# each crop's optimal and tolerable ranges (scripts/download_dataset.py), then the result is
+# filtered by those same ranges, so it has never been tested against real yields.
+MODEL_INFO = {
+    "name": "ASEAN Top-50 Gaussian Naive Bayes",
+    "trained_on": "synthetic samples drawn from crop range tables (FAO EcoCrop and ASEAN rules)",
+    "validated_on_field_data": False,
+    "score_is_probability": False,
+}
+
 
 @router.post(
     "/crop-suggestion",
@@ -38,6 +48,7 @@ def crop_suggestion(request: CropSuggestionRequest) -> CropSuggestionResponse:
 
     primary = recommendations[0]
     return CropSuggestionResponse(
+        model_info=MODEL_INFO,
         crop=str(primary["name"]),
         confidence_percent=float(primary["match_score"]),
         recommendations=[

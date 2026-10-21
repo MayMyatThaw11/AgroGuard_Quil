@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import threading
 import time
 import uuid
+from collections import deque
+from collections.abc import Callable
 from typing import Any
 
 from .config import get_settings
@@ -179,6 +182,80 @@ def verify_and_redeem_token(token: str | None, target: str, payload_hash: str) -
             )
 
 
+RATE_LIMITED = "REJECTED_RATE_LIMITED"
+ISSUE_WINDOW_S = 60.0
+
+# Sliding-window counters, in memory and per server process: they reset on a
+# restart and are not shared between workers. Fine for the single-process
+# server today; a multi-worker deployment needs a shared store.
+_clock: Callable[[], float] = time.monotonic
+_limit_lock = threading.Lock()
+_pin_failures: dict[str, deque[float]] = {}
+_issued: dict[str, deque[float]] = {}
+GLOBAL = "*"
+
+
+def reset_rate_limits() -> None:
+    with _limit_lock:
+        _pin_failures.clear()
+        _issued.clear()
+
+
+def _recent(store: dict[str, deque[float]], key: str, window_s: float) -> int:
+    hits = store.get(key)
+    if not hits:
+        return 0
+    cutoff = _clock() - window_s
+    while hits and hits[0] <= cutoff:
+        hits.popleft()
+    return len(hits)
+
+
+def _note(store: dict[str, deque[float]], *keys: str) -> None:
+    now = _clock()
+    for key in keys:
+        store.setdefault(key, deque()).append(now)
+
+
+def check_pin_lockout(caller: str) -> None:
+    """Refuse a PIN attempt from a caller (or the whole server) with too many recent misses."""
+    s = get_settings()
+    with _limit_lock:
+        too_many = (
+            _recent(_pin_failures, caller, s.pin_failure_window_s) >= s.pin_failures_per_caller
+            or _recent(_pin_failures, GLOBAL, s.pin_failure_window_s) >= s.pin_failures_global
+        )
+    if too_many:
+        raise SafetyError(
+            RATE_LIMITED,
+            f"too many wrong PINs; wait {int(s.pin_failure_window_s // 60)} minutes and try again",
+        )
+
+
+def record_pin_failure(caller: str) -> None:
+    with _limit_lock:
+        _note(_pin_failures, caller, GLOBAL)
+
+
+def check_issue_limit(caller: str, farm: str | None) -> None:
+    """Cap how fast approval tokens can be requested, per caller, per farm and overall.
+
+    Every wrong PIN costs a fresh token, so this is what bounds PIN guessing.
+    """
+    s = get_settings()
+    keyed = [caller] + ([f"farm:{farm}"] if farm else [])
+    with _limit_lock:
+        over_key = any(
+            _recent(_issued, key, ISSUE_WINDOW_S) >= s.approvals_per_minute_per_caller
+            for key in keyed
+        )
+        over_all = _recent(_issued, GLOBAL, ISSUE_WINDOW_S) >= s.approvals_per_minute_global
+        if not (over_key or over_all):
+            _note(_issued, *keyed, GLOBAL)
+    if over_key or over_all:
+        raise SafetyError(RATE_LIMITED, "too many approval requests; wait a minute and try again")
+
+
 def check_approval(pin: str | None, confirmed: bool) -> None:
     if not confirmed:
         raise SafetyError("REJECTED_APPROVAL_MISSING", "operator has not confirmed")
@@ -204,7 +281,17 @@ def evaluate_actuation(
     operator_confirmed: bool = False,
     challenge_token: str | None = None,
     requested_minutes: float | None = None,
+    rate_key: str | None = None,
+    farm_key: str | None = None,
+    issue_token: bool = True,
 ) -> dict[str, Any]:
+    """Run the gates and the two-phase human approval.
+
+    `rate_key` names the caller for the approval rate limits. The network
+    routes always pass it; None (in-process callers such as tests) is unlimited.
+    `issue_token=False` makes phase A a dry run for callers that must never be
+    able to finish an approval (the MCP agent): gates run, no token is minted.
+    """
     passed: list[str] = []
     notes: list[str] = []
     payload_hash = _compute_payload_hash(target, standard, declared_inputs, requested_minutes)
@@ -228,7 +315,11 @@ def evaluate_actuation(
         # Two-phase human confirmation (AGENTS.md hard rule 6)
         # Phase A: If not confirmed yet, issue a single-use token bound to payload hash
         if not operator_confirmed:
-            token = issue_challenge_token(target, payload_hash)
+            token = None
+            if issue_token:
+                if rate_key is not None:
+                    check_issue_limit(rate_key, farm_key)
+                token = issue_challenge_token(target, payload_hash)
             return {
                 "status": "PENDING_APPROVAL",
                 "target": target,
@@ -240,13 +331,22 @@ def evaluate_actuation(
                     "code": "REJECTED_APPROVAL_MISSING",
                     "detail": (
                         "Phase A challenge token issued; operator confirmation and PIN required"
+                        if token
+                        else "Gates passed; a named person must approve this in the app"
                     ),
                 },
             }
 
         # Phase B: Operator confirmation with PIN and token redemption
+        if rate_key is not None:
+            check_pin_lockout(rate_key)
         verify_and_redeem_token(challenge_token, target, payload_hash)
-        check_approval(approval_pin, operator_confirmed)
+        try:
+            check_approval(approval_pin, operator_confirmed)
+        except SafetyError as exc:
+            if exc.code == "REJECTED_PIN_MISMATCH" and rate_key is not None:
+                record_pin_failure(rate_key)
+            raise
         passed.append("gate3_challenge_token_verified")
 
         # Re-verify wind at transmission time for physical drone actuation

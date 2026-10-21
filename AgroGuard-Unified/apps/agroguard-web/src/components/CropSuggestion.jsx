@@ -66,6 +66,7 @@ export default function CropSuggestion() {
   const [suggestion, setSuggestion] = useState(null);
   const [predictionConfidence, setPredictionConfidence] = useState(null);
   const [predictionRecommendations, setPredictionRecommendations] = useState([]);
+  const [modelInfo, setModelInfo] = useState(null);
   const [selectedRecommendationIndex, setSelectedRecommendationIndex] = useState(0);
   const [explanation, setExplanation] = useState('');
   const [loading, setLoading] = useState(false);
@@ -230,6 +231,7 @@ export default function CropSuggestion() {
       setSuggestion(crop);
       setPredictionConfidence(data.confidencePercent);
       setPredictionRecommendations(data.recommendations || []);
+      setModelInfo(data.modelInfo || null);
       // Remember these conditions so Health Updates can pre-fill them.
       saveCropConditions(payload, {
         source: mode === 'auto' && weatherData ? 'satellite' : 'manual',
@@ -487,21 +489,23 @@ export default function CropSuggestion() {
                     <span style={{ width: `${recommendation.suitabilityPercent}%` }} />
                   </span>
                   <span className="recommendation-meta">
-                    <span>{recommendation.suitabilityPercent}% fit</span>
+                    <span>{t('crop.matchScore')} {Math.round(recommendation.suitabilityPercent)}</span>
                     <span>{Number(recommendation.marketPriceMmkPerKg).toLocaleString()} MMK/kg</span>
                   </span>
                 </button>
               ))}
             </div>
 
+            {modelInfo && !modelInfo.validatedOnFieldData && (
+              <p className="crop-model-note">{t('crop.modelNote')}</p>
+            )}
+
             <div className="crop-detail">
               <div className="crop-detail-head">
                 <h3>{selectedRecommendation.crop}</h3>
-                <span className="match-badge">{selectedRecommendation.suitabilityPercent}% suitable</span>
+                <span className="match-badge">{t('crop.matchScore')} {Math.round(selectedRecommendation.suitabilityPercent)}</span>
               </div>
-              <p className="crop-detail-reason">
-                A good fit for your soil pH, rainfall and temperature.
-              </p>
+              <p className="crop-detail-reason">{t('crop.rankedReason')}</p>
               <dl className="crop-stats">
                 <div>
                   <dt>Price</dt>

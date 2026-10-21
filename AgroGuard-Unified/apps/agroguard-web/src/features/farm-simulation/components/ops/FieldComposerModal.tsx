@@ -20,8 +20,6 @@ export const FieldComposerModal: React.FC<FieldComposerModalProps> = ({ draft, c
   const [selectedMachine, setSelectedMachine] = useState<MachineId | 'auto'>('auto');
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [text, setText] = useState('');
-  const [pin, setPin] = useState('1234');
-  const [confirmed, setConfirmed] = useState(true);
 
   const inferred = useMemo(
     () => inferAction(text, selectedMachine === 'auto' ? null : selectedMachine),
@@ -54,7 +52,9 @@ export const FieldComposerModal: React.FC<FieldComposerModalProps> = ({ draft, c
       return;
     }
 
-    const mission = dispatchCommand({
+    // Proposing a command never approves it. A named person approves it next, in the
+    // mission thread, with their own confirmation and PIN.
+    dispatchCommand({
       kind: 'command',
       machine: effMachine,
       action: effAction,
@@ -64,10 +64,6 @@ export const FieldComposerModal: React.FC<FieldComposerModalProps> = ({ draft, c
       windMs: context.windMs,
       standard: context.standard,
     });
-
-    if (mission.phase === 'proposed' && confirmed && pin.length >= 4) {
-      useFieldMissionStore.getState().approve(mission.id, pin);
-    }
     onClose();
   };
 
@@ -77,7 +73,7 @@ export const FieldComposerModal: React.FC<FieldComposerModalProps> = ({ draft, c
         <header className="flex items-center justify-between px-4 py-3 border-b border-[var(--aq-border-subtle)]">
           <div className="flex items-center gap-2">
             <h2 id="fc-title" className="aq-title text-sm font-semibold">
-              {kind === 'command' ? 'Dispatch field command' : 'Field note & agronomist advice'}
+              {kind === 'command' ? 'Field command (simulated dispatch)' : 'Field note & agronomist advice'}
             </h2>
             <span className="aq-badge is-water text-[10px]">
               {draft.paddyId ? draft.paddyId : 'Field coordinates'}
@@ -156,27 +152,10 @@ export const FieldComposerModal: React.FC<FieldComposerModalProps> = ({ draft, c
                 </div>
               )}
 
-              <div className="p-2 rounded bg-[var(--aq-surface-app)] border border-[var(--aq-border-subtle)] text-xs flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={confirmed}
-                    onChange={(e) => setConfirmed(e.target.checked)}
-                    className="rounded"
-                  />
-                  <span>Two-phase operator approval</span>
-                </label>
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-[var(--aq-stone-500)]">PIN:</span>
-                  <input
-                    type="password"
-                    maxLength={4}
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    className="w-14 px-1 py-0.5 text-center text-xs border rounded bg-[var(--aq-surface-card)]"
-                  />
-                </div>
-              </div>
+              <p className="p-2 rounded bg-[var(--aq-surface-app)] border border-[var(--aq-border-subtle)] text-xs text-[var(--aq-stone-500)]">
+                Proposing a command does not send it. You approve it next, in the mission thread, with your own
+                confirmation and PIN. Dispatch on this screen is simulated.
+              </p>
             </div>
           )}
 
@@ -200,7 +179,7 @@ export const FieldComposerModal: React.FC<FieldComposerModalProps> = ({ draft, c
             </AqButton>
             <AqButton variant="primary" type="submit" disabled={kind === 'command' && windExceeded}>
               <Send size={13} />
-              {kind === 'command' ? 'Dispatch mission' : 'Submit note'}
+              {kind === 'command' ? 'Propose command' : 'Submit note'}
             </AqButton>
           </footer>
         </form>

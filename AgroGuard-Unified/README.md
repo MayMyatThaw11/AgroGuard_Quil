@@ -206,6 +206,63 @@ To add the video:
 To use a hosted video instead, set `src` to its full `https://` URL to the
 video file. A YouTube page link will not play in a `<video>` tag.
 
+## Safety and sign-in
+
+- **The Farm Simulation API fails closed.** `backend/agriquill` defaults to
+  `AGRIQUILL_ENVIRONMENT=production`: it refuses to start unless
+  `AGRIQUILL_USERS` or `AGRIQUILL_WRITE_TOKEN` is set, and the built-in
+  `Farm Manager` demo sign-in is switched off. `npm run start` sets
+  `development` for you (override it in your shell or `gateway/.env`), which
+  turns the demo sign-in back on. Blank values for these settings count as
+  "not set".
+- **Only declared sensors report.** Telemetry (LoRaWAN webhooks and manual
+  readings) is accepted only for sensors a farm contract declares. Webhooks
+  take one token per network (`AGRIQUILL_TELEMETRY_TTN_TOKEN`,
+  `AGRIQUILL_TELEMETRY_CHIRPSTACK_TOKEN`). The AgroGuard bridge user may also
+  report its own `agroguard:` sensors.
+- **Approvals are rate limited.** Wrong PINs (5 per caller per 10 minutes) and
+  approval requests (5 per minute per caller or farm) return HTTP 429. The
+  counters live in memory in one server process.
+- **Agents cannot finish an actuation.** The MCP `lorawan_actuate` tool only
+  runs the safety gates and waits for a named person; it takes no PIN,
+  confirmation or token. `drone_spray_guard` takes the higher of the agent's
+  wind and the server's own (on-site anemometer, else today's forecast
+  maximum) when given a `farm_id`.
+- **Field commands are never approved by the modal.** In Farm Simulation a
+  command is proposed first and approved in a separate step with a typed PIN
+  and an unticked confirmation. That dispatch is simulated; real machine
+  commands go through the server flow in `OpsTaskCard`.
+
+Checks (from `backend/agriquill`): `python -m pytest`, `python -m ruff check
+agriquill tests`, `python -m mypy`. From `apps/agroguard-web`: `npm run
+typecheck` and `npm run test:farm-sim`.
+
+## Photo checks and agronomist review
+
+- **Photos are checked before diagnosis.** `POST /api/v1/photos/quality` flags a
+  photo that is blurry, dark, washed out, tiny or blank so it can be retaken. The
+  Disease Detection and Health Updates pages call it first; "Use this photo anyway"
+  carries on, with a weaker verdict.
+- **Answers say how sure the model is.** The disease service always names a class,
+  so `src/lib/diseaseVerdict.js` turns its score into "Looks like X, fairly sure",
+  "Possibly X, not very sure" or "Not sure, ask your agronomist" (no diagnosis or
+  treatment shown). The two cut-offs (85 and 60) and the quality thresholds in
+  `app/ml/photo_quality.py` are starting values, **not validated on Myanmar farmer
+  photos**; re-set them from reviewed photos.
+- **Consent and review.** A Health Updates photo can be shared with agronomists
+  (unticked by default, withdrawable by editing the report). `/photo-review` lists
+  consented photos the model knows least about first. Reviewing needs
+  `AGROGUARD_REVIEW_TOKEN` on the API (unset means the review routes are off).
+  `GET /api/v1/photos/labelled` exports reviewed, consented photos as training
+  examples. Nothing here trains a model: that needs enough reviewed photos first.
+- **The crop suggestion score is a ranking**, not a probability. The ASEAN Top-50
+  model was trained on samples generated from crop range tables, so it has never
+  been tested on real yields, and the screens and API (`modelInfo`) say so.
+  AgriQill's API no longer reports a synthetic 1.0 accuracy or a "95-98%" target.
+- This API has no sign-in of its own (only the review routes use a token), and saved
+  photos are served by URL without one. Put it behind a proxy or add sign-in before
+  collecting photos from real farmers.
+
 ## Required external services
 
 - **AgroGuard**: a Postgres database (Supabase works out of the box — see

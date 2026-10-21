@@ -21,6 +21,7 @@ from pymongo.errors import ConnectionFailure
 from app.core.config import get_settings
 from app.db.mongo import health_updates, image_bucket
 from app.ml.leaf_segmentation import segment_leaf
+from app.ml.photo_quality import check_photo_quality
 from app.schemas.health_update import (
     ConditionSource,
     HealthUpdateResponse,
@@ -61,6 +62,17 @@ def _to_response(doc: dict[str, Any]) -> HealthUpdateResponse:
         image_url=f"{base}/image" if doc.get("image_id") else None,
         mask_url=f"{base}/mask" if doc.get("mask_id") else None,
     )
+
+
+def review_priority(confidence: float | None) -> float:
+    """How soon an agronomist should look at a photo: the model's doubt, 0 (sure) to 1.
+
+    A photo the model gave no answer for comes first, as does anything it was unsure of.
+    This is the whole active-learning rule: label the photos the model knows least about.
+    """
+    if confidence is None:
+        return 1.0
+    return round(min(1.0, max(0.0, 1.0 - confidence / 100.0)), 3)
 
 
 def _is_diseased(health_status: str) -> bool:
@@ -105,6 +117,7 @@ async def create_health_update(
     notes: Annotated[str | None, Form()] = None,
     latitude: Annotated[float | None, Form()] = None,
     longitude: Annotated[float | None, Form()] = None,
+    consent_to_train: Annotated[bool, Form()] = False,
     soil_ph: Annotated[float | None, Form(ge=0, le=14)] = None,
     rainfall_mm: Annotated[float | None, Form(ge=0)] = None,
     temperature_c: Annotated[float | None, Form(ge=-50, le=70)] = None,
@@ -127,6 +140,7 @@ async def create_health_update(
     except Exception as exc:
         raise HTTPException(status_code=400, detail="The image could not be read.") from exc
 
+    quality = await run_in_threadpool(check_photo_quality, image_bytes)
     now = datetime.now(UTC)
     detection = None
     if detection_raw_class_name or detection_confidence is not None:
@@ -168,6 +182,14 @@ async def create_health_update(
                 "captured_at": conditions_captured_at,
             },
             "detection": detection,
+            "quality": {
+                "ok": quality.ok,
+                "reasons": quality.reasons,
+                "metrics": quality.metrics,
+            },
+            "consent_to_train": consent_to_train,
+            "review": None,
+            "review_priority": review_priority(detection_confidence),
             "segmentation": {
                 "affected_percent": segmentation.affected_percent,
                 "leaf_coverage_percent": segmentation.leaf_coverage_percent,
@@ -204,6 +226,8 @@ async def get_health_update(update_id: str):
 )
 async def update_health_update(update_id: str, data: HealthUpdateUpdate):
     changes = data.model_dump(exclude_unset=True)
+    if changes.get("consent_to_train", True) is None:
+        changes.pop("consent_to_train")  # a null can't mean "withdrawn"
     if "conditions" in changes and data.conditions is not None:
         changes["conditions"] = data.conditions.model_dump()
     if "health_status" in changes and "is_diseased" not in changes:

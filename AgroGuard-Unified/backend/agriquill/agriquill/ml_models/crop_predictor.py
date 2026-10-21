@@ -9,9 +9,7 @@ ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
 MODEL_PATH = ARTIFACT_DIR / "crop_model.joblib"
 LABEL_ENCODER_PATH = ARTIFACT_DIR / "label_encoder.joblib"
 FEATURE_NAMES = ["soil_pH", "rainfall_mm", "temperature_c"]
-TRAINING_DATA_PATH = (
-    Path(__file__).resolve().parent / "data" / "township_agricultural_data.csv"
-)
+TRAINING_DATA_PATH = Path(__file__).resolve().parent / "data" / "township_agricultural_data.csv"
 
 
 class CropModelUnavailableError(RuntimeError):
@@ -20,15 +18,9 @@ class CropModelUnavailableError(RuntimeError):
 
 @lru_cache(maxsize=1)
 def _load_artifacts():
-    missing = [
-        str(path)
-        for path in (MODEL_PATH, LABEL_ENCODER_PATH)
-        if not path.is_file()
-    ]
+    missing = [str(path) for path in (MODEL_PATH, LABEL_ENCODER_PATH) if not path.is_file()]
     if missing:
-        raise CropModelUnavailableError(
-            f"Missing crop model artifact(s): {', '.join(missing)}"
-        )
+        raise CropModelUnavailableError(f"Missing crop model artifact(s): {', '.join(missing)}")
 
     try:
         return joblib.load(MODEL_PATH), joblib.load(LABEL_ENCODER_PATH)
