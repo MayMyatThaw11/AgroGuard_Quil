@@ -13,6 +13,7 @@ from app.db.models.sensor_device import SensorDevice
 from app.db.models.sensor_observation import SensorObservation
 from app.db.session import utcnow
 from app.services.alerting import create_alert_for_assessment
+from app.services.sensor_quality import classify_factor_quality
 
 MIN_CONDITION_SCORE = 5.0
 
@@ -185,6 +186,30 @@ async def recompute_assessment(
     context = ctx_result.scalar_one_or_none()
 
     result = run_assessment(observation, context, crop_profile.requirements)
+
+    # Additive sensor-reading corroboration label, computed only for a
+    # factor whose out-of-range value actually came from this observation
+    # (not from the field's context snapshot, which has no reading of its
+    # own to corroborate). Never changes health_score, status, or whether
+    # an alert fires -- see app/services/sensor_quality.py.
+    if observation is not None:
+        for factor_entry in result["evidence"]["factors"]:
+            if factor_entry["status"] not in ("below_range", "above_range"):
+                continue
+            obs_value = getattr(observation, factor_entry["factor"], None)
+            if obs_value is None:
+                continue
+            factor_entry["quality"] = await classify_factor_quality(
+                session,
+                field_id=field.id,
+                factor=factor_entry["factor"],
+                direction=factor_entry["status"],
+                range_min=factor_entry["range_min"],
+                range_max=factor_entry["range_max"],
+                recorded_at=observation.recorded_at,
+                exclude_observation_id=observation.id,
+            )
+
     confidence = "high"
     if any(e.get("status") == "unknown" for e in result.get("evidence", {}).get("factors", [])):
         confidence = "medium"

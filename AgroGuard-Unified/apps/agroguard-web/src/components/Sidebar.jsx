@@ -1,4 +1,4 @@
-import { Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen, Droplets } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { useTheme } from '../contexts/ThemeContext.jsx'
@@ -9,6 +9,7 @@ const navItems = [
   { key: 'nav.ndvi', icon: Radar, path: '/ndvi-analysis' },
   { key: 'nav.suggestion', icon: Sprout, path: '/crop-suggestion' },
   { key: 'nav.disease', icon: ScanSearch, path: '/disease-detection' },
+  { key: 'nav.water', icon: Droplets, path: '/water-management' },
   { key: 'nav.chat', icon: Bot, path: '/ai-chat' },
   { key: 'nav.iot', icon: RadioTower, path: '/iot-simulation' },
   { key: 'nav.updates', icon: HeartPulse, path: '/health-updates' },

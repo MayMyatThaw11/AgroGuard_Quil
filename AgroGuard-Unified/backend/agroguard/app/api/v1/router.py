@@ -21,6 +21,11 @@ from app.api.v1.endpoints.ndvi import router as ndvi_router
 from app.api.v1.endpoints.photos import router as photos_router
 from app.api.v1.endpoints.observations import router as observations_router
 from app.api.v1.endpoints.regions import router as regions_router
+from app.api.v1.endpoints.water_advisory import router as water_advisory_router
+from app.api.v1.endpoints.water_forecast import router as water_forecast_router
+from app.api.v1.endpoints.water_irrigation import router as water_irrigation_router
+from app.api.v1.endpoints.water_scenario import router as water_scenario_router
+from app.api.v1.endpoints.water_weather import router as water_weather_router
 
 api_router = APIRouter()
 api_router.include_router(analytics_router)
@@ -44,4 +49,9 @@ api_router.include_router(ndvi_router)
 api_router.include_router(photos_router)
 api_router.include_router(observations_router)
 api_router.include_router(regions_router)
+api_router.include_router(water_advisory_router)
+api_router.include_router(water_forecast_router)
+api_router.include_router(water_irrigation_router)
+api_router.include_router(water_scenario_router)
+api_router.include_router(water_weather_router)
 

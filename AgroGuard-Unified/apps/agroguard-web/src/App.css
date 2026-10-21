@@ -432,6 +432,82 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .photo-picker-btn:disabled { cursor: not-allowed; opacity: .6; }
 .health-field-label { display: block; margin-bottom: .4rem; font-weight: 600; }
 
+/* Shared provenance/backend-state UI: Fertilizer, Water, Satellite, Export */
+.provenance-tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 999px; padding: .2rem .55rem; font-size: .68rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
+.provenance-tag.is-measured { background: rgba(23,170,81,.16); color: #137a38; }
+.provenance-tag.is-modelled { background: rgba(19,122,56,.12); color: #135f30; }
+.provenance-tag.is-user { background: rgba(215,122,17,.14); color: #9a5c0c; }
+.provenance-tag.is-demo { background: rgba(154,163,157,.22); color: #535d57; }
+.provenance-tag.is-unavailable { background: rgba(203,42,38,.1); color: #b3241f; }
+
+.backend-blocked-notice { display: flex; gap: .65rem; border: 1px dashed var(--border); border-radius: 1rem; background: #fafbfa; padding: .85rem 1rem; color: var(--text-muted); }
+.backend-blocked-notice strong { display: block; margin-bottom: .2rem; color: var(--text); font-size: .9rem; }
+.backend-blocked-notice p { margin: 0; font-size: .82rem; line-height: 1.5; }
+.backend-blocked-notice.is-planned { border-style: dotted; background: #fff; }
+.backend-blocked-icon { flex: 0 0 auto; color: var(--text-muted); margin-top: .1rem; }
+
+.api-error-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .6rem; }
+.api-error .btn { font-size: .82rem; padding: .45rem .9rem; }
+
+.demo-data-notice { display: inline-flex; align-items: center; gap: .4rem; border-radius: .7rem; background: rgba(154,163,157,.18); padding: .35rem .7rem; color: #535d57; font-size: .76rem; }
+
+.offline-notice { display: flex; align-items: center; gap: .5rem; border-radius: 1rem; background: #fbf1dc; padding: .7rem 1rem; color: #7a4d08; margin-bottom: 1rem; font-size: .85rem; }
+
+.feature-page { max-width: 72rem; margin: 0 auto; }
+.feature-section { margin-bottom: 1.5rem; }
+.feature-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .85rem; }
+.feature-section-head h2 { margin: 0; color: var(--text); font-size: 1.15rem; font-weight: 700; }
+.feature-section-head p { margin: .2rem 0 0; color: var(--text-muted); font-size: .85rem; }
+.feature-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; }
+.feature-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+.feature-field-row { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; padding: .5rem 0; border-bottom: 1px solid var(--border); }
+.feature-field-row:last-child { border-bottom: 0; }
+.feature-field-label { color: var(--text-muted); font-size: .82rem; }
+.feature-field-value { display: flex; align-items: center; gap: .5rem; color: var(--text); font-weight: 700; }
+.feature-checklist { display: grid; gap: .5rem; }
+.feature-checklist-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .65rem; border: 1px solid var(--border); border-radius: .9rem; background: #fff; padding: .7rem .85rem; }
+.feature-checklist-item .status-pill { flex: 0 0 auto; border-radius: 999px; padding: .18rem .6rem; font-size: .68rem; font-weight: 800; text-transform: uppercase; }
+.feature-checklist-item > div:not(.status-pill) { flex: 1 1 14rem; min-width: 0; }
+.feature-checklist-item .btn { font-size: .78rem; padding: .4rem .75rem; }
+.feature-checklist-actions { display: flex; gap: .4rem; flex: 0 0 auto; }
+@media (max-width: 480px) {
+  .feature-checklist-item { flex-direction: column; align-items: stretch; }
+}
+.status-pill.verified { background: rgba(23,170,81,.18); color: #137a38; }
+.status-pill.pending { background: rgba(215,122,17,.16); color: #9a5c0c; }
+.status-pill.missing { background: rgba(203,42,38,.12); color: #b3241f; }
+
+@media (max-width: 900px) {
+  .feature-grid-2, .feature-grid-3 { grid-template-columns: 1fr; }
+}
+
+/* Water Management: a row of form-group(s) plus a trailing action button,
+   their bottoms flush on desktop (e.g. From/To dates + Load Weather History).
+   align-items: flex-end aligns margin-box bottoms, so .form-group's own
+   margin-bottom must be zeroed here or the button appears to float lower
+   than the inputs above it. */
+.water-row-align { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .8rem; }
+.water-row-align > .form-group { flex: 1 1 160px; min-width: 0; margin-bottom: 0; }
+.water-row-align > .form-group input,
+.water-row-align > .form-group select { width: 100%; }
+.water-row-align > .btn { flex: 0 0 auto; }
+@media (max-width: 600px) {
+  .water-row-align > .btn { flex: 1 1 100%; width: 100%; }
+}
+
+/* Water Management: Water Planning's step groups -- a visible divider and
+   consistent spacing between Step 1 / 2 / 3 so they read as clearly
+   separate stages rather than one long form. */
+.water-planning-step { margin-bottom: 1.6rem; padding-bottom: 1.4rem; border-bottom: 1px solid var(--border); }
+.water-planning-step:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
+.water-planning-step h3 { margin: 0 0 1rem; color: var(--text); font-size: 1rem; font-weight: 700; }
+.water-planning-step .form-group { margin-bottom: 0; }
+.water-planning-sources { margin-top: .8rem; }
+.water-planning-calculate { margin-top: .4rem; }
+@media (max-width: 600px) {
+  .water-planning-calculate .btn { width: 100%; }
+}
+
 /* Crop Suggestion: clickable Leaflet map */
 .location-map-card { margin-top: 1rem; border: 1px solid var(--border); border-radius: 1rem; background: #fff; overflow: hidden; }
 .location-map-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .5rem 1rem; padding: .85rem 1rem; }

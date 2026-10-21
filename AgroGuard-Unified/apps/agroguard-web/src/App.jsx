@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard.jsx'
 import HealthUpdates from './components/HealthUpdates.jsx'
 import IoTSimulation from './components/IoTSimulation.jsx'
 import NDVIAnalysis from './components/NDVIAnalysis.jsx'
+import WaterManagement from './components/WaterManagement.jsx'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
 import DiseaseDetectionPage from './pages/DiseaseDetectionPage.jsx'
 import FarmSimulationPage from './pages/FarmSimulationPage.jsx'
@@ -21,6 +22,7 @@ function App() {
         <Route path="/ndvi-analysis" element={<NDVIAnalysis />} />
         <Route path="/crop-suggestion" element={<CropSuggestion />} />
         <Route path="/disease-detection" element={<DiseaseDetectionPage />} />
+        <Route path="/water-management" element={<WaterManagement />} />
         <Route path="/ai-chat" element={<AIChat />} />
         <Route path="/health-updates" element={<HealthUpdates />} />
         <Route path="/photo-review" element={<PhotoReviewPage />} />
