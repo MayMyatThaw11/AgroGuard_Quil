@@ -947,7 +947,8 @@ def test_gleam_outage_gives_null_with_reasons_and_the_breaker_stops_hammering(
     out = gleam.stress(16.731, 95.654)
     assert all(v["values"] is None for v in out["variables"].values())
     assert out["source"] is None and len(out["missing"]) == len(gleam.STRESS_VARIABLES)
-    assert len(calls) <= 3 * 3 + 3
+    started_before_open = gleam._BREAKER.threshold + gleam.WORKERS - 1
+    assert len(calls) <= started_before_open * 3
 
 
 def test_gleam_credentials_are_required(monkeypatch: pytest.MonkeyPatch) -> None:
