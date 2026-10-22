@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     nasa_power_endpoint: str = "https://power.larc.nasa.gov/api/temporal/daily/point"
     chirps_base: str = "https://data.chc.ucsb.edu/products/CHIRPS-2.0"
     earth_search_url: str = "https://earth-search.aws.element84.com/v1"
+    planetary_computer_url: str = "https://planetarycomputer.microsoft.com/api/stac/v1"
+    planetary_computer_sas_url: str = "https://planetarycomputer.microsoft.com/api/sas/v1/token"
     crop_calendar_endpoint: str = "https://api-cropcalendar.apps.fao.org/api/v1"
     faostat_api: str = "https://faostatservices.fao.org/api/v1"
     faostat_bulk_url: str = (

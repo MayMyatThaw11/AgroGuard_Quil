@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
-import { getSatellite, getSummary, type FarmSatellite, type FarmSummary, type MonitoringPaddy } from '../../lib/api.ts';
+import { getRadar, getSatellite, getSummary, type FarmRadar, type FarmSatellite, type FarmSummary, type MonitoringPaddy } from '../../lib/api.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
 import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, pawSanHarvest, readAgroguardLocal, type OwnStatus } from '../../lib/farmmap/ownFarms.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
@@ -13,6 +13,7 @@ import { DetailSection, KV, UpdatedLine } from './detailParts.tsx';
 import type { OwnFarmLive } from './useOwnFarms.ts';
 
 const MIN_TRUST_CHECKS = 10;
+const EXPERIMENTAL = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('experimental');
 const STATUS: Record<OwnStatus, { tone: 'accent' | 'warning' | 'alert' | 'neutral'; word: string; Icon: typeof CircleCheck }> = {
   ok: { tone: 'accent', word: 'Healthy', Icon: CircleCheck },
   watch: { tone: 'warning', word: 'Watch', Icon: TriangleAlert },
@@ -73,6 +74,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const [sat, setSat] = useState<FarmSatellite | 'loading' | 'error'>('loading');
   const [agField, setAgField] = useState<AgroguardField | null>(null);
   const [fieldDraft, setFieldDraft] = useState('1');
+  const [radar, setRadar] = useState<FarmRadar | 'error' | null>(null);
   const centre = useMemo(() => farmCentroid(farm.spec), [farm.spec]);
   const local = useMemo(() => {
     const storage = browserStorage();
@@ -85,6 +87,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
     latestHealthUpdate().then((h) => alive && setHealth(h), () => alive && setHealth('error'));
     setSat('loading');
     getSatellite(farm.id).then((s) => alive && setSat(s), () => alive && setSat('error'));
+    setRadar(null);
+    if (EXPERIMENTAL) getRadar(farm.id).then((r) => alive && setRadar(r), () => alive && setRadar('error'));
     return () => {
       alive = false;
     };
@@ -239,6 +243,16 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           {sat !== 'loading' && sat !== 'error' ? sat.parcels.flatMap((p) => p.series.map((s) => (
             <KV key={`${p.id}-${s.scene_id}`} k={s.datetime.slice(0, 10)} v={s.status === 'clear' ? `NDVI ${s.ndvi?.toFixed(2)} · NDWI ${s.ndwi?.toFixed(2)}` : s.status} sub={s.reason ?? s.scene_id} />
           ))) : null}
+          {radar === 'error' ? <KV k="Radar (shadow)" v="Unavailable" sub="Planetary Computer not reachable" /> : radar ? radar.parcels.map((p) => {
+            const last = [...p.series].reverse().find((s) => s.vv_db !== null);
+            return (
+              <div key={`radar-${p.id}`}>
+                <KV k={`${p.id} radar (shadow)`} v={last ? `VV ${last.vv_db} dB · ${last.call}` : 'No reading'} sub={last ? `Sentinel-1 ${last.datetime.slice(0, 10)} · open-water threshold TO VERIFY` : p.missing[0]?.reason} />
+                {p.revisit?.same_orbit_days ? <p className="aq-fm-note">Same-orbit revisit {p.revisit.same_orbit_days} days, so wet-dry cycles under {p.revisit.shortest_resolvable_cycle_days} days are not detectable.</p> : null}
+                <p className="aq-fm-note">{p.agreement?.agree != null ? `Agrees with the water-depth estimate on ${p.agreement.agree} of ${p.agreement.pairs} dates (chance ${Math.round((p.agreement.chance ?? 0) * p.agreement.pairs)})` : p.agreement?.reason}</p>
+              </div>
+            );
+          }) : null}
           <UpdatedLine>Contract {farm.sha256.slice(0, 12)}</UpdatedLine>
           <AqButton variant="ghost" onClick={onFocus}>Fly to boundary</AqButton>
         </More>

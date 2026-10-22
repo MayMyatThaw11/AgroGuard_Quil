@@ -200,3 +200,18 @@ def test_satellite_returns_a_scene_traced_series_per_bounded_parcel(
     assert parcels[0]["series"][0]["scene_id"] == "S2X"
     assert seen and seen[0][0] == seen[0][-1]
     assert client.get(f"{BASE}/contracts/{FARM}/satellite").status_code in (401, 403)
+
+
+def test_radar_is_a_shadow_witness_per_bounded_parcel(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agriquill.data import sentinel1
+
+    def fake(ring: list[list[float]], days: int = 60, depth: Any = None, client: Any = None):
+        return {"shadow": True, "series": [{"scene_id": "S1X", "vv_db": -9.6}], "missing": []}
+
+    monkeypatch.setattr(sentinel1, "paddy_radar", fake)
+    assert onboard_farm(body()).status_code == 200
+    out = client.get(f"{BASE}/contracts/{FARM}/radar?days=60", headers=ANN)
+    assert out.status_code == 200, out.text
+    assert out.json()["shadow"] is True
+    assert out.json()["parcels"][0]["series"][0]["scene_id"] == "S1X"
+    assert client.get(f"{BASE}/contracts/{FARM}/radar").status_code in (401, 403)

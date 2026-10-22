@@ -12,7 +12,7 @@ import httpx
 from . import contract, crops, farmers, fusion, rehearse, schedule, telemetry
 from .agronomy import RICE_KC, RICE_KC_SOURCE, STAGE_KC
 from .config import get_settings
-from .data import sentinel2, weather
+from .data import sentinel1, sentinel2, weather
 from .ledger import get_ledger
 from .store import RecordCache, missing, now_iso
 
@@ -660,6 +660,27 @@ def satellite(farm_id: str, days: int = 60) -> dict[str, Any]:
             continue
         parcels.append({"id": parcel["id"], **sentinel2.paddy_series(ring, days)})
     return {"farm_id": farm_id, "window_days": days, "parcels": parcels, "provenance": "DERIVED"}
+
+
+def radar(farm_id: str, days: int = 60) -> dict[str, Any]:
+    loaded = load(farm_id)
+    if loaded is None or loaded[1]["contract"] is None:
+        raise KeyError(farm_id)
+    status = monitoring(farm_id)
+    depth = {
+        p["id"]: (p["model"]["series_dates"], p["model"]["series"])
+        for p in status.get("paddies", [])
+        if p.get("model") and p["model"].get("series_dates")
+    }
+    parcels = []
+    for parcel in loaded[1]["contract"]["parcels"]:
+        ring = parcel.get("boundary")
+        if not ring or len(ring) < 4 or ring[0] != ring[-1]:
+            continue
+        parcels.append(
+            {"id": parcel["id"], **sentinel1.paddy_radar(ring, days, depth.get(parcel["id"]))}
+        )
+    return {"farm_id": farm_id, "window_days": days, "shadow": True, "parcels": parcels}
 
 
 def summary(farm_id: str, client: Any = None) -> dict[str, Any]:

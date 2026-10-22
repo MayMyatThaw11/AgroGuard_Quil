@@ -71,13 +71,27 @@ def utm_from_lonlat(lat: float, lon: float, zone: int, south: bool = False) -> t
     return 500000.0 + _K0 * big_a * east, (10000000.0 if south else 0.0) + _K0 * big_a * north
 
 
+def _float_predictor(raw: bytes, h: int, w: int) -> np.ndarray:
+    """TIFF floating-point predictor (Adobe Technical Note 3): byte deltas over planes."""
+    rows = np.frombuffer(raw, dtype=np.uint8)[: h * w * 4].reshape(h, w * 4)
+    planes = np.cumsum(rows, axis=1, dtype=np.uint8).reshape(h, 4, w)
+    return planes.transpose(0, 2, 1).copy().view(">f4").reshape(h, w).astype(np.float32)
+
+
 def decode_tile(raw: bytes, tags: dict[str, Any]) -> np.ndarray:
+    h, w = tags["tile_h"], tags["tile_w"]
+    body = zlib.decompress(raw)
+    if tags["bits"] == 32 and tags.get("sample_format") == 3:
+        if len(body) < h * w * 4:
+            raise SentinelError("tile is shorter than expected")
+        if tags.get("predictor", 1) == 3:
+            return _float_predictor(body, h, w)
+        return np.frombuffer(body, dtype=tags["byte_order"] + "f4")[: h * w].reshape(h, w)
     dtype = np.dtype(tags["byte_order"] + {8: "u1", 16: "u2"}[tags["bits"]])
-    data = np.frombuffer(zlib.decompress(raw), dtype=dtype)
-    expected = tags["tile_h"] * tags["tile_w"]
-    if data.size < expected:
+    data = np.frombuffer(body, dtype=dtype)
+    if data.size < h * w:
         raise SentinelError("tile is shorter than expected")
-    tile = data[:expected].reshape(tags["tile_h"], tags["tile_w"]).astype(dtype.newbyteorder("="))
+    tile = data[: h * w].reshape(h, w).astype(dtype.newbyteorder("="))
     if tags.get("predictor", 1) == 2:
         tile = np.cumsum(tile, axis=1, dtype=tile.dtype)
     return tile
@@ -90,10 +104,11 @@ def _header(client: httpx.Client, url: str) -> dict[str, Any]:
         tags = chirps.parse_header(
             head, lambda off, n: chirps._range(client, url, off, n), checks=False
         )
-        if tags.get("compression") != 8 or tags.get("predictor", 1) not in (1, 2):
+        floats = tags.get("bits") == 32 and tags.get("sample_format") == 3
+        if tags.get("compression") != 8 or tags.get("predictor", 1) not in (1, 2, 3):
             raise SentinelError(f"unsupported COG encoding in {url}")
-        if tags.get("bits") not in (8, 16) or tags.get("sample_format", 1) != 1:
-            raise SentinelError(f"expected unsigned 8 or 16 bit samples in {url}")
+        if not floats and (tags.get("bits") not in (8, 16) or tags.get("sample_format", 1) != 1):
+            raise SentinelError(f"expected unsigned 8 or 16 bit or float32 samples in {url}")
         _HOT.set(("s2tags", url), tags, HEADER_TTL_S)
     return tags
 
@@ -104,7 +119,9 @@ def read_window(
     tags = _header(client, url)
     th, tw = tags["tile_h"], tags["tile_w"]
     across = math.ceil(tags["width"] / tw)
-    out = np.zeros((rows, cols), dtype=np.uint16)
+    floats = tags.get("bits") == 32 and tags.get("sample_format") == 3
+    shape = (rows, cols)
+    out = np.full(shape, np.nan, dtype=np.float32) if floats else np.zeros(shape, np.uint16)
     digest = hashlib.sha256()
     for ty in range(row0 // th, (row0 + rows - 1) // th + 1):
         for tx in range(col0 // tw, (col0 + cols - 1) // tw + 1):

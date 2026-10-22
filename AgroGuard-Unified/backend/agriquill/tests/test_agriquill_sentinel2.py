@@ -44,6 +44,29 @@ def test_deflate_tile_with_horizontal_predictor_decodes_exactly():
     assert np.array_equal(sentinel2.decode_tile(_encode(tile), tags), tile)
 
 
+def _encode_float_predictor(tile: np.ndarray) -> bytes:
+    h, w = tile.shape
+    planes = tile.astype(">f4").view(np.uint8).reshape(h, w, 4).transpose(0, 2, 1).reshape(h, w * 4)
+    diff = planes.astype(np.int16)
+    diff[:, 1:] = planes[:, 1:].astype(np.int16) - planes[:, :-1].astype(np.int16)
+    return zlib.compress((diff % 256).astype(np.uint8).tobytes())
+
+
+def test_float_tile_with_floating_point_predictor_decodes_exactly():
+    rng = np.random.default_rng(3)
+    tile = rng.uniform(0.0005, 0.9, size=(3, 5)).astype(np.float32)
+    tile[0, 0] = -32768.0
+    tags = {
+        "tile_w": 5,
+        "tile_h": 3,
+        "bits": 32,
+        "sample_format": 3,
+        "predictor": 3,
+        "byte_order": "<",
+    }
+    assert np.array_equal(sentinel2.decode_tile(_encode_float_predictor(tile), tags), tile)
+
+
 def test_pixel_mask_keeps_only_pixel_centres_inside_the_ring():
     transform = [10.0, 0.0, 1000.0, 0.0, -10.0, 2000.0]
     ring = [

@@ -414,6 +414,31 @@ export async function getSatellite(farmId: string, days = 60) {
   return request<FarmSatellite>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/satellite?days=${days}`);
 }
 
+export interface RadarScene {
+  scene_id: string;
+  datetime: string;
+  relative_orbit: number | null;
+  vv_db: number | null;
+  call: 'open water' | 'no open water' | null;
+  reason?: string | null;
+}
+
+export interface FarmRadar {
+  farm_id: string;
+  shadow: true;
+  parcels: {
+    id: string;
+    series: RadarScene[];
+    missing: { field: string; reason: string }[];
+    revisit?: { same_orbit_days: number | null; shortest_resolvable_cycle_days: number | null; reason: string | null };
+    agreement?: { pairs: number; agree: number | null; chance: number | null; reason: string | null };
+  }[];
+}
+
+export async function getRadar(farmId: string, days = 60) {
+  return request<FarmRadar>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/radar?days=${days}`);
+}
+
 export async function getMonitoring(farmId: string) {
   return request<FarmMonitoring>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/monitoring`);
 }
