@@ -5,7 +5,9 @@ import base64
 import binascii
 import csv
 import hmac
+import logging
 import math
+import re
 import tempfile
 import time
 import uuid
@@ -16,8 +18,12 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
-from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field, model_validator
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .. import (
     agronomy,
@@ -1432,9 +1438,76 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         yield
 
 
+ERROR_CODES = {
+    400: "BAD_REQUEST",
+    401: "SIGN_IN_REQUIRED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    405: "METHOD_NOT_ALLOWED",
+    409: "CONFLICT",
+    413: "TOO_LARGE",
+    422: "VALIDATION_FAILED",
+    429: "RATE_LIMITED",
+    500: "INTERNAL_ERROR",
+    502: "UPSTREAM_FAILED",
+    503: "UNAVAILABLE",
+}
+_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
+_LOG = logging.getLogger("agriquill.api")
+
+
+def error_body(status: int, detail: Any, request_id: str) -> dict[str, Any]:
+    code, message = ERROR_CODES.get(status, f"HTTP_{status}"), str(detail)
+    if isinstance(detail, list):
+        diag = next((d for d in detail if isinstance(d, dict)), {})
+        if str(diag.get("code", "")).startswith("AGRI-"):
+            code = diag["code"]
+        message = str(diag.get("message") or diag.get("msg") or "the request was refused")
+    return {
+        "code": code,
+        "message": message,
+        "status": status,
+        "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
+        "request_id": request_id,
+        "detail": detail,
+    }
+
+
+def _install_error_contract(app: FastAPI) -> None:
+    def rid(request: Request) -> str:
+        return str(getattr(request.state, "request_id", "")) or uuid.uuid4().hex
+
+    @app.middleware("http")
+    async def request_id(request: Request, call_next: Any) -> Response:
+        given = request.headers.get("x-request-id", "")
+        request.state.request_id = given if _REQUEST_ID.match(given) else uuid.uuid4().hex
+        response: Response = await call_next(request)
+        response.headers["X-Request-ID"] = request.state.request_id
+        return response
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        body = error_body(exc.status_code, exc.detail, rid(request))
+        headers = {**(exc.headers or {}), "X-Request-ID": body["request_id"]}
+        return JSONResponse(body, status_code=exc.status_code, headers=headers)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid(request: Request, exc: RequestValidationError) -> JSONResponse:
+        detail = jsonable_encoder(exc.errors())
+        body = error_body(422, detail, rid(request))
+        return JSONResponse(body, status_code=422, headers={"X-Request-ID": body["request_id"]})
+
+    @app.exception_handler(Exception)
+    async def crashed(request: Request, exc: Exception) -> JSONResponse:
+        body = error_body(500, "internal error", rid(request))
+        _LOG.exception("unhandled error, request %s", body["request_id"])
+        return JSONResponse(body, status_code=500, headers={"X-Request-ID": body["request_id"]})
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="AgriQill API", version="0.1.0", lifespan=_lifespan)
     app.include_router(router, prefix="/api/v1")
+    _install_error_contract(app)
 
     @app.get("/health")
     async def liveness() -> dict[str, str]:

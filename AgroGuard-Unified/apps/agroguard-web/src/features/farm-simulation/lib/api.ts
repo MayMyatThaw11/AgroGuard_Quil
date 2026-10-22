@@ -43,14 +43,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
+    let code: string | null = null;
     try {
       const body = await res.json();
       const raw = body.detail ?? body;
       detail = typeof raw === 'string' ? raw : JSON.stringify(raw);
+      code = typeof body.code === 'string' ? body.code : null;
     } catch {
       /* ignore */
     }
-    throw new ApiError(detail, res.status);
+    throw new ApiError(detail, res.status, code, res.headers.get('x-request-id'));
   }
   return (await res.json()) as T;
 }
