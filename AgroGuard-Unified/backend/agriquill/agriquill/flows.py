@@ -16,6 +16,14 @@ RICE_HEIGHT_M = 1.0  # Table 12 maximum crop height for rice
 KC_MIN = 0.15  # FAO-56 Eq. 76 guidance for bare-soil Kc under typical conditions
 WET_RH_PCT = 90.0  # leaf-wetness proxy threshold, TO VERIFY against a local blast model
 
+FAO56_CH8 = (
+    "FAO-56 Ch. 8 (https://www.fao.org/4/x0490e/x0490e0e.htm), Eq. 80, 82-86 and Table 22; "
+    "fetched 2026-10-22"
+)
+RICE_ZR_M = 1.0  # Table 22 rice 0.5-1.0 m; footnote 1: the larger value models soil water stress
+RICE_P = 0.20  # Table 22 rice; footnote 4 says "0.20 of saturation"
+SATURATED = "water at or above the surface: root zone at or above field capacity, Dr = 0 (Eq. 86)"
+
 IPCC = (
     "IPCC 2019 Refinement Vol. 4 Ch. 5, Eq. 5.2, Tables 5.11, 5.11A, 5.12, 5.13 "
     "(ipcc-nggip.iges.or.jp/public/2019rf), fetched 2026-10-22"
@@ -106,22 +114,69 @@ def _days(hourly: Mapping[str, list[Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def taw_mm(theta_fc: float, theta_wp: float, zr_m: float) -> float:
+    """FAO-56 Eq. 82."""
+    return 1000 * (theta_fc - theta_wp) * zr_m
+
+
+def ks(depletion_mm: float, taw: float, p: float) -> float:
+    """FAO-56 Eq. 83 and 84; Ks = 1 while the depletion is within RAW."""
+    raw = p * taw
+    if depletion_mm <= raw:
+        return 1.0
+    return max((taw - depletion_mm) / (taw - raw), 0.0)
+
+
 def water(
     parcel: Mapping[str, Any],
     days: Sequence[Mapping[str, Any]],
     perc: float | None,
-    ponded: Mapping[str, bool],
+    levels: Mapping[str, float],
+    soil: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     kcb = RICE_KCB[STAGE_KC.get(str(parcel.get("stage") or ""), "mid")]
+    taw = taw_mm(soil["theta_fc"], soil["theta_wp"], RICE_ZR_M) if soil else None
+    depletion: float | None = None
     rows = []
     for day in days:
-        wet = ponded.get(day["date"])
+        level = levels.get(day["date"])
+        wet = None if level is None else level > 0
         coeff = dual_kc(kcb, day["u2_ms"], day["rh_min_pct"], RICE_HEIGHT_M)
+        stress: dict[str, Any]
+        if level is not None and level >= 0:
+            depletion = 0.0
+            stress = {"value": 1.0, "basis": SATURATED}
+            bound = "no stress: water at or above the surface"
+        elif level is None or taw is None or depletion is None:
+            depletion = None
+            reason = (
+                "tube water depth unknown for this day"
+                if level is None
+                else "soil water limits unknown"
+                if taw is None
+                else "no flooded day before this one to start the root-zone balance from"
+            )
+            stress = {"value": None, "reason": reason}
+            bound = f"upper bound: no water stress applied, {reason}"
+        else:
+            value = ks(depletion, taw, RICE_P)
+            stress = {
+                "value": round(value, 3),
+                "depletion_mm": round(depletion, 1),
+                "taw_mm": round(taw, 1),
+                "raw_mm": round(RICE_P * taw, 1),
+                "basis": "Eq. 84 on the depletion at the start of the day",
+            }
+            bound = "lower bound: Eq. 85 with irrigation, runoff and capillary rise taken as zero"
+            use = (value * coeff["kcb"] + coeff["ke"]) * day["et0_mm"]
+            depletion = min(max(depletion - day["rain_mm"] + use, 0.0), taw)
+        factor = 1.0 if stress["value"] is None else stress["value"]
         rows.append(
             {
                 "date": day["date"],
                 "rain_mm": day["rain_mm"],
-                "transpiration_mm": round(coeff["kcb"] * day["et0_mm"], 2),
+                "transpiration_mm": round(factor * coeff["kcb"] * day["et0_mm"], 2),
+                "transpiration_bound": bound,
                 "evaporation_mm": round(coeff["ke"] * day["et0_mm"], 2),
                 "evaporation_bound": "ponded"
                 if wet
@@ -130,8 +185,10 @@ def water(
                 else "upper bound: drying soil not modelled",
                 "percolation_mm": perc,
                 "kc": coeff,
+                "ks": stress,
             }
         )
+    gap = next((r["ks"] for r in rows if r["ks"]["value"] is None), None)
     total = {
         k: round(sum(r[k] for r in rows), 1)
         for k in ("rain_mm", "transpiration_mm", "evaporation_mm")
@@ -151,8 +208,39 @@ def water(
                 if perc is not None
                 else [missing("percolation_mm", "contract declares no percolation rate")]
             ),
+            *(
+                []
+                if soil
+                else [missing("theta_fc_wp", "no field capacity or wilting point for this site")]
+            ),
         ],
-        "method": "rain in; T = Kcb x ET0, E = Ke x ET0 (FAO-56 dual Kc); contract percolation",
+        "ks": {
+            "value": min(r["ks"]["value"] for r in rows) if rows and gap is None else None,
+            "reason": "no complete weather days" if not rows else gap["reason"] if gap else None,
+            "means": "lowest daily Ks in the window; 1 is no stress, 0 is wilting point",
+            "inputs": {
+                "tube_level_cm": {r["date"]: levels.get(r["date"]) for r in rows},
+                "tube_level_basis": "fused tube forecast median (p50)",
+                "theta_fc": soil["theta_fc"] if soil else None,
+                "theta_wp": soil["theta_wp"] if soil else None,
+                "soil_source": soil.get("source") if soil else None,
+                "zr_m": RICE_ZR_M,
+                "p": RICE_P,
+            },
+            "assumed": [
+                "Zr = 1.0 m, the top of the Table 22 rice range, which footnote 1 gives for "
+                "modelling soil water stress",
+                "Table 22 footnote 4 gives rice p as 0.20 of saturation; applying it to TAW "
+                "from field capacity (Eq. 82) is TO VERIFY",
+                "p is the Table 22 value for ETc near 5 mm/day, not adjusted for the day's ETc",
+            ],
+            "equations": "TAW Eq. 82, RAW Eq. 83, Ks Eq. 84, depletion Eq. 85 within Eq. 86; "
+            "Ks scales Kcb only (Eq. 80)",
+            "not_modelled": "stem sap flow: needs a sap-flow sensor to validate transpiration",
+            "source": FAO56_CH8,
+        },
+        "method": "rain in; T = Ks x Kcb x ET0, E = Ke x ET0 (FAO-56 dual Kc, Ch. 8 Ks); "
+        "contract percolation",
     }
 
 
@@ -349,14 +437,14 @@ def farm_flows(farm_id: str) -> dict[str, Any]:
         hydro = contract.terms_for(spec, p["id"]).get("hydrology", {})
         report = reports.get(p["id"]) or {}
         p50 = (report.get("band") or {}).get("p50") or []
-        ponded = dict(zip(report.get("band_dates") or [], [v > 0 for v in p50], strict=False))
+        levels = dict(zip(report.get("band_dates") or [], p50, strict=False))
         ch4 = methane(p, hydro.get("regime"), p.get("area_ha"))
         n = nitrogen([r for r in inputs if r.get("field") == p["id"]], hydro.get("regime"))
         parcels.append(
             {
                 "id": p["id"],
                 "stage": p.get("stage"),
-                "water": water(p, days, hydro.get("percolation_mm_day"), ponded),
+                "water": water(p, days, hydro.get("percolation_mm_day"), levels),
                 "methane": ch4,
                 "nitrogen": n,
                 "climate": climate(ch4, n),
@@ -367,6 +455,11 @@ def farm_flows(farm_id: str) -> dict[str, Any]:
         "status": "OK",
         "days": [{"date": d["date"], "et0_mm": d["et0_mm"], "canopy": d["canopy"]} for d in days],
         "parcels": parcels,
-        "sources": {"water": FAO56, "methane": IPCC, "weather": current["weather"]["source"]},
+        "sources": {
+            "water": FAO56,
+            "water_stress": FAO56_CH8,
+            "methane": IPCC,
+            "weather": current["weather"]["source"],
+        },
         "provenance": "modelled",
     }

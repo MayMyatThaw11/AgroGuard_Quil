@@ -51,15 +51,90 @@ def test_water_terms_split_et_and_keep_unmeasured_terms_null():
         {"date": "2026-10-22", "rain_mm": 10.0, "et0_mm": 4.0, "u2_ms": 2.0, "rh_min_pct": 45.0},
         {"date": "2026-10-23", "rain_mm": 0.0, "et0_mm": 5.0, "u2_ms": 2.0, "rh_min_pct": 45.0},
     ]
-    out = flows.water({"stage": "Flowering"}, days, 3.0, {"2026-10-22": True})
+    out = flows.water({"stage": "Flowering"}, days, 3.0, {"2026-10-22": 2.0})
     first, second = out["days"]
     assert first["transpiration_mm"] == pytest.approx(1.15 * 4.0, abs=0.01)
     assert first["evaporation_bound"] == "ponded"
     assert second["evaporation_bound"].startswith("upper bound: water depth unknown")
+    assert second["ks"] == {"value": None, "reason": "tube water depth unknown for this day"}
     assert out["total"]["percolation_mm"] == 6.0
     out_mm = out["total"]["transpiration_mm"] + out["total"]["evaporation_mm"] + 6.0
     assert out["net_mm"] == pytest.approx(round(10.0 - out_mm, 1))
-    assert {m["field"] for m in out["unknown"]} == {"irrigation_mm", "seepage_mm", "runoff_mm"}
+    assert {m["field"] for m in out["unknown"]} == {
+        "irrigation_mm",
+        "seepage_mm",
+        "runoff_mm",
+        "theta_fc_wp",
+    }
+
+
+def dry_days(n, et0=5.0):
+    return [
+        {
+            "date": f"2026-10-{i + 1:02d}",
+            "rain_mm": 0.0,
+            "et0_mm": et0,
+            "u2_ms": 2.0,
+            "rh_min_pct": 45.0,
+        }
+        for i in range(n)
+    ]
+
+
+def test_flooded_or_saturated_field_has_no_water_stress():
+    days = dry_days(2)
+    out = flows.water({"stage": "Flowering"}, days, None, {"2026-10-01": 0.0, "2026-10-02": 4.0})
+    assert [d["ks"]["value"] for d in out["days"]] == [1.0, 1.0]
+    assert out["days"][0]["ks"]["basis"] == flows.SATURATED
+    assert out["days"][0]["transpiration_mm"] == pytest.approx(1.15 * 5.0, abs=0.01)
+    assert out["ks"]["value"] == 1.0 and out["ks"]["reason"] is None
+    assert out["ks"]["source"] == flows.FAO56_CH8
+
+
+def test_dry_field_without_soil_limits_leaves_ks_null_and_transpiration_an_upper_bound():
+    days = dry_days(2)
+    out = flows.water({"stage": "Flowering"}, days, None, {"2026-10-01": 2.0, "2026-10-02": -10.0})
+    drying = out["days"][1]
+    assert drying["ks"] == {"value": None, "reason": "soil water limits unknown"}
+    assert drying["transpiration_bound"].startswith("upper bound: no water stress applied")
+    assert drying["transpiration_mm"] == pytest.approx(1.15 * 5.0, abs=0.01)
+    assert out["ks"]["value"] is None and out["ks"]["reason"] == "soil water limits unknown"
+    assert out["ks"]["inputs"]["theta_fc"] is None
+    assert out["ks"]["inputs"]["tube_level_cm"]["2026-10-02"] == -10.0
+
+
+def test_ks_follows_fao56_eq_82_to_84():
+    taw = flows.taw_mm(0.40, 0.20, 1.0)
+    assert taw == pytest.approx(200.0)
+    assert flows.ks(30.0, taw, 0.20) == 1.0
+    assert flows.ks(40.0, taw, 0.20) == 1.0
+    assert flows.ks(120.0, taw, 0.20) == pytest.approx(80 / 160)
+    assert flows.ks(200.0, taw, 0.20) == 0.0
+
+
+def test_root_zone_balance_cuts_transpiration_once_depletion_passes_raw():
+    days = dry_days(9)
+    levels = {d["date"]: -5.0 for d in days} | {"2026-10-01": 2.0}
+    soil = {"theta_fc": 0.40, "theta_wp": 0.20, "source": "test profile"}
+    out = flows.water({"stage": "Flowering"}, days, None, levels, soil)
+    coeff = flows.dual_kc(1.15, 2.0, 45.0, flows.RICE_HEIGHT_M)
+    use = coeff["kc"] * 5.0
+    eighth, ninth = out["days"][7], out["days"][8]
+    assert eighth["ks"]["depletion_mm"] == pytest.approx(round(6 * use, 1))
+    assert eighth["ks"]["value"] == 1.0 and eighth["ks"]["raw_mm"] == 40.0
+    expected = (200 - 7 * use) / (200 - 40)
+    assert ninth["ks"]["value"] == pytest.approx(round(expected, 3))
+    assert ninth["transpiration_mm"] == pytest.approx(round(expected * 1.15 * 5.0, 2))
+    assert ninth["transpiration_bound"].startswith("lower bound")
+    assert out["ks"]["value"] == ninth["ks"]["value"]
+    assert "theta_fc_wp" not in {m["field"] for m in out["unknown"]}
+
+
+def test_root_zone_balance_needs_a_flooded_day_to_start_from():
+    soil = {"theta_fc": 0.40, "theta_wp": 0.20}
+    out = flows.water({"stage": "Flowering"}, dry_days(1), None, {"2026-10-01": -5.0}, soil)
+    assert out["days"][0]["ks"]["value"] is None
+    assert out["ks"]["reason"].startswith("no flooded day")
 
 
 def fert(product, rate, n_pct, unit="kg/ha"):
