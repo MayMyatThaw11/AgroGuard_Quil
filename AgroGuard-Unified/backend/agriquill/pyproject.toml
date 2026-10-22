@@ -48,7 +48,7 @@ where = ["."]
 include = ["agriquill*"]
 
 [tool.setuptools.package-data]
-agriquill = ["data/*.json"]
+agriquill = ["data/*.json", "data/*.csv"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

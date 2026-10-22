@@ -6,6 +6,7 @@ import {
   farmCentroid,
   advisoryLitres,
   linkedField,
+  nationalHarvest,
   pawSanHarvest,
   paddyInputs,
   parcelStatuses,
@@ -190,4 +191,21 @@ test('a harvest range is given only for Paw San, from the plan range 2.6 to 3.37
   assert.deepEqual([out.lowT, out.highT], [5.2, 6.74]);
   s.parcels[0].crop = null;
   assert.equal(pawSanHarvest(s), null);
+});
+
+test('national harvest adds only parcels with a FAOSTAT range and keeps unknown ones out', () => {
+  const ref = {
+    farm_id: 'f',
+    country: 'THA',
+    country_name: 'Thailand',
+    note: '',
+    parcels: [
+      { parcel: 'a', crop: 'rice', tonnes: [2.26, 2.38] as [number, number], area_ha: 0.8, yield: { t_ha: 2.98, year: 2024 } },
+      { parcel: 'b', crop: 'rice', tonnes: [10, 12] as [number, number], area_ha: 4, yield: { t_ha: 2.98, year: 2024 } },
+      { parcel: 'c', crop: 'strawberry', tonnes: null, reason: 'crop not matched to a FAOSTAT item' },
+    ],
+  };
+  assert.deepEqual(nationalHarvest(ref), { areaHa: 4.8, lowT: 12.26, highT: 14.38, year: 2024 });
+  assert.equal(nationalHarvest({ ...ref, parcels: [ref.parcels[2]] }), null);
+  assert.equal(nationalHarvest(null), null);
 });

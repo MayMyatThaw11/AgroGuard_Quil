@@ -27,7 +27,7 @@ export function ringAreaHa(ring: Corner[]): number {
 
 const lonLat = (ring: Corner[]) => ring.map(([lat, lon]) => [lon, lat]);
 
-export function tracedGeojson(corners: Corner[], field: string): string | null {
+export function tracedGeojson(corners: Corner[], field: string, source = 'traced on the farm map'): string | null {
   const open = tracedRing(corners).slice(0, -1);
   if (open.length < MIN_CORNERS) return null;
   const doc: FeatureCollection<Polygon> = {
@@ -35,7 +35,7 @@ export function tracedGeojson(corners: Corner[], field: string): string | null {
     features: [
       {
         type: 'Feature',
-        properties: { field, source: 'traced on the farm map' },
+        properties: { field, source },
         geometry: { type: 'Polygon', coordinates: [lonLat(tracedRing(corners))] },
       },
     ],

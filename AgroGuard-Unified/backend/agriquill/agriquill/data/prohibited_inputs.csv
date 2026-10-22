@@ -1,0 +1,49 @@
+standard,item,rule,clause,condition,source_url,retrieved,status
+USDA_NOP,ash_from_manure_burning,prohibited,7 CFR 205.602(a),,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,arsenic,prohibited,7 CFR 205.602(b),,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,calcium_chloride,conditional,7 CFR 205.602(c),brine-process calcium chloride only as a foliar spray for a calcium-uptake disorder,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,lead_salts,prohibited,7 CFR 205.602(d),,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,potassium_chloride,conditional,7 CFR 205.602(e),only from a mined source and applied so chloride does not accumulate in the soil,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,rotenone,prohibited,7 CFR 205.602(f),,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,sodium_fluoaluminate,prohibited,7 CFR 205.602(g),,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,sodium_nitrate,conditional,7 CFR 205.602(h),no more than 20 % of the crop's total nitrogen requirement,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,strychnine,prohibited,7 CFR 205.602(i); 205.604(a),,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,tobacco_dust,prohibited,7 CFR 205.602(j),,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,nicotine_sulfate,prohibited,7 CFR 205.602(j),,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.602,2026-10-22,TO VERIFY
+USDA_NOP,synthetic_urea,not_authorised,7 CFR 205.105(a); not listed in 205.601,,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.601,2026-10-22,TO VERIFY
+USDA_NOP,glyphosate,not_authorised,7 CFR 205.105(a); not listed in 205.601,,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.601,2026-10-22,TO VERIFY
+USDA_NOP,paraquat,not_authorised,7 CFR 205.105(a); not listed in 205.601,,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.601,2026-10-22,TO VERIFY
+USDA_NOP,synthetic_pyrethroids,not_authorised,7 CFR 205.105(a); not listed in 205.601,,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.601,2026-10-22,TO VERIFY
+USDA_NOP,organophosphate_insecticide,not_authorised,7 CFR 205.105(a); not listed in 205.601,,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.601,2026-10-22,TO VERIFY
+USDA_NOP,carbamate_insecticide,not_authorised,7 CFR 205.105(a); not listed in 205.601,,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.601,2026-10-22,TO VERIFY
+USDA_NOP,synthetic_herbicide,not_authorised,7 CFR 205.105(a); 205.601(b) lists only soap-based herbicides for farmstead maintenance,,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.601,2026-10-22,TO VERIFY
+USDA_NOP,synthetic_storage_fumigant,conditional,7 CFR 205.271(d),only after prevention and National List options fail; the handler and certifier must agree and the product must not contact organic produce,https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-7.xml?part=205&section=205.271,2026-10-22,TO VERIFY
+EU_2018_848,synthetic_urea,not_authorised,Reg (EU) 2018/848 Art 24(1)(b); Reg (EU) 2021/1165 Annex II lists no synthetic nitrogen and excludes ammonium salts,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,glyphosate,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,paraquat,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,synthetic_pyrethroids,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); Reg (EU) 2021/1165 Annex I allows deltamethrin and lambda-cyhalothrin only in traps against Bactrocera oleae and Ceratitis capitata,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,organophosphate_insecticide,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,carbamate_insecticide,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,synthetic_herbicide,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); Reg (EU) 2021/1165 Annex I lists no synthetic herbicide active substance,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,copper,conditional,Reg (EU) 2021/1165 Annex I,no more than 28 kg of copper per hectare over 7 years,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+ASEAN_ORGANIC_ASOA,synthetic_urea,prohibited,ASOA text not fetched; Farm Simulation default,,,,TO VERIFY
+ASEAN_ORGANIC_ASOA,glyphosate,prohibited,ASOA text not fetched; Farm Simulation default,,,,TO VERIFY
+ASEAN_ORGANIC_ASOA,paraquat,prohibited,ASOA text not fetched; Farm Simulation default,,,,TO VERIFY
+ASEAN_ORGANIC_ASOA,synthetic_pyrethroids,prohibited,ASOA text not fetched; Farm Simulation default,,,,TO VERIFY
+ASEAN_ORGANIC_ASOA,organophosphate_insecticide,prohibited,ASOA text not fetched; Farm Simulation default,,,,TO VERIFY
+ASEAN_ORGANIC_ASOA,synthetic_herbicide,prohibited,ASOA text not fetched; Farm Simulation default,,,,TO VERIFY
+ASEAN_ORGANIC_ASOA,carbamate_insecticide,prohibited,ASOA text not fetched; Farm Simulation default,,,,TO VERIFY
+EU_2018_848,rotenone,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,nicotine_sulfate,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,tobacco_dust,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,strychnine,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,arsenic,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,sodium_fluoaluminate,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,potassium_chloride,not_authorised,Reg (EU) 2018/848 Art 24(1)(b); not in Reg (EU) 2021/1165 Annex II,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,sodium_nitrate,not_authorised,Reg (EU) 2018/848 Art 24(1)(b); not in Reg (EU) 2021/1165 Annex II,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,ash_from_manure_burning,not_authorised,Reg (EU) 2018/848 Art 24(1)(b); Reg (EU) 2021/1165 Annex II lists only wood ash from wood not chemically treated,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,calcium_chloride,conditional,Reg (EU) 2021/1165 Annex II,calcium chloride solution only as a foliar treatment of apple trees against calcium deficit,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,phosphine,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,aluminium_phosphide,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,methyl_bromide,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY
+EU_2018_848,sulfuryl_fluoride,not_authorised,Reg (EU) 2018/848 Art 24(1)(a); not in Reg (EU) 2021/1165 Annex I,,http://publications.europa.eu/resource/celex/32021R1165,2026-10-22,TO VERIFY

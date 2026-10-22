@@ -26,6 +26,45 @@ export const MIN_APPROVAL_PIN_LENGTH = 4;
  * server would show a check the gateway does not run.
  */
 export const PROHIBITED_INPUTS: Readonly<Record<string, readonly string[]>> = {
+  USDA_NOP: [
+    'ash_from_manure_burning',
+    'arsenic',
+    'lead_salts',
+    'rotenone',
+    'sodium_fluoaluminate',
+    'strychnine',
+    'tobacco_dust',
+    'nicotine_sulfate',
+    'synthetic_urea',
+    'glyphosate',
+    'paraquat',
+    'synthetic_pyrethroids',
+    'organophosphate_insecticide',
+    'carbamate_insecticide',
+    'synthetic_herbicide'
+  ],
+  EU_2018_848: [
+    'synthetic_urea',
+    'glyphosate',
+    'paraquat',
+    'synthetic_pyrethroids',
+    'organophosphate_insecticide',
+    'carbamate_insecticide',
+    'synthetic_herbicide',
+    'rotenone',
+    'nicotine_sulfate',
+    'tobacco_dust',
+    'strychnine',
+    'arsenic',
+    'sodium_fluoaluminate',
+    'potassium_chloride',
+    'sodium_nitrate',
+    'ash_from_manure_burning',
+    'phosphine',
+    'aluminium_phosphide',
+    'methyl_bromide',
+    'sulfuryl_fluoride'
+  ],
   ASEAN_ORGANIC_ASOA: [
     'synthetic_urea',
     'glyphosate',
@@ -34,16 +73,7 @@ export const PROHIBITED_INPUTS: Readonly<Record<string, readonly string[]>> = {
     'organophosphate_insecticide',
     'synthetic_herbicide',
     'carbamate_insecticide'
-  ],
-  EU_2018_848: [
-    'synthetic_urea',
-    'glyphosate',
-    'paraquat',
-    'synthetic_pyrethroids',
-    'organophosphate_insecticide',
-    'carbamate_insecticide'
-  ],
-  USDA_NOP: ['synthetic_urea', 'glyphosate', 'paraquat', 'synthetic_pyrethroids']
+  ]
 };
 
 export const STANDARD_ALIASES: Readonly<Record<string, string>> = {

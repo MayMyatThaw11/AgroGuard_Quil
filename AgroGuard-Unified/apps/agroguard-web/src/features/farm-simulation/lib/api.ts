@@ -43,14 +43,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
+    let code: string | null = null;
     try {
       const body = await res.json();
       const raw = body.detail ?? body;
       detail = typeof raw === 'string' ? raw : JSON.stringify(raw);
+      code = typeof body.code === 'string' ? body.code : null;
     } catch {
       /* ignore */
     }
-    throw new ApiError(detail, res.status);
+    throw new ApiError(detail, res.status, code, res.headers.get('x-request-id'));
   }
   return (await res.json()) as T;
 }
@@ -366,6 +368,7 @@ export interface MonitoringFlag {
   predicted_cm: number;
   kind: string;
   meaning: string;
+  status?: 'unconfirmed' | 'confirmed' | 'conflicting';
 }
 
 export interface MonitoringPaddy {
@@ -464,6 +467,27 @@ export interface FarmRisk {
 
 export async function getRisk(farmId: string) {
   return request<FarmRisk>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/risk`);
+}
+
+export interface HarvestParcel {
+  parcel: string;
+  crop: string | null;
+  tonnes: [number, number] | null;
+  area_ha?: number;
+  reason?: string;
+  yield?: { t_ha: number | null; t_ha_5y?: [number, number]; year?: number; item?: string; flag_meaning?: string };
+}
+
+export interface HarvestReference {
+  farm_id: string;
+  country: string | null;
+  country_name: string | null;
+  parcels: HarvestParcel[];
+  note: string;
+}
+
+export async function getHarvestReference(farmId: string) {
+  return request<HarvestReference>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/harvest-reference`);
 }
 
 export async function getRadar(farmId: string, days = 60) {

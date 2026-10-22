@@ -5,7 +5,9 @@ import base64
 import binascii
 import csv
 import hmac
+import logging
 import math
+import re
 import tempfile
 import time
 import uuid
@@ -16,17 +18,23 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
-from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field, model_validator
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .. import (
     agronomy,
+    certificates,
     contract,
     crops,
     cropvalue,
     dsl,
     evidence,
     fleet,
+    fumigation,
     jobs,
     knowledge,
     live,
@@ -1268,6 +1276,69 @@ async def contracts_add_herd(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
+class CertificateReq(BaseModel):
+    kind: str = Field(pattern=f"^({'|'.join(certificates.KINDS)})$")
+    number: str = Field(min_length=1, max_length=60, pattern=r"^[^\n|]*$")
+    issuer: str = Field(min_length=1, max_length=80)
+    country: str = Field(pattern=r"^[A-Z]{2}$")
+    issued: date
+    expires: date
+    added_by: str = Field(min_length=1, max_length=80)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> CertificateReq:
+        if self.expires <= self.issued:
+            raise ValueError("expires must be after issued")
+        return self
+
+
+@router.get("/farms/{farm_id}/certificates")
+async def farms_certificates(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(certificates.calendar, farm_id)
+
+
+@router.post("/farms/{farm_id}/certificates")
+async def farms_add_certificate(
+    farm_id: str, req: CertificateReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    _named(caller, req.added_by)
+    _own(caller, farm_id)
+    cert = req.model_dump(mode="json", exclude={"added_by"})
+    return await asyncio.to_thread(certificates.add, farm_id, cert, req.added_by)
+
+
+class FumigationReq(BaseModel):
+    store: str = Field(min_length=1, max_length=60, pattern=r"^[^\n|]*$")
+    parcels: list[str] = Field(min_length=1, max_length=500)
+    product: str = Field(min_length=1, max_length=80, pattern=r"^[^\n|]*$")
+    active_ingredient: str | None = Field(default=None, max_length=80)
+    method: Literal["synthetic_chemical", "controlled_atmosphere", "hermetic", "heat", "other"]
+    applied_at: date
+    recorded_by: str = Field(min_length=1, max_length=80)
+
+
+@router.get("/farms/{farm_id}/fumigations")
+async def farms_fumigations(farm_id: str, caller: Caller | None = _READER) -> list[dict[str, Any]]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(fumigation.history, farm_id)
+
+
+@router.post("/farms/{farm_id}/fumigations")
+async def farms_add_fumigation(
+    farm_id: str, req: FumigationReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    _named(caller, req.recorded_by)
+    _own(caller, farm_id)
+    event = req.model_dump(mode="json", exclude={"recorded_by"})
+    try:
+        return await asyncio.to_thread(fumigation.record, farm_id, event, req.recorded_by)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="no contract for this farm") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @router.get("/contracts/{farm_id}/monitoring")
 async def contracts_monitoring(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
     _see(caller, farm_id)
@@ -1286,6 +1357,19 @@ async def contracts_satellite(
 async def contracts_risk(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
     _see(caller, farm_id)
     return await asyncio.to_thread(_live_call, live.risk, farm_id)
+
+
+def _harvest(farm_id: str) -> dict[str, Any]:
+    loaded = live.load(farm_id)
+    if loaded is None or loaded[1]["contract"] is None:
+        raise KeyError(farm_id)
+    return {"farm_id": farm_id, **cropvalue.harvest_reference(loaded[1]["contract"])}
+
+
+@router.get("/contracts/{farm_id}/harvest-reference")
+async def contracts_harvest(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(_live_call, _harvest, farm_id)
 
 
 @router.get("/contracts/{farm_id}/radar")
@@ -1367,9 +1451,76 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         yield
 
 
+ERROR_CODES = {
+    400: "BAD_REQUEST",
+    401: "SIGN_IN_REQUIRED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    405: "METHOD_NOT_ALLOWED",
+    409: "CONFLICT",
+    413: "TOO_LARGE",
+    422: "VALIDATION_FAILED",
+    429: "RATE_LIMITED",
+    500: "INTERNAL_ERROR",
+    502: "UPSTREAM_FAILED",
+    503: "UNAVAILABLE",
+}
+_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
+_LOG = logging.getLogger("agriquill.api")
+
+
+def error_body(status: int, detail: Any, request_id: str) -> dict[str, Any]:
+    code, message = ERROR_CODES.get(status, f"HTTP_{status}"), str(detail)
+    if isinstance(detail, list):
+        diag = next((d for d in detail if isinstance(d, dict)), {})
+        if str(diag.get("code", "")).startswith("AGRI-"):
+            code = diag["code"]
+        message = str(diag.get("message") or diag.get("msg") or "the request was refused")
+    return {
+        "code": code,
+        "message": message,
+        "status": status,
+        "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
+        "request_id": request_id,
+        "detail": detail,
+    }
+
+
+def _install_error_contract(app: FastAPI) -> None:
+    def rid(request: Request) -> str:
+        return str(getattr(request.state, "request_id", "")) or uuid.uuid4().hex
+
+    @app.middleware("http")
+    async def request_id(request: Request, call_next: Any) -> Response:
+        given = request.headers.get("x-request-id", "")
+        request.state.request_id = given if _REQUEST_ID.match(given) else uuid.uuid4().hex
+        response: Response = await call_next(request)
+        response.headers["X-Request-ID"] = request.state.request_id
+        return response
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        body = error_body(exc.status_code, exc.detail, rid(request))
+        headers = {**(exc.headers or {}), "X-Request-ID": body["request_id"]}
+        return JSONResponse(body, status_code=exc.status_code, headers=headers)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid(request: Request, exc: RequestValidationError) -> JSONResponse:
+        detail = jsonable_encoder(exc.errors())
+        body = error_body(422, detail, rid(request))
+        return JSONResponse(body, status_code=422, headers={"X-Request-ID": body["request_id"]})
+
+    @app.exception_handler(Exception)
+    async def crashed(request: Request, exc: Exception) -> JSONResponse:
+        body = error_body(500, "internal error", rid(request))
+        _LOG.exception("unhandled error, request %s", body["request_id"])
+        return JSONResponse(body, status_code=500, headers={"X-Request-ID": body["request_id"]})
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="AgriQill API", version="0.1.0", lifespan=_lifespan)
     app.include_router(router, prefix="/api/v1")
+    _install_error_contract(app)
 
     @app.get("/health")
     async def liveness() -> dict[str, str]:

@@ -324,8 +324,11 @@ def facts(entry: dict[str, Any]) -> dict[str, Any]:
         "lat": entry["latitude"],
         "lon": entry["longitude"],
         "variety": variety,
+        "spi1": stats.get("spi1"),
         "spi3": spi,
+        "spi6": stats.get("spi6"),
         "spiClass": spi_class(spi),
+        "harvestRain": stats.get("harvest_rain"),
         "rainPercentile": stats.get("latest_percentile"),
         "rainPeriod": stats.get("latest_period"),
         "rain12": [{"period": r["period"], "mm": r["precip_mm"]} for r in rain.get("series", [])],
@@ -376,7 +379,11 @@ def to_typescript() -> str:
     return (
         "export interface RegionFact {\n"
         "  town: string;\n  country: string;\n  iso3: string;\n  lat: number;\n  lon: number;\n"
-        "  variety: string | null;\n  spi3: number | null;\n  spiClass: string | null;\n"
+        "  variety: string | null;\n  spi1: number | null;\n  spi3: number | null;\n"
+        "  spi6: number | null;\n  spiClass: string | null;\n"
+        "  harvestRain: { baseline: string; threshold_mm: number; threshold_status: string;"
+        " months: { month: number; years: number; median_mm: number; p90_mm: number;"
+        " chance_at_or_above: number }[]; reason?: string } | null;\n"
         "  rainPercentile: number | null;\n  rainPeriod: string | null;\n"
         "  rain12: { period: string; mm: number }[];\n  tmaxC: number | null;\n"
         "  tminC: number | null;\n  rain30Mm: number | null;\n  et0MmDay: number | null;\n"

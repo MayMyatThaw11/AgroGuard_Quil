@@ -23,6 +23,9 @@ METHOD_FALLBACK = "damped-trend-fallback"
 
 WINDOW_DAYS = 14
 Z90 = 1.2816
+QUANTILES = (0.1, 0.5, 0.9)
+ALPHA = 0.2
+MIN_PROMOTION_PAIRS = 30
 EVENT_JUMP_CM = 2.0
 
 
@@ -121,8 +124,9 @@ def _damped(target: np.ndarray, horizon: int) -> np.ndarray:
 if _TORCH_AVAILABLE:
 
     class _ResidualNet(nn.Module):
-        def __init__(self, hidden: int, horizon: int, dropout: float) -> None:
+        def __init__(self, hidden: int, horizon: int, dropout: float, outputs: int = 1) -> None:
             super().__init__()
+            self.horizon, self.outputs = horizon, outputs
             self.encoder = nn.Sequential(
                 nn.Conv1d(3, hidden, kernel_size=3, padding=2, dilation=1),
                 nn.GELU(),
@@ -135,12 +139,19 @@ if _TORCH_AVAILABLE:
                 nn.Linear(hidden + 2 * horizon, 48),
                 nn.GELU(),
                 nn.Dropout(dropout),
-                nn.Linear(48, horizon),
+                nn.Linear(48, horizon * outputs),
             )
 
         def forward(self, history: torch.Tensor, future: torch.Tensor) -> torch.Tensor:
             features = self.encoder(history.transpose(1, 2))[:, :, history.shape[1] - 1]
-            return self.head(torch.cat([features, future], dim=1))
+            out = self.head(torch.cat([features, future], dim=1))
+            return out if self.outputs == 1 else out.view(-1, self.horizon, self.outputs)
+
+    def pinball_loss(pred: torch.Tensor, truth: torch.Tensor) -> torch.Tensor:
+        """Mean quantile loss over QUANTILES; pred is (batch, horizon, len(QUANTILES))."""
+        q = torch.tensor(QUANTILES, dtype=pred.dtype)
+        err = truth.unsqueeze(-1) - pred
+        return torch.maximum(q * err, (q - 1) * err).mean()
 
 
 @dataclass(frozen=True)
@@ -180,6 +191,7 @@ def _train_hybrid(
     temp: np.ndarray,
     wb: _WaterBalance,
     cfg: ForecastConfig,
+    quantile: bool = False,
 ) -> tuple[_Hybrid | None, int]:
     scale = max(float(np.std(np.concatenate(targets))), 1.0)
     rain_scale = max(float(rain.std()), 1.0)
@@ -208,14 +220,14 @@ def _train_hybrid(
     if len(xs) < cfg.min_neural_windows:
         return None, len(xs)
     torch.manual_seed(cfg.seed)
-    model = _ResidualNet(cfg.hidden, cfg.horizon, cfg.dropout)
+    model = _ResidualNet(cfg.hidden, cfg.horizon, cfg.dropout, len(QUANTILES) if quantile else 1)
     optimiser = torch.optim.AdamW(
         model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay
     )
     xt = torch.tensor(np.asarray(xs), dtype=torch.float32)
     ft = torch.tensor(np.asarray(fs), dtype=torch.float32)
     yt = torch.tensor(np.asarray(ys), dtype=torch.float32)
-    loss_fn = nn.SmoothL1Loss()
+    loss_fn = pinball_loss if quantile else nn.SmoothL1Loss()
     model.train()
     for _ in range(cfg.epochs):
         optimiser.zero_grad()
@@ -247,7 +259,11 @@ def _hybrid_predict(
         hybrid.model.eval()
     with torch.no_grad():
         residual = hybrid.model(x, f).numpy() * hybrid.scale
-    return physics[None, :] + residual
+    base = physics[None, :, None] if residual.ndim == 3 else physics[None, :]
+    return base + residual
+
+
+_PredictArgs = tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, ForecastConfig]
 
 
 def _round(values: np.ndarray) -> list[float]:
@@ -259,17 +275,49 @@ def _band(mid: np.ndarray, sigma: float) -> dict[str, list[float]]:
     return {"p10": _round(mid - spread), "p50": _round(mid), "p90": _round(mid + spread)}
 
 
+def _hybrid_band(draws: np.ndarray, sigma: float) -> dict[str, list[float]]:
+    """MC-dropout quantiles, never narrower than the physics residual band."""
+    q10, q50, q90 = np.quantile(draws, (0.1, 0.5, 0.9), axis=0)
+    spread = Z90 * sigma * np.sqrt(np.arange(1, draws.shape[1] + 1))
+    return {
+        "p10": _round(np.minimum(q10, q50 - spread)),
+        "p50": _round(q50),
+        "p90": _round(np.maximum(q90, q50 + spread)),
+    }
+
+
+def _quantile_band(hybrid: _Hybrid, args: _PredictArgs) -> dict[str, list[float]]:
+    """Pinball-head quantiles, sorted so P10 <= P50 <= P90 (heads can cross)."""
+    draws = np.sort(_hybrid_predict(hybrid, *args, samples=1)[0], axis=-1)
+    return {"p10": _round(draws[:, 0]), "p50": _round(draws[:, 1]), "p90": _round(draws[:, 2])}
+
+
+def inside_band(band: dict[str, list[float]], actual: np.ndarray) -> int:
+    lo, hi = np.asarray(band["p10"]), np.asarray(band["p90"])
+    return int(np.sum((actual >= lo) & (actual <= hi)))
+
+
+def interval_score(band: dict[str, list[float]], actual: np.ndarray) -> float:
+    """Gneiting and Raftery (2007) central-interval score for alpha = ALPHA; lower is better."""
+    lo, hi = np.asarray(band["p10"]), np.asarray(band["p90"])
+    misses = np.maximum(lo - actual, 0.0) + np.maximum(actual - hi, 0.0)
+    return float(np.mean(hi - lo + (2 / ALPHA) * misses))
+
+
+MIN_COVERAGE_N = 10
+
+
 def _backtest(
     targets: list[np.ndarray],
     rain: np.ndarray,
     temp: np.ndarray,
     cfg: ForecastConfig,
-) -> tuple[dict[str, float], int, int]:
+) -> tuple[dict[str, float], dict[str, Any], int, int]:
     cut = len(rain) - cfg.horizon
     train = [t[:cut] for t in targets]
     eligible = [i for i, t in enumerate(targets) if not management_events(t, rain)[cut:].any()]
     if not eligible:
-        return {}, 0, 0
+        return {}, {}, 0, 0
     wb = _fit_water_balance(train, rain[:cut], cfg.recency_half_life_days)
     future = rain[cut:]
     predictors: dict[str, Callable[[int], np.ndarray]] = {
@@ -277,25 +325,66 @@ def _backtest(
         DAMPED_TREND: lambda i: _damped(train[i], cfg.horizon),
         WATER_BALANCE: lambda i: wb.roll(i, train[i][-1], future),
     }
+
+    def residual_band(
+        predict: Callable[[int], np.ndarray],
+    ) -> Callable[[int], dict[str, list[float]]]:
+        return lambda i: _band(predict(i), wb.sigma)
+
+    banders = {name: residual_band(predict) for name, predict in predictors.items()}
     windows = 0
+    quantile_bander: Callable[[int], dict[str, list[float]]] | None = None
     if _TORCH_AVAILABLE:
         hybrid, windows = _train_hybrid(train, rain[:cut], temp[:cut], wb, cfg)
-        if hybrid is not None:
-            predictors[HYBRID] = lambda i: _hybrid_predict(
-                hybrid,
-                train[i],
-                rain[:cut],
-                temp[:cut],
-                future,
-                wb.roll(i, train[i][-1], future),
-                cfg,
-                samples=1,
-            )[0]
+        heads = _train_hybrid(train, rain[:cut], temp[:cut], wb, cfg, quantile=True)[0]
+        if hybrid is not None and heads is not None:
+
+            def args(i: int) -> _PredictArgs:
+                physics = wb.roll(i, train[i][-1], future)
+                return (train[i], rain[:cut], temp[:cut], future, physics, cfg)
+
+            def run(i: int, samples: int) -> np.ndarray:
+                assert hybrid is not None
+                return _hybrid_predict(hybrid, *args(i), samples=samples)
+
+            predictors[HYBRID] = lambda i: run(i, 1)[0]
+            banders[HYBRID] = lambda i: _hybrid_band(run(i, cfg.mc_samples), wb.sigma)
+            quantile_bander = lambda i: _quantile_band(heads, args(i))  # noqa: E731
+    actual = {i: targets[i][cut:] for i in eligible}
     scores = {
-        name: float(np.mean([np.mean(np.abs(predict(i) - targets[i][cut:])) for i in eligible]))
+        name: float(np.mean([np.mean(np.abs(predict(i) - actual[i])) for i in eligible]))
         for name, predict in predictors.items()
     }
-    return scores, len(eligible), windows
+    bands = {name: {i: band(i) for i in eligible} for name, band in banders.items()}
+    n = len(eligible) * cfg.horizon
+
+    def summary(per: dict[int, dict[str, list[float]]]) -> tuple[int, float]:
+        inside = sum(inside_band(per[i], actual[i]) for i in eligible)
+        return inside, float(np.mean([interval_score(per[i], actual[i]) for i in eligible]))
+
+    stats = {name: summary(per) for name, per in bands.items()}
+    report: dict[str, Any] = {
+        "band_coverage": {name: {"inside": s[0], "n": n} for name, s in stats.items()},
+        "interval_score": {name: round(s[1], 3) for name, s in stats.items()},
+        "quantile_heads": None,
+    }
+    if quantile_bander is not None:
+        q_inside, q_score = summary({i: quantile_bander(i) for i in eligible})
+        mc_inside, mc_score = stats[HYBRID]
+        q_cov, mc_cov = q_inside / n, mc_inside / n
+        report["quantile_heads"] = {
+            "pairs": n,
+            "interval_score": round(q_score, 3),
+            "coverage": round(q_cov, 3),
+            "mc_interval_score": round(mc_score, 3),
+            "mc_coverage": round(mc_cov, 3),
+            "promoted": n >= MIN_PROMOTION_PAIRS
+            and q_score < mc_score
+            and abs(q_cov - 0.8) < abs(mc_cov - 0.8),
+            "rule": f"pinball heads replace MC dropout only with a lower interval score and "
+            f"coverage closer to 80 % on at least {MIN_PROMOTION_PAIRS} held-out pairs",
+        }
+    return scores, report, len(eligible), windows
 
 
 def forecast(
@@ -342,10 +431,12 @@ def forecast(
     if _TORCH_AVAILABLE:
         torch.set_num_threads(1)
     try:
-        scores, scored, windows = _backtest(targets, rain, temp, cfg)
+        scores, report, scored, windows = _backtest(targets, rain, temp, cfg)
         chosen = min(scores, key=lambda k: scores[k]) if scores else WATER_BALANCE
         wb = _fit_water_balance(targets, rain, cfg.recency_half_life_days)
         hybrid = _train_hybrid(targets, rain, temp, wb, cfg)[0] if chosen == HYBRID else None
+        promoted = chosen == HYBRID and bool((report.get("quantile_heads") or {}).get("promoted"))
+        heads = _train_hybrid(targets, rain, temp, wb, cfg, quantile=True)[0] if promoted else None
     finally:
         if _TORCH_AVAILABLE:
             torch.set_num_threads(threads)
@@ -354,17 +445,13 @@ def forecast(
     per_series: dict[str, dict[str, list[float]]] = {}
     for i, (s, target) in enumerate(zip(series, targets, strict=True)):
         physics = wb.roll(i, target[-1], future)
-        if chosen == HYBRID and hybrid is not None:
+        if chosen == HYBRID and heads is not None:
+            per_series[s.id] = _quantile_band(heads, (target, rain, temp, future, physics, cfg))
+        elif chosen == HYBRID and hybrid is not None:
             draws = _hybrid_predict(
                 hybrid, target, rain, temp, future, physics, cfg, samples=cfg.mc_samples
             )
-            q10, q50, q90 = np.quantile(draws, (0.1, 0.5, 0.9), axis=0)
-            spread = Z90 * wb.sigma * np.sqrt(np.arange(1, cfg.horizon + 1))
-            per_series[s.id] = {
-                "p10": _round(np.minimum(q10, q50 - spread)),
-                "p50": _round(q50),
-                "p90": _round(np.maximum(q90, q50 + spread)),
-            }
+            per_series[s.id] = _hybrid_band(draws, wb.sigma)
         elif chosen == PERSISTENCE:
             per_series[s.id] = _band(np.full(cfg.horizon, target[-1]), wb.sigma)
         elif chosen == DAMPED_TREND:
@@ -374,9 +461,20 @@ def forecast(
 
     backtest: dict[str, Any] | None = None
     if scores:
-        mae_model = scores[chosen] if chosen in scores else scores[WATER_BALANCE]
+        scored_as = chosen if chosen in scores else WATER_BALANCE
+        mae_model = scores[scored_as]
         mae_naive = scores[PERSISTENCE]
         backtest = {
+            "band_coverage": report["band_coverage"],
+            "coverage": report["band_coverage"][scored_as],
+            "coverage_shown": report["band_coverage"][scored_as]["n"] >= MIN_COVERAGE_N,
+            "interval_score": report["interval_score"],
+            "quantile_heads": report["quantile_heads"],
+            "band_method": "pinball quantile heads"
+            if heads is not None
+            else "MC dropout"
+            if chosen == HYBRID
+            else "physics residual",
             "holdout_days": cfg.horizon,
             "series_scored": scored,
             "candidates": {name: round(v, 3) for name, v in sorted(scores.items())},

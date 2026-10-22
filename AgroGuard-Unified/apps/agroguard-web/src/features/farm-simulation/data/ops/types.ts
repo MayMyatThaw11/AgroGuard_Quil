@@ -74,6 +74,11 @@ export interface OpsBacktest {
   mae_model: number;
   mae_persistence: number;
   skill_vs_persistence: number;
+  band_coverage?: Record<string, { inside: number; n: number }>;
+  coverage?: { inside: number; n: number };
+  interval_score?: Record<string, number>;
+  band_method?: string;
+  coverage_shown?: boolean;
   note: string;
 }
 

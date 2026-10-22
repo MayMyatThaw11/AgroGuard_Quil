@@ -91,6 +91,64 @@ def test_neural_residual_candidate_competes_when_data_is_sufficient():
     )
 
 
+def test_band_coverage_counts_readings_inside_p10_p90():
+    band = {"p10": [0.0, 0.0, 0.0], "p50": [1.0, 1.0, 1.0], "p90": [2.0, 2.0, 2.0]}
+    assert forecast.inside_band(band, np.asarray([1.0, 2.0, 2.5])) == 2
+
+
+def test_every_backtest_candidate_reports_band_coverage_as_x_of_n():
+    series, rain, temp = _series(6)
+    cfg = forecast.ForecastConfig(min_neural_windows=20, epochs=40)
+    out = forecast.forecast(
+        series, rain[:HISTORY_DAYS], temp[:HISTORY_DAYS], rain[HISTORY_DAYS:], cfg
+    )
+    coverage = out["backtest"]["band_coverage"]
+    assert set(coverage) == set(out["backtest"]["candidates"])
+    expected_n = out["backtest"]["series_scored"] * HORIZON
+    for entry in coverage.values():
+        assert entry["n"] == expected_n and 0 <= entry["inside"] <= entry["n"]
+    assert out["backtest"]["coverage"] == coverage[out["method"]]
+    assert out["backtest"]["coverage_shown"] == (expected_n >= forecast.MIN_COVERAGE_N)
+
+
+def test_interval_score_is_width_plus_scaled_misses():
+    band = {"p10": [0.0, 0.0], "p50": [1.0, 1.0], "p90": [2.0, 2.0]}
+    inside = forecast.interval_score(band, np.asarray([1.0, 1.5]))
+    assert inside == 2.0
+    missed = forecast.interval_score(band, np.asarray([3.0, -1.0]))
+    assert missed == 2.0 + (2 / 0.2) * 1.0
+
+
+def test_pinball_loss_penalises_each_quantile_asymmetrically():
+    import torch
+
+    pred = torch.tensor([[[0.0, 0.0, 0.0]]])
+    truth = torch.tensor([[1.0]])
+    loss = forecast.pinball_loss(pred, truth).item()
+    assert abs(loss - (0.1 + 0.5 + 0.9) / 3) < 1e-6
+
+
+def test_quantile_heads_run_in_shadow_and_promote_only_on_the_plan_rule():
+    series, rain, temp = _series(6)
+    cfg = forecast.ForecastConfig(min_neural_windows=20, epochs=40)
+    out = forecast.forecast(
+        series, rain[:HISTORY_DAYS], temp[:HISTORY_DAYS], rain[HISTORY_DAYS:], cfg
+    )
+    shadow = out["backtest"]["quantile_heads"]
+    assert shadow["pairs"] == out["backtest"]["series_scored"] * HORIZON
+    rule = (
+        shadow["pairs"] >= forecast.MIN_PROMOTION_PAIRS
+        and shadow["interval_score"] < shadow["mc_interval_score"]
+        and abs(shadow["coverage"] - 0.8) < abs(shadow["mc_coverage"] - 0.8)
+    )
+    assert shadow["promoted"] is rule
+    assert set(out["backtest"]["interval_score"]) == set(out["backtest"]["candidates"])
+    for band in out["series"].values():
+        assert all(
+            a <= b <= c for a, b, c in zip(band["p10"], band["p50"], band["p90"], strict=True)
+        )
+
+
 def test_forecast_falls_back_on_short_history():
     out = forecast.forecast(
         [forecast.SeriesInput("pd", [5, 4, 3, 2, 1, 0, -1, -2])],
@@ -366,7 +424,7 @@ def test_dsl_linter_and_actuation_gate_share_the_prohibited_list():
         safety.prohibited_for("ASOA_ORGANIC_V2") == safety.PROHIBITED_INPUTS["ASEAN_ORGANIC_ASOA"]
     )
     usda = dsl.lint('standard: "USDA_NOP"\nspray: carbamate_insecticide')
-    assert usda["is_valid"] is True
+    assert usda["is_valid"] is False, "7 CFR 205.105(a): synthetics not listed in 205.601"
 
 
 def test_mcp_http_transport_refuses_actuation_tools():

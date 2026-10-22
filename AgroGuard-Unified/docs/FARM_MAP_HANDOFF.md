@@ -34,7 +34,41 @@ The farm map feature (code name AgriQill) runs on branch `farm-simulation`. The 
   - per-parcel harvest-early or protect advice, plus a planting month that clears the usual peak
   - 30-day history cache, and a stale copy served on HTTP 429
 
-## Next, in order
+## Done on 22 Oct, second block (W1 in the owner's order)
+- **B-TS-1** (97cfd82): every backtest candidate has a P10–P90 band and coverage "X of N", hidden under 10. The ops table has an "In band" column, and the paddy chart has the F-TS-1 trust line. First result: the chosen band holds 36 of 70, below the nominal 80 %.
+- **B-TS-2** (1929e8f): pinball quantile heads in shadow. The interval score (α 0.2) is reported for every candidate. Heads replace MC dropout only with a lower interval score and coverage closer to 80 % on 30 or more pairs.
+- **B-TS-4** (9e12c65): Huber-robust Kalman update.
+  - A forged +20 cm reading moves the estimate 0.9 cm.
+  - Two agreeing readings within 96 h accept a jump.
+  - A contradicting reading makes the depth "unknown: conflicting readings" and still raises an inspection proposal.
+- **B-TS-11** (2fbdf56): SPI-1/3/6 by the WMO gamma-mixed method, plus Nov–Jan harvest-rain odds (25 mm threshold TO VERIFY). Township fields stay null until the next `regions` snapshot build, which needs the network for CHIRPS.
+- **B-AG-1** (8479fb7): `prohibited_inputs.csv` from fetched eCFR (205.105/.601/.602/.604/.271) and EU 2021/1165 Annexes I and II. Each row has a clause, URL and date, and is TO VERIFY. NOP now blocks carbamates, per 205.105(a). ASOA and GB/T 19630 texts are not fetched.
+- **Plan-order correction:** W1 was deferred earlier because I resumed from a plan the owner had rejected (transcript lines 3239–3241). W1 now runs first, in the owner's order.
+
+## Next 5-hour block, in this order
+1. **Finish W1:**
+   - **B-AG-2:** conversion record per plot plus `AGRI-E030`. EU anchor 24 months before sowing, NOP 36 months before harvest, ASOA 12 months TO VERIFY. Test: an EU plot sown at month 23 is blocked even if harvested at month 28.
+   - **B-AG-3:** `certificates` table with alerts at 60 and 14 days and an SPS reminder before 30 June.
+   - **B-AG-12:** `POST /farms/{id}/fumigations`, reusing `_banned_match` and the new `synthetic_storage_fumigant` conditional row (205.271(d)), plus `AGRI-E033`.
+   - **B-TR-6:** error contract `{code, message, status, timestamp, request_id, detail}` in `api/main.py`, plus `ApiError.code` on the frontend.
+   - **Re-verify only:** B-OP-1, B-OP-4, B-ML-1 and B-GIS-1, by tests.
+2. **The 22 Oct plan, in its order:**
+   - **Phase A+ OSM suggestion:** hidden.
+   - **Trace interaction fixes 1–4:**
+     - corner at the centre with Enter
+     - Esc cancels
+     - `aria-live` on the count and area
+     - focus moves on start and save
+   - **Phase E:** manual and tech persona plans with budget, crew and machines; five variations sharing one forecast per farm (measured: up to 9.6 s per forecast when the neural path trains).
+   - **Flow view:** the water balance first, with ET split into T and E by FAO-56 dual Kc; then nitrogen (NH₃ volatilisation, nitrification and denitrification), CH₄ under AWD (IPCC 2019 Tier 1) and canopy VPD, all with cited equations.
+   - **Phase B:** palette via the ui-color-palette MCP.
+   - **Phase D:** W2 items in shadow.
+3. **Also open:**
+   - rolling-origin evaluation and the future-rain leak fix (Open-Meteo Previous Runs, field names TO VERIFY)
+   - the GLEAM breaker flaky test
+   - rebuild the regions snapshot (network) so SPI-1/6 and harvest rain fill
+
+## Older ordered list (before this block)
 1. Phase A+ last item: OSM outline suggestion, hidden in the demo.
    - Ask the owner before any segmentation model.
 2. Site context deepening (the /deepen findings):

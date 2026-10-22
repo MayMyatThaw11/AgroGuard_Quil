@@ -81,6 +81,25 @@
   cursor: crosshair !important;
 }
 
+.aq-fm-crosshair {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  transform: translate(50vw, 50vh);
+  pointer-events: none;
+  background:
+    linear-gradient(var(--aq-text-strong), var(--aq-text-strong)) center / 2px 100% no-repeat,
+    linear-gradient(var(--aq-text-strong), var(--aq-text-strong)) center / 100% 2px no-repeat;
+  filter: drop-shadow(0 0 1px var(--aq-surface-card));
+}
+
+.aq-fm-right h2[tabindex='-1']:focus {
+  outline: none;
+}
+
 .aq-fm-tiles {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
