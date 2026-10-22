@@ -20,3 +20,33 @@
   --aq-z-toast: 60;
   --aq-z-boot: 90;
 }
+
+@media (pointer: coarse) {
+  .aq-root.aq-farmmap {
+    --aq-control-h: 44px;
+    --aq-control-h-lg: 44px;
+    --aq-input-h: 44px;
+    --aq-status-h: 44px;
+  }
+
+  .aq-root.aq-farmmap .aq-fm-close,
+  .aq-root.aq-farmmap .aq-panel-hide,
+  .aq-root.aq-farmmap .aq-reopen,
+  .aq-root.aq-farmmap .aq-seg,
+  .aq-root.aq-farmmap .aq-fm-controls .aq-icon-btn,
+  .aq-root.aq-farmmap .aq-switch,
+  .aq-root.aq-farmmap .aq-fm-check,
+  .aq-root.aq-farmmap .aq-fm-near,
+  .aq-root.aq-farmmap .aq-fm-search-box {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .aq-root.aq-farmmap .aq-fm-close {
+    right: 56px;
+  }
+
+  .aq-root.aq-farmmap .aq-fm-right-body > .aq-fm-sec:first-child > .aq-section-head:first-child {
+    min-height: 44px;
+  }
+}

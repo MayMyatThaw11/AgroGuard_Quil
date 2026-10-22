@@ -134,6 +134,10 @@
   flex: 1;
 }
 
+.aq-fm-right-body > .aq-fm-sec:first-child > .aq-section-head:first-child {
+  min-height: 30px;
+}
+
 .aq-fm-close {
   position: absolute;
   top: 6px;
