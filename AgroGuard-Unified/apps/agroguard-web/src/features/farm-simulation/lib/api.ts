@@ -490,7 +490,52 @@ export async function getHarvestReference(farmId: string) {
   return request<HarvestReference>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/harvest-reference`);
 }
 
-export type JobKind = 'irrigate' | 'drain' | 'scout' | 'spray' | 'harvest';
+export interface WaterTotals {
+  rain_mm: number;
+  transpiration_mm: number;
+  evaporation_mm: number;
+  percolation_mm: number | null;
+}
+
+export interface ParcelFlows {
+  id: string;
+  stage: string | null;
+  water: {
+    total: WaterTotals;
+    net_mm: number | null;
+    unknown: { field: string; reason: string }[];
+    method: string;
+    days: { date: string; evaporation_bound: string }[];
+  };
+  methane: {
+    kg_ha: number | null;
+    range_kg_ha?: [number, number];
+    farm_kg?: number | null;
+    continuous_flooding_kg_ha?: number;
+    saved_vs_flooding_kg_ha?: number;
+    regime?: string;
+    season_days?: number;
+    season_basis?: string;
+    assumed?: string[];
+    reason?: string;
+    source: string;
+  };
+}
+
+export interface FarmFlows {
+  farm_id: string;
+  status: string;
+  days?: { date: string; et0_mm: number; canopy: { vpd_kpa_mean: number | null; vpd_kpa_max: number | null; wet_hours: number; wet_rule: string } }[];
+  parcels?: ParcelFlows[];
+  sources?: { water: string; methane: string; weather: string };
+  missing?: { field: string; reason: string }[];
+}
+
+export async function getFlows(farmId: string) {
+  return request<FarmFlows>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/flows`);
+}
+
+export type JobKind ='irrigate' | 'drain' | 'scout' | 'spray' | 'harvest';
 
 export interface PersonaVariation {
   label?: string;

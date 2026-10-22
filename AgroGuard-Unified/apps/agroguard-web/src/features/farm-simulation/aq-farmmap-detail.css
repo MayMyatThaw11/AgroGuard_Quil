@@ -178,6 +178,11 @@
   align-items: center;
 }
 
+.aq-fm-bar-row.is-flow {
+  grid-template-columns: 112px minmax(0, 1fr) 76px;
+  gap: var(--aq-space-3);
+}
+
 .aq-fm-bar-value {
   color: var(--aq-text-strong);
   font: var(--aq-type-label);

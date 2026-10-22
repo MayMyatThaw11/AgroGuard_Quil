@@ -10,6 +10,7 @@ import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
 import { OpsForecastChart } from '../ops/OpsForecastChart.tsx';
 import { DetailSection, KV, More, UpdatedLine } from './detailParts.tsx';
+import { FlowView } from './FlowView.tsx';
 import { PersonaPlan } from './PersonaPlan.tsx';
 import type { OwnFarmLive } from './useOwnFarms.ts';
 
@@ -212,6 +213,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           <p className="aq-fm-note">Add a tube reading to start the water forecast.</p>
         </DetailSection>
       )}
+
+      <FlowView farmId={farm.id} spec={farm.spec} />
 
       <DetailSection>
         <AqSectionLabel aside="Sentinel-2">Satellite</AqSectionLabel>
