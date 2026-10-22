@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from . import geometry
+from . import conversion, geometry
 from .config import get_settings
 
 TOKEN = re.compile(
@@ -597,6 +597,43 @@ def _herd(block: Block, contract: dict[str, Any], diags: list[dict[str, Any]]) -
     return herd
 
 
+def _conversion(
+    block: Block, standard: str | None, diags: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    claim = block.fields.get("sell_as")
+    if claim is None or str(claim.value).lower() != "organic":
+        return None
+    out = conversion.check(
+        standard,
+        _scalar(block, "conversion_start"),
+        _scalar(block, "planted"),
+        _scalar(block, "harvest"),
+    )
+    if out["qualifies"] is False:
+        diags.append(
+            _diag(
+                "AGRI-E034",
+                "ERROR",
+                claim.line,
+                claim.col,
+                f"parcel {block.name} cannot sell as organic: {out['reason']}.",
+                f"Sell as conventional until {out['earliest'] or 'conversion start is recorded'}.",
+            )
+        )
+    elif out["qualifies"] is None:
+        diags.append(
+            _diag(
+                "AGRI-W034",
+                "WARNING",
+                claim.line,
+                claim.col,
+                f"parcel {block.name}: organic conversion not checked, {out['reason']}.",
+                "Record the dates so the conversion anchor can be checked.",
+            )
+        )
+    return out
+
+
 def _build(root: Block, diags: list[dict[str, Any]]) -> dict[str, Any] | None:
     farm = next((b for b in root.blocks if b.type == "farm"), None)
     parcels = [b for b in root.blocks if b.type == "parcel"]
@@ -653,6 +690,7 @@ def _build(root: Block, diags: list[dict[str, Any]]) -> dict[str, Any] | None:
                 "planted": _scalar(block, "planted"),
                 "standard": _scalar(block, "standard") or standard,
                 "terms": _terms(block, diags),
+                "conversion": _conversion(block, _scalar(block, "standard") or standard, diags),
             }
         )
         if contract["farm"]["standard"] is None:
