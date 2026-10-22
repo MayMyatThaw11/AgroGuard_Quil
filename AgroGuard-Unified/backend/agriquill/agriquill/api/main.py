@@ -42,6 +42,7 @@ from .. import (
     live,
     lots,
     ml,
+    modelcard,
     onboard,
     ops,
     pending,
@@ -1668,6 +1669,17 @@ def error_body(status: int, detail: Any, request_id: str) -> dict[str, Any]:
         "request_id": request_id,
         "detail": detail,
     }
+@router.get("/contracts/{farm_id}/model-card")
+async def contracts_model_card(
+    farm_id: str, format: Literal["json", "csv"] = "json", caller: Caller | None = _READER
+) -> Any:
+    _see(caller, farm_id)
+    card = await asyncio.to_thread(_live_call, modelcard.build, farm_id)
+    if format == "csv":
+        return Response(modelcard.to_csv(card), media_type="text/csv")
+    return card
+
+
 
 
 def _install_error_contract(app: FastAPI) -> None:
