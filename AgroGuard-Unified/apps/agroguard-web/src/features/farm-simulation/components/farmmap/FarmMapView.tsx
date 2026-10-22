@@ -26,7 +26,7 @@ import { KeysDialog } from './KeysDialog.tsx';
 import { MapControls } from './MapControls.tsx';
 import { Minimap } from './Minimap.tsx';
 import { OfflineBanner } from './OfflineBanner.tsx';
-import { OverviewPanel } from './OverviewPanel.tsx';
+import { FarmsRollup, OverviewPanel } from './OverviewPanel.tsx';
 import { OwnFarmDetail } from './OwnFarmDetail.tsx';
 import { TraceDetail } from './TraceDetail.tsx';
 import { useOwnFarms } from './useOwnFarms.ts';
@@ -325,9 +325,10 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
               ) : (
                 <>
                   <DetailSection>
-                    <AqSectionLabel aside={own.error ? 'unavailable' : String(yours.length)}>Your farms</AqSectionLabel>
+                    <AqSectionLabel aside={own.error ? 'unavailable' : undefined}>Your farms</AqSectionLabel>
                     {own.error ? <p className="aq-fm-note">Could not load your farms: {own.error}</p> : null}
                     {!own.error && yours.length === 0 ? <p className="aq-fm-note">No farm onboarded yet. Trace your field or import a boundary file to see a replica of your real farm here.</p> : null}
+                    {own.error ? null : <FarmsRollup farms={ownFarms} />}
                     <AqButton onClick={startTrace}><PenLine size={14} aria-hidden="true" />Trace your field</AqButton>
                     {[...yours, ...demos].map((f) => (
                       <button key={f.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'own', farm: f.id })}>

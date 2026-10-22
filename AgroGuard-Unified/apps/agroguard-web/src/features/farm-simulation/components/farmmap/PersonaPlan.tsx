@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getPersonaPlans, type JobKind, type PersonaPlanResult, type PersonaPlans } from '../../lib/api.ts';
 import type { ContractAsset } from '../../lib/contractFarm.ts';
 import { personaVariations, reasonText, type PersonaInputs } from '../../lib/farmmap/personaInputs.ts';
@@ -44,24 +44,36 @@ const PlanColumn: React.FC<{ plan: PersonaPlanResult }> = ({ plan }) => {
   );
 };
 
-export const PersonaPlan: React.FC<{ farmId: string; assets: ContractAsset[] }> = ({ farmId, assets }) => {
+export const PersonaPlan: React.FC<{ farmId: string; assets: ContractAsset[]; onResult?: (plans: PersonaPlans) => void }> = ({ farmId, assets, onResult }) => {
   const [inputs, setInputs] = useState<PersonaInputs>({ crew: '2', budget: '', inflation: '', prices: {}, handHours: {}, machines: assets.map((a) => a.id) });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<PersonaPlans | null>(null);
   const set = (patch: Partial<PersonaInputs>) => setInputs((v) => ({ ...v, ...patch }));
   const built = personaVariations(inputs);
+  const current = useRef(farmId);
+
+  useEffect(() => {
+    current.current = farmId;
+    setResult(null);
+    setError('');
+    setBusy(false);
+  }, [farmId]);
 
   const run = async () => {
     if (typeof built === 'string') return;
+    const asked = farmId;
     setBusy(true);
     setError('');
     try {
-      setResult(await getPersonaPlans(farmId, built));
+      const plans = await getPersonaPlans(asked, built);
+      if (current.current !== asked) return;
+      setResult(plans);
+      onResult?.(plans);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (current.current === asked) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBusy(false);
+      if (current.current === asked) setBusy(false);
     }
   };
 

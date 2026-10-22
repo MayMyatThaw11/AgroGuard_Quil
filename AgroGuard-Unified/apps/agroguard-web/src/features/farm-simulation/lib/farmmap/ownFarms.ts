@@ -1,6 +1,7 @@
-import type { FarmMonitoring, HarvestReference } from '../api.ts';
+import type { FarmMonitoring, FarmRisk, HarvestReference, PersonaPlans } from '../api.ts';
 import type { ContractSpec } from '../contractFarm.ts';
 import type { FarmStatus, PointFeature, PolygonFeature, Position } from './farmMapTypes.ts';
+import { reasonText } from './personaInputs.ts';
 
 export type OwnStatus = FarmStatus | 'unknown';
 
@@ -292,4 +293,97 @@ export function parcelStatuses(spec: ContractSpec, base: Omit<StatusInputs, 'pad
     out[parcel.id] = replicaStatus({ ...base, paddies: own ? [own] : [] }).status;
   }
   return out;
+}
+
+export interface RollupFarm {
+  id: string;
+  seed: boolean;
+  spec: ContractSpec;
+  status: OwnStatus;
+}
+
+export interface FarmsRollup {
+  farms: number;
+  demo: number;
+  areaHa: number;
+  areaUnknown: number;
+  harvest: { lowT: number; highT: number; farms: number } | null;
+  alerts: number;
+}
+
+const round2 = (v: number) => Math.round(v * 100) / 100;
+
+function farmArea(spec: ContractSpec): number | null {
+  const known = spec.parcels.length > 0 && spec.parcels.every((p) => typeof p.area_ha === 'number' && p.area_ha > 0);
+  return known ? spec.parcels.reduce((s, p) => s + (p.area_ha ?? 0), 0) : null;
+}
+
+export function farmsRollup(farms: readonly RollupFarm[], harvests: ReadonlyMap<string, HarvestReference>): FarmsRollup {
+  let areaHa = 0;
+  let areaUnknown = 0;
+  let lowT = 0;
+  let highT = 0;
+  let priced = 0;
+  for (const farm of farms) {
+    const area = farmArea(farm.spec);
+    if (area === null) areaUnknown += 1;
+    else areaHa += area;
+    const harvest = nationalHarvest(harvests.get(farm.id) ?? null);
+    if (harvest) {
+      lowT += harvest.lowT;
+      highT += harvest.highT;
+      priced += 1;
+    }
+  }
+  return {
+    farms: farms.length,
+    demo: farms.filter((f) => f.seed).length,
+    areaHa: round2(areaHa),
+    areaUnknown,
+    harvest: priced > 0 ? { lowT: round2(lowT), highT: round2(highT), farms: priced } : null,
+    alerts: farms.filter((f) => f.status === 'risk').length,
+  };
+}
+
+export interface TodayInputs {
+  risk: FarmRisk | null;
+  blocked: { title: string; reason: string | null }[] | null;
+  advisory: AdvisoryLocal | null;
+  plan: PersonaPlans | null;
+}
+
+export interface TodayLine {
+  tone: 'alert' | 'warning' | 'neutral';
+  text: string;
+  source: string;
+}
+
+function firstJob(plan: PersonaPlans | null): { label: string; title: string; start: string } | null {
+  for (const p of plan?.plans ?? []) {
+    const job = p.tasks.filter((t) => t.schedule.status === 'scheduled' && t.schedule.start).sort((a, b) => (a.schedule.start ?? '').localeCompare(b.schedule.start ?? ''))[0];
+    if (job?.schedule.start) return { label: p.label, title: job.title, start: job.schedule.start };
+  }
+  return null;
+}
+
+export function todayLine({ risk, blocked, advisory, plan }: TodayInputs): TodayLine {
+  const flood = risk?.provider ?? 'farm map flood risk';
+  const action = risk?.parcels?.find((p) => p.advice.action !== 'none');
+  if (action) return { tone: action.advice.action === 'protect' ? 'alert' : 'warning', text: `${action.id}: ${action.advice.text}`, source: flood };
+  if (risk?.level === 'high' || risk?.level === 'watch') {
+    return { tone: risk.level === 'high' ? 'alert' : 'warning', text: `Flood risk ${risk.level} in the next 30 days${risk.flood_date ? ` from ${risk.flood_date}` : ''}`, source: flood };
+  }
+  const gate = blocked?.[0];
+  if (gate) return { tone: 'warning', text: `${gate.title} is blocked: ${reasonText(gate.reason)}`, source: 'work plan in the farm summary' };
+  if (advisory) {
+    return { tone: 'neutral', text: `Water advice: ${advisory.status.replace(/_/g, ' ')}${advisory.reason ? ` · ${advisory.reason}` : ''}`, source: 'AgroGuard water advice saved in this browser' };
+  }
+  const job = firstJob(plan);
+  if (job) return { tone: 'neutral', text: `${job.title}, ${job.start.replace('T', ' ')}`, source: `Plan your work · ${job.label}` };
+  const unchecked = [risk ? null : 'flood risk', blocked ? null : 'blocked jobs'].filter(Boolean);
+  return {
+    tone: 'neutral',
+    text: 'Nothing urgent today',
+    source: unchecked.length ? `water advice · not loaded: ${unchecked.join(', ')}` : 'flood risk, blocked jobs and water advice, none flagged',
+  };
 }

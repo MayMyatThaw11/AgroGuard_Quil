@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fieldStatus, type FieldStatus } from '../../lib/agroguard.ts';
-import { getContract, getMonitoring, listContracts, type FarmMonitoring } from '../../lib/api.ts';
+import { getContract, getMonitoring, listContracts, type FarmMonitoring, type HarvestReference } from '../../lib/api.ts';
 import type { ContractSpec } from '../../lib/contractFarm.ts';
 import type { FarmMapEngine } from '../../lib/farmmap/engine/engineTypes.ts';
 import {
@@ -16,6 +16,13 @@ import {
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 
 const POLL_MS = 20000;
+const harvests = new Map<string, HarvestReference>();
+
+export const loadedHarvests: ReadonlyMap<string, HarvestReference> = harvests;
+
+export function rememberHarvest(farmId: string, ref: HarvestReference): void {
+  harvests.set(farmId, ref);
+}
 
 export interface OwnFarmLive {
   id: string;

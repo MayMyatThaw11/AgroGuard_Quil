@@ -4,9 +4,12 @@ import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
 import { CROPS } from '../../lib/farmmap/farmMapTheme.ts';
 import type { CropId, Farm } from '../../lib/farmmap/farmMapTypes.ts';
 import type { EngineStats, PickTarget } from '../../lib/farmmap/engine/engineTypes.ts';
+import { farmsRollup, type RollupFarm } from '../../lib/farmmap/ownFarms.ts';
 import { AqSectionLabel, AqStatTile } from '../aq/aqLayout.tsx';
-import { DetailSection } from './detailParts.tsx';
+import { AqBadge } from '../aq/aqPrimitives.tsx';
+import { DetailSection, KV, More } from './detailParts.tsx';
 import { shareStyle, tintStyle } from './tint.ts';
+import { loadedHarvests } from './useOwnFarms.ts';
 
 interface OverviewPanelProps {
   farms: readonly Farm[];
@@ -21,11 +24,41 @@ function attention(farms: readonly Farm[]): Farm[] {
     .slice(0, 8);
 }
 
+const SAMPLE = <AqBadge>Sample data</AqBadge>;
+const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 1 });
+
+export const FarmsRollup: React.FC<{ farms: readonly RollupFarm[] }> = ({ farms }) => {
+  const r = farmsRollup(farms, loadedHarvests);
+  if (r.farms === 0) return null;
+  return (
+    <>
+      <div className="aq-fm-tiles is-three">
+        <AqStatTile label="Farms" value={String(r.farms)} />
+        <AqStatTile label="Area" value={r.areaUnknown === r.farms ? '—' : fmt(r.areaHa)} unit="ha" />
+        <AqStatTile label="At risk" value={String(r.alerts)} tone={r.alerts ? 'alert' : 'default'} />
+      </div>
+      <p className="aq-fm-note">
+        From your farm contracts{r.demo ? ` · ${r.demo} bundled demo` : ''}{r.areaUnknown ? ` · ${r.areaUnknown} with area unknown, left out of the hectares` : ''}
+      </p>
+      <More label="Harvest and stock">
+        <KV
+          k="Harvest at national yield"
+          v={r.harvest ? `${fmt(r.harvest.lowT)}–${fmt(r.harvest.highT)} t` : 'not loaded'}
+          sub={r.harvest ? `FAOSTAT 5-year range, ${r.harvest.farms} of ${r.farms} farms · open a farm to add its reference` : 'opens with each farm; open a farm to load its FAOSTAT reference'}
+        />
+        <KV k="Certificates due in 60 days" v="not loaded" sub="certificate dates are not in the farm map yet" />
+        <KV k="Lots in store" v="not loaded" sub="stored lots are not in the farm map yet" />
+      </More>
+    </>
+  );
+};
+
 function CountryList({ onPick }: { onPick: (target: PickTarget) => void }) {
   const data = getFarmMap();
   return (
     <div className="aq-fm-overview">
       <h2 className="aq-title">ASEAN overview</h2>
+      <div className="aq-fm-badges">{SAMPLE}</div>
       <p className="aq-meta">
         {data.farms.length.toLocaleString()} farms in 11 countries. Pick a country bubble, search a town, or scroll in. Regions load as you get close; everything else stays unloaded.
       </p>
@@ -59,6 +92,7 @@ export const OverviewPanel: React.FC<OverviewPanelProps> = ({ farms, stats, onPi
       <DetailSection className="is-head">
         <h2 className="aq-title">In view</h2>
         <p className="aq-meta">Loaded regions only · updates as you move</p>
+        <div className="aq-fm-badges">{SAMPLE}</div>
         <div className="aq-fm-tiles is-three">
           <AqStatTile label="Farms" value={String(farms.length)} />
           <AqStatTile label="Area" value={Math.round(hectares).toLocaleString()} unit="ha" />

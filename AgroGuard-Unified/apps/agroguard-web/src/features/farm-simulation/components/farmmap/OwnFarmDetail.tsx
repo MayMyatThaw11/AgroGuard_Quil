@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
+import { CalendarClock, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
-import { getHarvestReference, getRadar, getRisk, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type HarvestReference, type MonitoringPaddy, type RiverCell } from '../../lib/api.ts';
+import { getHarvestReference, getRadar, getRisk, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type HarvestReference, type MonitoringPaddy, type PersonaPlans, type RiverCell } from '../../lib/api.ts';
+import { failedText } from '../../lib/apiError.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
-import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, nationalHarvest, pawSanHarvest, readAgroguardLocal, type OwnStatus } from '../../lib/farmmap/ownFarms.ts';
+import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, nationalHarvest, pawSanHarvest, readAgroguardLocal, todayLine, type OwnStatus, type TodayLine } from '../../lib/farmmap/ownFarms.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 import { PROVENANCE_CLASS, PROVENANCE_LABEL, type ProvenanceLevel } from '../../lib/provenance.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
@@ -13,7 +14,7 @@ import { DetailSection, KV, More, UpdatedLine } from './detailParts.tsx';
 import { FlowView } from './FlowView.tsx';
 import { SeasonStrip } from './SeasonStrip.tsx';
 import { PersonaPlan } from './PersonaPlan.tsx';
-import type { OwnFarmLive } from './useOwnFarms.ts';
+import { rememberHarvest, type OwnFarmLive } from './useOwnFarms.ts';
 
 const MIN_TRUST_CHECKS = 10;
 const EXPERIMENTAL = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('experimental');
@@ -22,6 +23,12 @@ const STATUS: Record<OwnStatus, { tone: 'accent' | 'warning' | 'alert' | 'neutra
   watch: { tone: 'warning', word: 'Watch', Icon: TriangleAlert },
   risk: { tone: 'alert', word: 'At risk', Icon: OctagonAlert },
   unknown: { tone: 'neutral', word: 'Unknown', Icon: CircleHelp },
+};
+
+const TODAY: Record<TodayLine['tone'], { className: string; Icon: typeof CircleCheck }> = {
+  alert: { className: 'aq-alert is-error', Icon: OctagonAlert },
+  warning: { className: 'aq-alert is-warning', Icon: TriangleAlert },
+  neutral: { className: 'aq-alert', Icon: CalendarClock },
 };
 
 const Prov: React.FC<{ level: ProvenanceLevel }> = ({ level }) => <span className={PROVENANCE_CLASS[level]}>{PROVENANCE_LABEL[level]}</span>;
@@ -77,7 +84,9 @@ function chartSummary(p: MonitoringPaddy): string {
 
 export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: number | null) => void; onFocus: () => void }> = ({ farm, onLink, onFocus }) => {
   const [summary, setSummary] = useState<FarmSummary | null>(null);
-  const [health, setHealth] = useState<HealthUpdateSummary | null | 'error'>(null);
+  const [summaryFailed, setSummaryFailed] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthUpdateSummary | null | 'error' | 'loading'>('loading');
+  const [plan, setPlan] = useState<PersonaPlans | null>(null);
   const [sat, setSat] = useState<FarmSatellite | 'loading' | 'error'>('loading');
   const [agField, setAgField] = useState<AgroguardField | null>(null);
   const [fieldDraft, setFieldDraft] = useState('1');
@@ -92,7 +101,11 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
 
   useEffect(() => {
     let alive = true;
-    getSummary(farm.id).then((s) => alive && setSummary(s), () => alive && setSummary(null));
+    setSummary(null);
+    setSummaryFailed(null);
+    setHealth('loading');
+    setPlan(null);
+    getSummary(farm.id).then((s) => alive && setSummary(s), (err: unknown) => alive && setSummaryFailed(failedText(err, 'Trust score unavailable')));
     latestHealthUpdate().then((h) => alive && setHealth(h), () => alive && setHealth('error'));
     setSat('loading');
     getSatellite(farm.id).then((s) => alive && setSat(s), () => alive && setSat('error'));
@@ -100,7 +113,10 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
     setRisk(null);
     getRisk(farm.id).then((r) => alive && setRisk(r), () => alive && setRisk('error'));
     setYieldRef(null);
-    getHarvestReference(farm.id).then((r) => alive && setYieldRef(r), () => alive && setYieldRef(null));
+    getHarvestReference(farm.id).then((r) => {
+      rememberHarvest(farm.id, r);
+      if (alive) setYieldRef(r);
+    }, () => alive && setYieldRef(null));
     if (EXPERIMENTAL) getRadar(farm.id).then((r) => alive && setRadar(r), () => alive && setRadar('error'));
     return () => {
       alive = false;
@@ -130,6 +146,10 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const flood = risk && risk !== 'error' ? risk : null;
   const elev = flood?.elevation?.mean_m ?? null;
   const actions = (flood?.parcels ?? []).filter((p) => p.advice.action !== 'none');
+  const today = risk === null || (summary === null && summaryFailed === null)
+    ? null
+    : todayLine({ risk: flood, blocked: summary?.work.blocked ?? null, advisory: local.advisory, plan });
+  const todayStyle = TODAY[today?.tone ?? 'neutral'];
 
   return (
     <>
@@ -147,6 +167,14 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           {farm.reasons.map((r) => <p key={r} className="aq-fm-note">{r}</p>)}
           <UpdatedLine>Checked {ago(farm.checkedAt)}</UpdatedLine>
         </More>
+      </DetailSection>
+
+      <DetailSection>
+        <div className={todayStyle.className} role="status">
+          <todayStyle.Icon size={14} aria-hidden="true" />
+          <span><b>Today:</b> {today ? today.text : 'Loading'}</span>
+        </div>
+        {today ? <p className="aq-fm-note">From {today.source}</p> : null}
       </DetailSection>
 
       <DetailSection>
@@ -208,7 +236,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
             </figure>
           ) : null)}
           <p className="aq-fm-note">
-            {decisions && decisions.scored >= MIN_TRUST_CHECKS ? `Right in ${decisions.inside_band} of ${decisions.scored} checks on this farm` : `Trust score after ${MIN_TRUST_CHECKS} checked readings · ${decisions?.scored ?? 0} so far`}
+            {summaryFailed ?? (!summary ? 'Loading the trust score' : decisions && decisions.scored >= MIN_TRUST_CHECKS ? `Right in ${decisions.inside_band} of ${decisions.scored} checks on this farm` : `Trust score after ${MIN_TRUST_CHECKS} checked readings · ${decisions ? `${decisions.scored} so far` : 'none reported'}`)}
           </p>
         </DetailSection>
       ) : (
@@ -254,7 +282,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
         </DetailSection>
       ) : null}
 
-      <PersonaPlan farmId={farm.id} assets={farm.spec.assets} />
+      <PersonaPlan farmId={farm.id} assets={farm.spec.assets} onResult={setPlan} />
 
       <DetailSection>
         <More label="Details and sources">
@@ -290,7 +318,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           )) : null}
           {!harvest && !yieldRef ? <KV k="Expected harvest" v="Not available" sub="harvest reference not reachable" /> : null}
           {local.crop ? <KV k="Crop conditions" v={`pH ${local.crop.soilPh} · ${local.crop.rainfallMm} mm · ${local.crop.temperatureC} °C`} sub={`${local.crop.validatedOnFieldData ? 'field-validated' : 'not field-validated'} · ${km(centre, local.crop.lat, local.crop.lon)}`} /> : null}
-          {health === 'error' ? <KV k="Health update" v="Unavailable" sub="service not reachable" /> : health ? (
+          {health === 'loading' ? <KV k="Health update" v="Loading" /> : health === 'error' ? <KV k="Health update" v="Unavailable" sub="service not reachable" /> : health ? (
             <KV k="Health update" v={`Looks like ${health.diseaseName ?? health.healthStatus}`} sub={`${health.detection?.confidence != null ? `${Math.round(health.detection.confidence)} % · ` : ''}${health.township ?? km(centre, health.latitude, health.longitude)} · ${ago(health.reportedAt)}`} />
           ) : null}
           {sat !== 'loading' && sat !== 'error' ? sat.parcels.flatMap((p) => p.series.map((s) => (

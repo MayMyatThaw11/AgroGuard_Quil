@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { FarmRisk, HarvestReference, PersonaPlans } from '../../src/features/farm-simulation/lib/api.ts';
 import type { ContractSpec } from '../../src/features/farm-simulation/lib/contractFarm.ts';
 import {
   contractFeatures,
   farmCentroid,
+  farmsRollup,
+  todayLine,
   advisoryLitres,
   linkedField,
   nationalHarvest,
@@ -208,4 +211,64 @@ test('national harvest adds only parcels with a FAOSTAT range and keeps unknown 
   assert.deepEqual(nationalHarvest(ref), { areaHa: 4.8, lowT: 12.26, highT: 14.38, year: 2024 });
   assert.equal(nationalHarvest({ ...ref, parcels: [ref.parcels[2]] }), null);
   assert.equal(nationalHarvest(null), null);
+});
+
+function ref(farmId: string, tonnes: [number, number]): HarvestReference {
+  return { farm_id: farmId, country: 'MM', country_name: 'Myanmar', note: '', parcels: [{ parcel: 'P1', crop: 'rice', tonnes, area_ha: 1, yield: { t_ha: 3, year: 2024 } }] };
+}
+
+test('the farms roll-up sums area, national harvest and alerts over two farms', () => {
+  const a = { id: 'a', seed: false, status: 'risk' as const, spec: spec([SQUARE, SQUARE]) };
+  const b = { id: 'b', seed: true, status: 'ok' as const, spec: spec([SQUARE]) };
+  const r = farmsRollup([a, b], new Map([['a', ref('a', [3, 4])], ['b', ref('b', [1.5, 2.25])]]));
+  assert.equal(r.farms, 2);
+  assert.equal(r.demo, 1);
+  assert.equal(r.areaHa, 3.6);
+  assert.equal(r.areaUnknown, 0);
+  assert.deepEqual(r.harvest, { lowT: 4.5, highT: 6.25, farms: 2 });
+  assert.equal(r.alerts, 1);
+});
+
+test('a farm with unknown area is left out of the hectares and counted, and a missing reference is not zero', () => {
+  const known = { id: 'a', seed: false, status: 'ok' as const, spec: spec([SQUARE]) };
+  const blank = spec([SQUARE, SQUARE]);
+  blank.parcels[1].area_ha = null;
+  const unknown = { id: 'b', seed: false, status: 'unknown' as const, spec: blank };
+  const r = farmsRollup([known, unknown], new Map());
+  assert.equal(r.areaHa, 1.2);
+  assert.equal(r.areaUnknown, 1);
+  assert.equal(r.harvest, null);
+});
+
+const RISK: FarmRisk = { farm_id: 'f', level: 'low', provider: 'GloFAS', missing: [] };
+const ADVICE = { status: 'irrigate_now', reasonCode: null, reason: 'dry soil', dataQuality: null, netDepthMm: 12, mode: null, cropType: null, fieldId: 1, capturedAt: null };
+const PLAN: PersonaPlans = {
+  farm_id: 'f',
+  status: 'OK',
+  plans: [{
+    label: 'By hand', persona: 'manual', crew: 2, machines: [], own_hours: [],
+    outcome: { scheduled: 2, blocked: [], lateness_h: 0, by_hand: 2, solver: null, cost: { priced_total: 0, unpriced_jobs: 2, budget: null, inflation_pct: 0, within_budget: null, dropped: [], note: null } },
+    tasks: [
+      { id: 't2', title: 'Drain P2', date: '2026-10-24', paddy_id: 'P2', asset_id: null, blocked_reason: null, schedule: { status: 'scheduled', start: '2026-10-24T06:00' } },
+      { id: 't1', title: 'Scout P1', date: '2026-10-23', paddy_id: 'P1', asset_id: null, blocked_reason: null, schedule: { status: 'scheduled', start: '2026-10-23T06:00' } },
+    ],
+  }],
+};
+
+test('today picks a flood action first, then a blocked job, then water advice, then the first planned job', () => {
+  const flooded: FarmRisk = { ...RISK, level: 'high', parcels: [{ id: 'P1', advice: { action: 'harvest_early', text: 'Harvest early' }, planting: null }] };
+  const blocked = [{ title: 'Spray P1', reason: 'NO_GATE_WINDOW: wind' }];
+  assert.deepEqual(todayLine({ risk: flooded, blocked, advisory: ADVICE, plan: PLAN }), { tone: 'warning', text: 'P1: Harvest early', source: 'GloFAS' });
+  const gate = todayLine({ risk: RISK, blocked, advisory: ADVICE, plan: PLAN });
+  assert.equal(gate.text, 'Spray P1 is blocked: no allowed hours: wind too strong');
+  assert.equal(gate.source, 'work plan in the farm summary');
+  assert.equal(todayLine({ risk: RISK, blocked: [], advisory: ADVICE, plan: PLAN }).text, 'Water advice: irrigate now · dry soil');
+  const job = todayLine({ risk: RISK, blocked: [], advisory: null, plan: PLAN });
+  assert.equal(job.text, 'Scout P1, 2026-10-23 06:00');
+  assert.equal(job.source, 'Plan your work · By hand');
+});
+
+test('today says nothing urgent and names what it could not check', () => {
+  assert.equal(todayLine({ risk: RISK, blocked: [], advisory: null, plan: null }).text, 'Nothing urgent today');
+  assert.equal(todayLine({ risk: null, blocked: [], advisory: null, plan: null }).source, 'water advice · not loaded: flood risk');
 });
