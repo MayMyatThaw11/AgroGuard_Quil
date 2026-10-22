@@ -1,0 +1,50 @@
+ingredient,aliases,status,use,source
+Methyl bromide,,restricted,fumigant,Notification 5/2018 restricted list
+Aluminium phosphide,aluminum phosphide,restricted,fumigant,Notification 5/2018 restricted list
+Magnesium phosphide,,restricted,fumigant,Notification 5/2018 restricted list
+Bromadiolone,,restricted,rodenticide,Notification 5/2018 restricted list
+Zinc phosphide,,restricted,rodenticide,Notification 5/2018 restricted list
+Brodifacoum,,restricted,rodenticide,Notification 5/2018 restricted list
+Fenthion,,restricted,malarial control,Notification 5/2018 restricted list
+Aldicarb,,banned,"insecticide, nematicide",1/2013 HS table; 6/2018 (team-supplied list)
+Alachlor,,banned,herbicide,1/2013 HS table; 6/2018 (team-supplied list)
+Aldrin,,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Alpha hexachlorocyclohexane,alpha HCH,banned,insecticide,6/2018 (team-supplied list)
+Arsenic,arsenic acid|arsenic compounds,banned,"rodenticide, insecticide",1/2013 HS table; 6/2018 (team-supplied list)
+Beta hexachlorocyclohexane,"beta HCH,BHC",banned,insecticide,6/2018 (team-supplied list)
+Binapacryl,,banned,"fungicide, acaricide",1/2013 HS table; 6/2018 (team-supplied list)
+Captafol,,banned,fungicide,1/2013 HS table; 6/2018 (team-supplied list)
+Chlordane,,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Chlordimeform,,banned,"insecticide, acaricide",1/2013 HS table; 6/2018 (team-supplied list)
+Cyhexatin,,banned,acaricide,6/2018 (team-supplied list)
+Chlordecone,,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Chlorobenzilate,chlorobenzylate,banned,"insecticide, acaricide",1/2013 HS table; 6/2018 (team-supplied list)
+Dieldrin,,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+DNOC,"4,6-dinitro-o-cresol",banned,"insecticide, herbicide",1/2013 HS table; 6/2018 (team-supplied list)
+Dinoseb,dinoseb acetate,banned,herbicide,1/2013 HS table; 6/2018 (team-supplied list)
+Ethylene dibromide,EDB,banned,"insecticide, fumigant",6/2018 (team-supplied list)
+Ethylene dichloride,"1,2-dichloroethane",banned,"insecticide, fumigant",1/2013 HS table; 6/2018 (team-supplied list)
+Endosulfan,,banned,"insecticide, acaricide",1/2013 HS table; 6/2018 (team-supplied list)
+Endrin,,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Ethylene oxide,oxirane,banned,fumigant,1/2013 HS table; 6/2018 (team-supplied list)
+EPN,,banned,"insecticide, acaricide",6/2018 (team-supplied list)
+Fluoroacetamide,,banned,rodenticide,1/2013 HS table; 6/2018 (team-supplied list)
+Heptachlor,,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Hexachlorobenzene,HCB,banned,fungicide,6/2018 (team-supplied list)
+Lindane,gamma HCH|gamma hexachlorocyclohexane,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Mercury compounds,mercury|mercury sulphates|organo-mercury compounds,banned,fungicide,1/2013 HS table; 6/2018 (team-supplied list)
+Methomyl,,banned,insecticide,6/2018 (team-supplied list)
+Methamidophos,,banned,"insecticide, acaricide",1/2013 HS table; 6/2018 (team-supplied list)
+Monocrotophos,,banned,"insecticide, acaricide",1/2013 HS table; 6/2018 (team-supplied list)
+Mirex,,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Methyl parathion,parathion-methyl|methylparathion,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Trichlorfon,trichlorofon,banned,insecticide,6/2018 (team-supplied list)
+Ethyl parathion,parathion|parathion ethyl,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Pentachlorophenol,PCP,banned,"insecticide, fungicide, wood preservative",1/2013 HS table; 6/2018 (team-supplied list)
+Phosphamidon,,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Strobane,polychloroterpenes,banned,insecticide,6/2018 (team-supplied list)
+"2,4,5-T","2,4,5-TP|fenoprop",banned,herbicide,6/2018 (team-supplied list)
+Toxaphene,camphechlor,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Tributyltin compounds,tributyltin|organotin compounds,banned,"fungicide, biocide",1/2013 HS table; 6/2018 (team-supplied list)
+DDT,clofenotane,banned,insecticide,1/2013 HS table; 6/2018 (team-supplied list)
+Thallium,,banned,,1/2013 HS table only
