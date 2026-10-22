@@ -366,6 +366,7 @@ export interface MonitoringFlag {
   predicted_cm: number;
   kind: string;
   meaning: string;
+  status?: 'unconfirmed' | 'confirmed' | 'conflicting';
 }
 
 export interface MonitoringPaddy {

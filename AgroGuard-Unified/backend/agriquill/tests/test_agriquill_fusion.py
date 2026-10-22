@@ -58,15 +58,34 @@ def test_reading_pulls_estimate_and_shrinks_uncertainty():
     assert fused["flags"] == []
 
 
-def test_jump_above_model_is_flagged_as_inflow():
-    out = fusion.kalman_depth([row(0, -10.0), row(10, 4.0)], hourly(), 0, 24, 1.0, 0.0)
-    assert out["flags"][0]["kind"] == "unmodelled_inflow"
-    assert out["now"] == pytest.approx(4.0)
+def test_one_forged_jump_moves_the_estimate_under_2_cm_and_stays_flagged():
+    model_only = fusion.kalman_depth([row(0, 0.0)], hourly(), 0, 24, 1.0, 0.0)
+    forged = fusion.kalman_depth([row(0, 0.0), row(10, 20.0)], hourly(), 0, 24, 1.0, 0.0)
+    assert abs(forged["now"] - model_only["now"]) < 2.0
+    assert forged["flags"][0]["kind"] == "unmodelled_inflow"
+    assert forged["flags"][0]["status"] == "unconfirmed"
 
 
-def test_fast_drop_is_flagged_as_leak_or_fault():
+def test_two_agreeing_readings_accept_a_real_irrigation():
+    out = fusion.kalman_depth(
+        [row(0, -10.0), row(10, 4.0), row(12, 4.1)], hourly(), 0, 24, 1.0, 0.0
+    )
+    assert out["now"] == pytest.approx(4.1, abs=0.5)
+    assert out["flags"][0]["status"] == "confirmed"
+
+
+def test_a_jump_contradicted_by_the_next_reading_is_unknown_not_guessed():
+    out = fusion.kalman_depth([row(0, 0.0), row(10, 20.0), row(12, 0.1)], hourly(), 0, 24, 1.0, 0.0)
+    assert out["now"] is None
+    assert "conflicting readings" in out["reason"]
+    assert out["flags"][0]["status"] == "conflicting"
+
+
+def test_a_lone_bund_breach_raises_a_flag_not_silence():
     out = fusion.kalman_depth([row(0, 0.0), row(5, -12.0)], hourly(), 0, 24, 1.0, 0.0)
     assert out["flags"][0]["kind"] == "fast_drawdown"
+    assert out["flags"][0]["status"] == "unconfirmed"
+    assert out["now"] is not None
 
 
 def test_missing_weather_hour_is_reported():
@@ -192,3 +211,20 @@ def test_fault_flag_becomes_an_inspection_proposal():
     out = live.watch(FARM, mock())
     texts = [p["text"] for p in out["proposals"]]
     assert any(t.startswith("Inspect PD-02") for t in texts)
+
+
+def test_conflicting_readings_still_raise_an_inspection_proposal():
+    base = datetime.now(UTC) - timedelta(hours=8)
+    for hours, value in ((0, 0.0), (2, 20.0), (4, 0.1)):
+        telemetry.ingest(
+            "PD-02-tube",
+            (base + timedelta(hours=hours)).isoformat(),
+            {"water_depth_cm": value},
+            "lorawan:ttn",
+        )
+    status = live.monitoring(FARM, mock())
+    pd02 = next(p for p in status["paddies"] if p["id"] == "PD-02")
+    assert pd02["model"] is None
+    assert any("conflicting readings" in m["reason"] for m in pd02["missing"])
+    out = live.watch(FARM, mock())
+    assert any(p["text"].startswith("Inspect PD-02") for p in out["proposals"])

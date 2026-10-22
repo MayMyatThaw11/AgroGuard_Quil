@@ -8,11 +8,15 @@ PROCESS_VAR_CM2_PER_H = 0.04
 READING_VAR_CM2 = {"lorawan": 0.25, "manual": 1.0}
 DEFAULT_READING_VAR_CM2 = 1.0
 OUTLIER_SIGMA = 3.0
+HUBER_K = 1.345
+CONFIRM_WINDOW_H = 96
 Z90 = 1.2816
 ASSUMPTIONS = {
     "process_variance_cm2_per_hour": PROCESS_VAR_CM2_PER_H,
     "reading_variance_cm2": READING_VAR_CM2,
     "outlier_sigma": OUTLIER_SIGMA,
+    "robust_update": f"Huber weight min(1, {HUBER_K}/|z|) beyond {OUTLIER_SIGMA} sigma; a jump "
+    f"is accepted only when a second reading within {CONFIRM_WINDOW_H} h agrees",
     "status": "TO VERIFY: noise levels are engineering assumptions until field-calibrated",
 }
 
@@ -64,6 +68,8 @@ def kalman_depth(
     past: list[dict[str, Any]] = []
     forward: list[dict[str, float]] = []
     now: tuple[float, float] | None = None
+    pending: dict[str, Any] | None = None
+    conflict = False
     for i in range(start, len(times)):
         for row in sorted(by_hour.get(i, []), key=lambda r: r["observed_at"]):
             z, r = float(row["value"]), reading_variance(row["source"])
@@ -71,25 +77,41 @@ def kalman_depth(
                 x, p = z, r
                 updates += 1
                 continue
+            updates += 1
+            if pending is not None and i - pending["hour"] > CONFIRM_WINDOW_H:
+                pending = None
+            if pending is not None:
+                hours = i - pending["hour"]
+                tolerance = OUTLIER_SIGMA * math.sqrt(
+                    pending["r"] + r + PROCESS_VAR_CM2_PER_H * hours
+                )
+                agrees = abs(z - pending["x"]) <= tolerance
+                pending["flag"]["status"] = "confirmed" if agrees else "conflicting"
+                pending = None
+                if agrees:
+                    x, p = z, r
+                    continue
+                conflict = True
             s = p + r
             innovation = z - x
             if abs(innovation) > OUTLIER_SIGMA * math.sqrt(s):
-                flags.append(
-                    {
-                        "observed_at": row["observed_at"],
-                        "reading_cm": z,
-                        "predicted_cm": round(x, 2),
-                        "kind": "unmodelled_inflow" if innovation > 0 else "fast_drawdown",
-                        "meaning": "irrigation, unforecast rain or a blocked drain"
-                        if innovation > 0
-                        else "bund leak, higher percolation or a sensor fault",
-                    }
-                )
-                x, p = z, r
+                flag = {
+                    "observed_at": row["observed_at"],
+                    "reading_cm": z,
+                    "predicted_cm": round(x, 2),
+                    "kind": "unmodelled_inflow" if innovation > 0 else "fast_drawdown",
+                    "meaning": "irrigation, unforecast rain or a blocked drain"
+                    if innovation > 0
+                    else "bund leak, higher percolation or a sensor fault",
+                    "status": "unconfirmed",
+                }
+                flags.append(flag)
+                pending = {"x": z, "r": r, "hour": i, "flag": flag}
+                weight = HUBER_K / (abs(innovation) / math.sqrt(s))
+                gain = weight * p / s
             else:
                 gain = p / s
-                x, p = x + gain * innovation, (1 - gain) * p
-            updates += 1
+            x, p = x + gain * innovation, (1 - gain) * p
         if i == now_index:
             now = (x, p) if x is not None else None
         if x is None:
@@ -100,6 +122,8 @@ def kalman_depth(
                 return {"now": None, "reason": f"weather hour {times[i]} lacks rain or ET0"}
             break
         x, p = x + step, p + PROCESS_VAR_CM2_PER_H
+        if pending is not None:
+            pending["x"] += step
         if _day_end(times, i):
             sigma = math.sqrt(p)
             if i < now_index:
@@ -115,6 +139,13 @@ def kalman_depth(
                         "p90": round(x + Z90 * sigma, 2),
                     }
                 )
+    if conflict:
+        return {
+            "now": None,
+            "reason": "unknown: conflicting readings; a jump was not confirmed by the next "
+            "reading. Check the tube and the bunds, then log a new reading",
+            "flags": flags,
+        }
     if now is None and x is not None and now_index >= len(times):
         now = (x, p)
     if now is None or now[0] is None:

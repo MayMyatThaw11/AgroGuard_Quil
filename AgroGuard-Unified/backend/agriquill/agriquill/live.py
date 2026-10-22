@@ -320,6 +320,7 @@ def _paddy_depth(
     fused = fusion.kalman_depth(readings, hourly, offset_s, now_index, kc, perc)
     if fused["now"] is None:
         out["missing"].append(missing("water_depth", fused["reason"]))
+        out["flags"] = fused.get("flags", [])
         return out
     last = readings[-1]
     age_h = (datetime.now(UTC) - datetime.fromisoformat(last["observed_at"])).total_seconds() / 3600

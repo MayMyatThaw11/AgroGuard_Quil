@@ -256,7 +256,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           {paddies.map((p) => (
             <div key={p.id}>
               <KV k={p.id} v={p.model ? `${cm(p.model.depth_cm)} ± ${cm(p.model.sigma_cm)} cm` : 'Unknown'} sub={p.model ? 'Kalman filter · noise TO VERIFY' : p.missing[0]?.reason} />
-              {p.model?.flags.map((f) => <p key={f.observed_at} className="aq-fm-note">{f.kind.replace(/_/g, ' ')} · read {cm(f.reading_cm)} cm · expected {cm(f.predicted_cm)} cm · {f.meaning}</p>)}
+              {p.model?.flags.map((f) => <p key={f.observed_at} className="aq-fm-note">{f.kind.replace(/_/g, ' ')}{f.status ? ` (${f.status})` : ''} · read {cm(f.reading_cm)} cm · expected {cm(f.predicted_cm)} cm · {f.meaning}</p>)}
             </div>
           ))}
           {farm.monitoringError ? <p className="aq-fm-note">Water data unavailable: {farm.monitoringError}</p> : null}
