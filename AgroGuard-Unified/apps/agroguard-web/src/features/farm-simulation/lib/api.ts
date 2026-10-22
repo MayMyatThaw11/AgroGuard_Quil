@@ -435,6 +435,37 @@ export interface FarmRadar {
   }[];
 }
 
+export type FloodLevel = 'low' | 'watch' | 'high' | 'unknown';
+
+export interface RiverCell {
+  lat: number;
+  lon: number;
+  km: number;
+  mean_flow: number | null;
+  years: number;
+  levels?: { q2: number; q5: number; q10: number };
+  high_years: number[];
+  forecast?: { q2: { chance: number | null; first_date: string | null }; q5: { chance: number | null; first_date: string | null } };
+  level: FloodLevel;
+  reason?: string;
+}
+
+export interface FarmRisk {
+  farm_id: string;
+  level: FloodLevel;
+  flood_date?: string | null;
+  elevation?: { mean_m: number | null; min_m: number | null; max_m: number | null; within_dem_error: boolean | null; accuracy?: string };
+  nearest?: RiverCell;
+  main?: RiverCell;
+  parcels?: { id: string; advice: { action: 'none' | 'protect' | 'harvest_early'; text: string }; planting: { text: string } | null }[];
+  assumptions?: Record<string, string>;
+  missing: { field: string; reason: string }[];
+}
+
+export async function getRisk(farmId: string) {
+  return request<FarmRisk>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/risk`);
+}
+
 export async function getRadar(farmId: string, days = 60) {
   return request<FarmRadar>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/radar?days=${days}`);
 }

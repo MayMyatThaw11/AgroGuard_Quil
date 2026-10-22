@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     environment: str = "production"
     soilgrids_endpoint: str = "https://rest.isric.org/soilgrids/v2.0/properties/query"
     openmeteo_endpoint: str = "https://api.open-meteo.com/v1/forecast"
+    open_meteo_elevation_url: str = "https://api.open-meteo.com/v1/elevation"
+    open_meteo_flood_url: str = "https://flood-api.open-meteo.com/v1/flood"
     http_timeout_s: float = 30.0
     soil_cache_ttl_s: float = 180 * 24 * 3600.0
     weather_cache_ttl_s: float = 3600.0

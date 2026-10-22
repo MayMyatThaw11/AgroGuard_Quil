@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
-import { getRadar, getSatellite, getSummary, type FarmRadar, type FarmSatellite, type FarmSummary, type MonitoringPaddy } from '../../lib/api.ts';
+import { getRadar, getRisk, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type MonitoringPaddy, type RiverCell } from '../../lib/api.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
 import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, pawSanHarvest, readAgroguardLocal, type OwnStatus } from '../../lib/farmmap/ownFarms.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
@@ -61,6 +61,22 @@ const More: React.FC<{ label: string; children: React.ReactNode }> = ({ label, c
   );
 };
 
+const FLOOD_WORD = { low: 'Low', watch: 'Watch', high: 'High', unknown: 'Unknown' } as const;
+
+const pct = (v: number | null | undefined) => (v == null ? '?' : `${Math.round(v * 100)} %`);
+
+const RiverLine: React.FC<{ label: string; cell: RiverCell }> = ({ label, cell }) => (
+  <KV
+    k={label}
+    v={cell.levels ? `2-yr ${fmt(cell.levels.q2)} · 5-yr ${fmt(cell.levels.q5)} m³/s` : 'No flood levels'}
+    sub={
+      cell.levels
+        ? `${cell.km} km · ${cell.years} years · chance of 5-yr flow ${pct(cell.forecast?.q5.chance)} · past high years ${cell.high_years.join(', ') || 'none'}`
+        : cell.reason
+    }
+  />
+);
+
 function chartSummary(p: MonitoringPaddy): string {
   const band = p.model?.band;
   if (!band || band.p50.length === 0) return '';
@@ -75,6 +91,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const [agField, setAgField] = useState<AgroguardField | null>(null);
   const [fieldDraft, setFieldDraft] = useState('1');
   const [radar, setRadar] = useState<FarmRadar | 'error' | null>(null);
+  const [risk, setRisk] = useState<FarmRisk | 'error' | null>(null);
   const centre = useMemo(() => farmCentroid(farm.spec), [farm.spec]);
   const local = useMemo(() => {
     const storage = browserStorage();
@@ -88,6 +105,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
     setSat('loading');
     getSatellite(farm.id).then((s) => alive && setSat(s), () => alive && setSat('error'));
     setRadar(null);
+    setRisk(null);
+    getRisk(farm.id).then((r) => alive && setRisk(r), () => alive && setRisk('error'));
     if (EXPERIMENTAL) getRadar(farm.id).then((r) => alive && setRadar(r), () => alive && setRadar('error'));
     return () => {
       alive = false;
@@ -112,12 +131,18 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const charted = paddies.filter((p) => p.model?.band && p.model.band_dates.length > 0);
   const water = advisoryLitres(local.advisory, farm.fieldId, area);
   const harvest = pawSanHarvest(farm.spec);
+  const flood = risk && risk !== 'error' ? risk : null;
+  const elev = flood?.elevation?.mean_m ?? null;
+  const actions = (flood?.parcels ?? []).filter((p) => p.advice.action !== 'none');
 
   return (
     <>
       <DetailSection className="is-head">
         <h2 className="aq-title">{farm.spec.farm.name ?? farm.id}</h2>
-        <p className="aq-meta">{farm.seed ? 'Demo farm' : 'Your farm'} · {farm.spec.parcels.length} parcels · {area.toFixed(2)} ha</p>
+        <p className="aq-meta">
+          {farm.seed ? 'Demo farm' : 'Your farm'} · {farm.spec.parcels.length} parcels · {area.toFixed(2)} ha
+          {elev !== null ? ` · ${flood?.elevation?.within_dem_error ? `about ${elev} m, near sea level` : `${elev} m above sea level`}` : ''}
+        </p>
         <div className="aq-fm-badges">
           <AqBadge tone={status.tone}><status.Icon size={12} aria-hidden="true" />{status.word}</AqBadge>
           {farm.seed ? <AqBadge>Demo contract</AqBadge> : null}
@@ -151,14 +176,27 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
         </div>
       </DetailSection>
 
-      {water.litres !== null || harvest ? (
+      {water.litres !== null || harvest || risk ? (
         <DetailSection>
           <div className="aq-fm-tiles">
+            {risk ? (
+              <Tile
+                label="Flood risk, 30 days"
+                value={flood ? FLOOD_WORD[flood.level] : 'Unknown'}
+                level={flood && flood.level !== 'unknown' ? 'modelled' : 'unavailable'}
+                tone={flood?.level === 'high' ? 'alert' : flood?.level === 'watch' ? 'warning' : undefined}
+              />
+            ) : null}
             {water.litres !== null ? <Tile label="Water to add" value={fmt(water.litres / 1000)} unit="m³" level="inferred" /> : null}
             {harvest ? <Tile label="Expected harvest" value={`${fmt(harvest.lowT)}–${fmt(harvest.highT)}`} unit="t" level="inferred" /> : null}
           </div>
           {water.litres !== null ? <p className="aq-fm-note">Water: {fmt(water.litres)} L net, before field losses · {local.advisory?.netDepthMm} mm over {area.toFixed(2)} ha</p> : null}
           {harvest ? <p className="aq-fm-note">Harvest: Paw San {harvest.areaHa} ha × {PAW_SAN_T_HA[0]}–{PAW_SAN_T_HA[1]} t/ha · TO VERIFY</p> : null}
+          {actions.map((p) => (
+            <div key={`flood-${p.id}`} className={`aq-alert ${p.advice.action === 'harvest_early' ? 'is-warning' : 'is-error'}`} role="status">
+              <b>{p.id}:</b> {p.advice.text}
+            </div>
+          ))}
         </DetailSection>
       ) : null}
 
@@ -243,6 +281,17 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           {sat !== 'loading' && sat !== 'error' ? sat.parcels.flatMap((p) => p.series.map((s) => (
             <KV key={`${p.id}-${s.scene_id}`} k={s.datetime.slice(0, 10)} v={s.status === 'clear' ? `NDVI ${s.ndvi?.toFixed(2)} · NDWI ${s.ndwi?.toFixed(2)}` : s.status} sub={s.reason ?? s.scene_id} />
           ))) : null}
+          {risk === 'error' ? <KV k="Flood risk" v="Unavailable" sub="farm map API not reachable" /> : null}
+          {flood ? (
+            <>
+              {flood.elevation?.mean_m != null ? <KV k="Height" v={`${flood.elevation.min_m}–${flood.elevation.max_m} m`} sub={`Copernicus DEM, ${flood.elevation.accuracy ?? ''}`} /> : null}
+              {flood.main ? <RiverLine label="Main river cell" cell={flood.main} /> : null}
+              {flood.nearest && flood.nearest !== flood.main && (flood.nearest.lat !== flood.main?.lat || flood.nearest.lon !== flood.main?.lon) ? <RiverLine label="Nearest river cell" cell={flood.nearest} /> : null}
+              {flood.parcels?.[0]?.planting ? <p className="aq-fm-note">{flood.parcels[0].planting.text}</p> : null}
+              {flood.missing.map((m) => <p key={m.reason} className="aq-fm-note">{m.reason}</p>)}
+              {flood.assumptions?.limit ? <p className="aq-fm-note">{flood.assumptions.limit}. {flood.assumptions.levels}.</p> : null}
+            </>
+          ) : null}
           {radar === 'error' ? <KV k="Radar (shadow)" v="Unavailable" sub="Planetary Computer not reachable" /> : radar ? radar.parcels.map((p) => {
             const last = [...p.series].reverse().find((s) => s.vv_db !== null);
             return (

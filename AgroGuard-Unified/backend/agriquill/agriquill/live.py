@@ -12,7 +12,7 @@ import httpx
 from . import contract, crops, farmers, fusion, rehearse, schedule, telemetry
 from .agronomy import RICE_KC, RICE_KC_SOURCE, STAGE_KC
 from .config import get_settings
-from .data import sentinel1, sentinel2, weather
+from .data import flood, sentinel1, sentinel2, weather
 from .ledger import get_ledger
 from .store import RecordCache, missing, now_iso
 
@@ -660,6 +660,47 @@ def satellite(farm_id: str, days: int = 60) -> dict[str, Any]:
             continue
         parcels.append({"id": parcel["id"], **sentinel2.paddy_series(ring, days)})
     return {"farm_id": farm_id, "window_days": days, "parcels": parcels, "provenance": "DERIVED"}
+
+
+def _season_days(crop_id: str | None) -> int | None:
+    try:
+        return crops.get_crop(crop_id or "rice_lowland").season_days
+    except KeyError:
+        return None
+
+
+def risk(farm_id: str) -> dict[str, Any]:
+    loaded = load(farm_id)
+    if loaded is None or loaded[1]["contract"] is None:
+        raise KeyError(farm_id)
+    parcels = loaded[1]["contract"]["parcels"]
+    rings = [p["boundary"] for p in parcels if p.get("boundary") and len(p["boundary"]) >= 4]
+    if not rings:
+        return {
+            "farm_id": farm_id,
+            "level": "unknown",
+            "missing": [missing("river_discharge", "add a field boundary to read flood risk")],
+        }
+    corners = [pt for ring in rings for pt in ring[:-1]]
+    out = flood.site_risk([*corners, corners[0]])
+    today = datetime.now(UTC).date()
+    main = out.get("main")
+    out["parcels"] = []
+    for p in parcels:
+        season = _season_days(p.get("crop_id"))
+        planted = date.fromisoformat(p["planted"]) if p.get("planted") else None
+        out["parcels"].append(
+            {
+                "id": p["id"],
+                "planted": p.get("planted"),
+                "season_days": season,
+                "advice": flood.advice(
+                    out.get("level", "unknown"), out.get("flood_date"), planted, season, today
+                ),
+                "planting": flood.planting_window(main["peak_months"], season) if main else None,
+            }
+        )
+    return {"farm_id": farm_id, **out}
 
 
 def radar(farm_id: str, days: int = 60) -> dict[str, Any]:

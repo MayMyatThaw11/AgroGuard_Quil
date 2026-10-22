@@ -215,3 +215,25 @@ def test_radar_is_a_shadow_witness_per_bounded_parcel(monkeypatch: pytest.Monkey
     assert out.json()["shadow"] is True
     assert out.json()["parcels"][0]["series"][0]["scene_id"] == "S1X"
     assert client.get(f"{BASE}/contracts/{FARM}/radar").status_code in (401, 403)
+
+
+def test_risk_reads_one_site_and_gives_each_parcel_its_own_advice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agriquill.data import flood
+
+    def fake(
+        ring: list[list[float]], planted: Any = None, season_days: Any = None, client: Any = None
+    ):
+        assert ring[0] == ring[-1]
+        return {"level": "high", "flood_date": "2026-11-05", "main": {"peak_months": [8, 8, 9]}}
+
+    monkeypatch.setattr(flood, "site_risk", fake)
+    assert onboard_farm(body()).status_code == 200
+    out = client.get(f"{BASE}/contracts/{FARM}/risk", headers=ANN)
+    assert out.status_code == 200, out.text
+    parcel = out.json()["parcels"][0]
+    assert out.json()["level"] == "high"
+    assert parcel["advice"]["action"] in ("harvest_early", "protect")
+    assert parcel["planting"]["peak_month"] == 8
+    assert client.get(f"{BASE}/contracts/{FARM}/risk").status_code in (401, 403)
