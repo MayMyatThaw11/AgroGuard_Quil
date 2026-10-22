@@ -51,7 +51,7 @@ def test_a_later_reading_never_changes_an_earlier_prediction():
     rows[-1] = {**rows[-1], "value": rows[-1]["value"] + 30}
     by_hour = {i * 12: [r] for i, r in enumerate(rows)}
     second = fusion._augmented_walk(by_hour, hourly, 1.05, 3.0, True)
-    assert [y for _, y in first] == [y for _, y in second]
+    assert [y for _, y, _ in first] == [y for _, y, _ in second]
 
 
 def test_one_reading_is_not_scored():
@@ -65,3 +65,15 @@ def test_a_correct_contract_percolation_gives_no_reason_to_promote():
     out = fusion.next_reading_backtest(readings(hourly, true_perc=3.0), hourly, 0, 1.05, 3.0)
     assert out["status"] == "shadow"
     assert abs(out["mae_cm"]["augmented"] - out["mae_cm"]["one_state"]) < 0.05
+
+
+def test_the_shadow_lists_changepoints_beside_the_2_cm_rule_and_no_recall_without_labels():
+    hourly = weather(20)
+    rows = readings(hourly, true_perc=3.0)
+    for row in rows[20:]:
+        row["value"] = round(row["value"] + 3.0, 2)
+    out = fusion.next_reading_backtest(rows, hourly, 0, 1.05, 3.0)
+    cps = out["changepoints"]
+    assert rows[20]["observed_at"] in cps["bocpd"] or rows[21]["observed_at"] in cps["bocpd"]
+    assert rows[20]["observed_at"] in cps["jump_rule_2cm"]
+    assert cps["recall"] is None and "F-TS-3" in cps["recall_reason"]

@@ -173,6 +173,7 @@ KC_PRIOR_SD = 0.1
 PERC_WALK_VAR = 0.01
 KC_WALK_VAR = 1e-5
 PROMOTE_MIN_PAIRS = 30
+JUMP_RULE_CM = 2.0
 
 
 def _augmented_walk(
@@ -181,8 +182,8 @@ def _augmented_walk(
     kc: float,
     perc_mm_day: float,
     augmented: bool,
-) -> list[tuple[float, float]]:
-    """Walk forward hour by hour; before each reading record (reading, prediction from the past)."""
+) -> list[tuple[float, float, str]]:
+    """Walk forward hour by hour; before each reading record (reading, prediction, time)."""
     times = hourly["time"]
     x = np.array([0.0, perc_mm_day, 0.0])
     p = np.diag([0.0, PERC_PRIOR_SD_MM_DAY**2, KC_PRIOR_SD**2]) if augmented else np.zeros((3, 3))
@@ -193,14 +194,14 @@ def _augmented_walk(
     )
     h = np.array([1.0, 0.0, 0.0])
     started = False
-    pairs: list[tuple[float, float]] = []
+    pairs: list[tuple[float, float, str]] = []
     for i in range(min(by_hour), len(times)):
         for row in sorted(by_hour.get(i, []), key=lambda r: r["observed_at"]):
             z, r = float(row["value"]), reading_variance(row["source"])
             if not started:
                 x[0], p[0, 0], started = z, r, True
                 continue
-            pairs.append((z, float(x[0])))
+            pairs.append((z, float(x[0]), row["observed_at"]))
             s = float(h @ p @ h) + r
             innovation = z - x[0]
             weight = min(1.0, HUBER_K / (abs(innovation) / math.sqrt(s))) if innovation else 1.0
@@ -234,9 +235,13 @@ def next_reading_backtest(
     if len(by_hour) < 2:
         return {"status": "shadow", "pairs": 0, "reason": "needs two readings inside the window"}
     scores: dict[str, float | None] = {}
+    walked: list[tuple[float, float, str]] = []
     for name, flag in (("one_state", False), ("augmented", True)):
         pairs = _augmented_walk(by_hour, hourly, kc, perc_mm_day, flag)
-        scores[name] = round(sum(abs(z - y) for z, y in pairs) / len(pairs), 3) if pairs else None
+        scores[name] = (
+            round(sum(abs(z - y) for z, y, _ in pairs) / len(pairs), 3) if pairs else None
+        )
+        walked = pairs
     n = sum(len(v) for v in by_hour.values()) - 1
     one, aug = scores["one_state"], scores["augmented"]
     better = one is not None and aug is not None and aug < one
@@ -246,9 +251,56 @@ def next_reading_backtest(
         "mae_cm": scores,
         "rule": f"promote only when the augmented filter has the lower next-reading MAE on "
         f"{PROMOTE_MIN_PAIRS} or more pairs",
+        "changepoints": {
+            "bocpd": [walked[i][2] for i in changepoints([z - y for z, y, _ in walked])],
+            "jump_rule_2cm": [t for z, y, t in walked if abs(z - y) > JUMP_RULE_CM],
+            "recall": None,
+            "recall_reason": "no farmer-confirmed irrigation or drainage events yet (F-TS-3)",
+        },
         "priors": {
             "percolation_mm_day": [perc_mm_day, PERC_PRIOR_SD_MM_DAY],
             "kc_offset": [0.0, KC_PRIOR_SD],
             "status": "TO VERIFY",
         },
     }
+
+
+# B-TS-6 shadow: Adams and MacKay (2007) online changepoint detection on reading residuals.
+CP_HAZARD = 1 / 50  # expected run of 50 readings between events, TO VERIFY with farmer labels
+CP_THRESHOLD = 0.5
+CP_MIN_HISTORY = 3  # a run needs a few readings before a restart means anything
+
+
+def _student_t_logpdf(x: np.ndarray, mu: np.ndarray, var: np.ndarray, df: np.ndarray) -> np.ndarray:
+    from math import lgamma
+
+    lg = np.vectorize(lgamma)
+    z = (x - mu) ** 2 / (df * var)
+    return (
+        lg((df + 1) / 2) - lg(df / 2) - 0.5 * np.log(np.pi * df * var) - (df + 1) / 2 * np.log1p(z)
+    )
+
+
+def changepoints(
+    residuals: list[float], hazard: float = CP_HAZARD, threshold: float = CP_THRESHOLD
+) -> list[int]:
+    """Indices where the posterior run length most likely restarted, under a Normal-Gamma model."""
+    mu, kappa, alpha, beta = np.zeros(1), np.ones(1), np.ones(1), np.ones(1)
+    log_r = np.zeros(1)
+    events = []
+    for t, x in enumerate(residuals):
+        var = beta * (kappa + 1) / (alpha * kappa)
+        log_pred = _student_t_logpdf(np.full_like(mu, x), mu, var, 2 * alpha)
+        grow = log_r + log_pred + math.log(1 - hazard)
+        cp = np.logaddexp.reduce(log_r + log_pred) + math.log(hazard)
+        log_r = np.concatenate([[cp], grow])
+        log_r -= np.logaddexp.reduce(log_r)
+        new_mu = (kappa * mu + x) / (kappa + 1)
+        beta = np.concatenate([[1.0], beta + kappa * (x - mu) ** 2 / (2 * (kappa + 1))])
+        mu = np.concatenate([[0.0], new_mu])
+        kappa = np.concatenate([[1.0], kappa + 1])
+        alpha = np.concatenate([[1.0], alpha + 0.5])
+        recent = np.logaddexp.reduce(log_r[1:3]) if len(log_r) > 2 else log_r[1]
+        if t >= CP_MIN_HISTORY and math.exp(recent) > threshold:
+            events.append(t)
+    return [e for n, e in enumerate(events) if n == 0 or e - events[n - 1] > 1]
