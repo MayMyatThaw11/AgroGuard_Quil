@@ -49,6 +49,16 @@ test('no field area means no farm totals at all', () => {
   assert.equal(flowSummary(null, {}), null);
 });
 
+test('greenhouse gases become farm tonnes of CO2e and need every field', () => {
+  const withClimate = (id: string, kg: number | null): ParcelFlows => ({
+    ...parcel(id, 21),
+    climate: { co2e_kg_ha: kg, range_kg_ha: kg === null ? undefined : [kg / 2, kg * 2], left_out: ['fuel'], source: 'IPCC AR6' },
+  });
+  const out = flowSummary(flows([withClimate('a', 2000), withClimate('b', 1000)]), { a: 2, b: 1 });
+  assert.deepEqual(out?.climate, { farmT: 5, lowT: 2.5, highT: 10, leftOut: ['fuel'] });
+  assert.equal(flowSummary(flows([withClimate('a', 2000), withClimate('b', null)]), { a: 2, b: 1 })?.climate, null);
+});
+
 test('nitrogen totals are area-weighted and absent when nothing was logged', () => {
   const withN = (id: string): ParcelFlows => ({
     ...parcel(id, 21),

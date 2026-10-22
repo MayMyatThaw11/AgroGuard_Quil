@@ -84,6 +84,41 @@ def test_logged_nitrogen_follows_the_ipcc_tier1_fractions():
     assert out["factors"]["EF1FR"] == 0.005
 
 
+def test_urea_releases_its_carbon_as_co2_by_ipcc_eq_11_13():
+    out = flows.nitrogen([fert("Urea 46%", 100, 46), fert("Compost", 1000, 1.5)], "AWD_SAFE")
+    assert out["urea_kg_ha"] == 100
+    assert out["co2_urea_kg_ha"] == pytest.approx(round(100 * 0.20 * 44 / 12, 1))
+    assert out["co2_urea_range_kg_ha"] == [round(100 * 0.10 * 44 / 12, 1), out["co2_urea_kg_ha"]]
+
+
+def test_co2_equivalent_uses_ar6_gwp100_and_keeps_unlogged_fuel_out():
+    ch4 = flows.methane({"planted": None}, "AWD_SAFE", 2.0)
+    n = flows.nitrogen([fert("Urea 46%", 100, 46)], "AWD_SAFE")
+    out = flows.climate(ch4, n)
+    n2o_kg = (n["n2o_direct_kg_n_ha"] + n["n2o_indirect_kg_n_ha"]) * 44 / 28
+    assert out["terms"]["ch4"]["co2e_kg_ha"] == pytest.approx(round(ch4["kg_ha"] * 27.0, 1))
+    assert out["terms"]["n2o"]["co2e_kg_ha"] == pytest.approx(round(n2o_kg * 273, 1))
+    assert (
+        out["terms"]["fuel"]["co2e_kg_ha"] is None
+        and "not logged" in out["terms"]["fuel"]["reason"]
+    )
+    known = [t["co2e_kg_ha"] for t in out["terms"].values() if t["co2e_kg_ha"] is not None]
+    assert out["co2e_kg_ha"] == pytest.approx(round(sum(known), 1), abs=0.2)
+    assert out["range_kg_ha"][0] < out["co2e_kg_ha"] < out["range_kg_ha"][1]
+
+
+def test_unlogged_fertiliser_leaves_n2o_and_urea_out_instead_of_counting_zero():
+    out = flows.climate(flows.methane({"planted": None}, "AWD_SAFE", 1.0), flows.nitrogen([], None))
+    assert out["terms"]["n2o"]["co2e_kg_ha"] is None
+    assert set(out["left_out"]) == {"n2o", "urea_co2", "fuel"}
+    assert out["co2e_kg_ha"] == out["terms"]["ch4"]["co2e_kg_ha"]
+
+
+def test_co2_equivalent_is_null_when_methane_is_unknown():
+    out = flows.climate(flows.methane({}, "SOMETHING", 1.0), flows.nitrogen([], None))
+    assert out["co2e_kg_ha"] is None and out["reason"]
+
+
 def test_continuous_flooding_uses_its_own_direct_n2o_factor_and_bad_rows_are_counted_out():
     out = flows.nitrogen([fert("Ammonium sulphate", 100, 21), fert("Urea", 50, None)], "CONTINUOUS")
     assert out["factors"]["EF1FR"] == 0.003 and out["not_counted"] == 1

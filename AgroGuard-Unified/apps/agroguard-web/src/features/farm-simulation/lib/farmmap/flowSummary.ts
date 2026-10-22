@@ -18,6 +18,18 @@ export interface FlowSummary {
   wettestDay: { date: string; wetHours: number; vpdMax: number | null } | null;
   nitrogen: { appliedKg: number; airKg: number; waterKg: number; n2oKg: number; notCounted: number } | null;
   methane: { kgHa: number; low: number; high: number; savedKgHa: number | null; farmKg: number | null; regime: string; days: number } | null;
+  climate: { farmT: number; lowT: number; highT: number; leftOut: string[] } | null;
+}
+
+function farmClimate(sized: ParcelFlows[], areaHa: Record<string, number | null>): FlowSummary['climate'] {
+  if (!sized.every((p) => p.climate?.co2e_kg_ha != null && p.climate.range_kg_ha)) return null;
+  const tonnes = (pick: (p: ParcelFlows) => number) => Math.round(sized.reduce((s, p) => s + pick(p) * (areaHa[p.id] ?? 0), 0) / 100) / 10;
+  return {
+    farmT: tonnes((p) => p.climate?.co2e_kg_ha ?? 0),
+    lowT: tonnes((p) => p.climate?.range_kg_ha?.[0] ?? 0),
+    highT: tonnes((p) => p.climate?.range_kg_ha?.[1] ?? 0),
+    leftOut: [...new Set(sized.flatMap((p) => p.climate?.left_out ?? []))],
+  };
 }
 
 const round = (v: number) => Math.round(v);
@@ -50,6 +62,7 @@ export function flowSummary(flows: FarmFlows | null, areaHa: Record<string, numb
   const logged = sized.some((p) => (p.nitrogen?.applied_kg_n_ha ?? 0) > 0 || (p.nitrogen?.not_counted ?? 0) > 0);
   return {
     days: flows?.days?.length ?? 0,
+    climate: farmClimate(sized, areaHa),
     nitrogen: logged
       ? {
           appliedKg: nKg((p) => p.nitrogen?.applied_kg_n_ha ?? 0),

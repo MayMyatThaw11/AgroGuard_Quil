@@ -220,6 +220,64 @@ EF4_WET, EF5 = 0.014, 0.011
 ORGANIC_WORDS = ("compost", "manure", "azolla", "vermi", "bio", "organic", "green manure", "straw")
 
 
+IPCC_UREA = (
+    "IPCC 2006 Guidelines Vol. 4 Ch. 11 Eq. 11.13, EF 0.20 t C per t urea, -50 % uncertainty "
+    "(no 2019 refinement), fetched 2026-10-22"
+)
+UREA_EF_C = 0.20
+AR6_GWP100 = {"ch4": (27.0, 11.0), "n2o": (273.0, 130.0)}  # non-fossil CH4, Table 7.15
+AR6 = "IPCC AR6 WG1 Ch. 7 Table 7.15, GWP-100 with uncertainty, fetched 2026-10-22"
+
+
+def climate(ch4: Mapping[str, Any], n: Mapping[str, Any]) -> dict[str, Any]:
+    """Season greenhouse gases per hectare as CO2-equivalent; a missing term is left out."""
+    if ch4.get("kg_ha") is None:
+        return {"co2e_kg_ha": None, "reason": ch4.get("reason") or "methane unknown", "source": AR6}
+    gwp_ch4, d_ch4 = AR6_GWP100["ch4"]
+    gwp_n2o, d_n2o = AR6_GWP100["n2o"]
+    lo_ch4, hi_ch4 = ch4["range_kg_ha"]
+    n2o = (n["n2o_direct_kg_n_ha"] + n["n2o_indirect_kg_n_ha"]) * 44 / 28
+    terms = {
+        "ch4": {
+            "co2e_kg_ha": round(ch4["kg_ha"] * gwp_ch4, 1),
+            "range": [lo_ch4 * (gwp_ch4 - d_ch4), hi_ch4 * (gwp_ch4 + d_ch4)],
+            "basis": f"{ch4['kg_ha']} kg CH4 x GWP-100 {gwp_ch4}",
+        },
+        "n2o": {
+            "co2e_kg_ha": round(n2o * gwp_n2o, 1),
+            "range": [n2o * (gwp_n2o - d_n2o), n2o * (gwp_n2o + d_n2o)],
+            "basis": f"{round(n2o, 3)} kg N2O (N2O-N x 44/28) x GWP-100 {gwp_n2o:g}",
+        },
+        "urea_co2": {
+            "co2e_kg_ha": n["co2_urea_kg_ha"],
+            "range": n["co2_urea_range_kg_ha"],
+            "basis": "urea kg x 0.20 x 44/12",
+        },
+        "fuel": {
+            "co2e_kg_ha": None,
+            "reason": "fuel use is not logged for this farm",
+            "basis": "IPCC 2006 Vol. 2 Table 1.4 diesel 74,100 kg CO2/TJ once litres are logged",
+        },
+    }
+    if not n["applications"]:
+        for key in ("n2o", "urea_co2"):
+            terms[key] = {"co2e_kg_ha": None, "reason": "no fertiliser with a rate and N % logged"}
+    known = [t for t in terms.values() if t["co2e_kg_ha"] is not None]
+    for t in known:
+        t["range"] = [round(float(v), 1) for v in t["range"]]
+    return {
+        "co2e_kg_ha": round(sum(t["co2e_kg_ha"] for t in known), 1),
+        "range_kg_ha": [
+            round(sum(t["range"][0] for t in known), 1),
+            round(sum(t["range"][1] for t in known), 1),
+        ],
+        "terms": terms,
+        "left_out": [k for k, t in terms.items() if t["co2e_kg_ha"] is None],
+        "range_note": "sums each term's bounds; wider than a joint interval",
+        "source": f"{AR6}; {IPCC_UREA}",
+    }
+
+
 def n_source(product: str) -> str:
     text = product.lower()
     if "urea" in text:
@@ -230,13 +288,14 @@ def n_source(product: str) -> str:
 def nitrogen(records: Sequence[Mapping[str, Any]], regime: str | None) -> dict[str, Any]:
     """IPCC Tier 1 fate of the nitrogen the farm logged: lost to air, to water, and as N2O."""
     ef1 = EF1_FLOODED_RICE.get(_regime(regime) or "", EF1_FR_DEFAULT)
-    rows, skipped = [], 0
+    rows, kept, skipped = [], [], 0
     for r in records:
         if r.get("kind") != "fertiliser":
             continue
         if r.get("rate") is None or r.get("n_pct") is None or r.get("rate_unit") != "kg/ha":
             skipped += 1
             continue
+        kept.append(r)
         n = r["rate"] * r["n_pct"] / 100
         source = n_source(str(r.get("product") or ""))
         rows.append(
@@ -247,6 +306,8 @@ def nitrogen(records: Sequence[Mapping[str, Any]], regime: str | None) -> dict[s
                 "n_kg_ha": round(n, 2),
             }
         )
+    urea = sum(float(r["rate"]) for r, x in zip(kept, rows, strict=True) if x["source"] == "urea")
+    co2_urea = urea * UREA_EF_C * 44 / 12
     applied = sum(x["n_kg_ha"] for x in rows)
     gas = sum(x["n_kg_ha"] * FRAC_GAS[x["source"]] for x in rows)
     leach = applied * FRAC_LEACH_WET
@@ -259,6 +320,10 @@ def nitrogen(records: Sequence[Mapping[str, Any]], regime: str | None) -> dict[s
         "n2o_indirect_kg_n_ha": round(gas * EF4_WET + leach * EF5, 2),
         "remaining_kg_n_ha": round(applied - gas - leach - direct, 1),
         "remaining_means": "taken up by the crop or held in the soil; not measured",
+        "urea_kg_ha": round(urea, 1),
+        "co2_urea_kg_ha": round(co2_urea, 1),
+        "co2_urea_range_kg_ha": [round(co2_urea * 0.5, 1), round(co2_urea, 1)],
+        "co2_urea_source": IPCC_UREA,
         "applications": rows,
         "not_counted": skipped,
         "not_counted_reason": "fertiliser rows without a kg/ha rate or an N %" if skipped else None,
@@ -285,15 +350,16 @@ def farm_flows(farm_id: str) -> dict[str, Any]:
         report = reports.get(p["id"]) or {}
         p50 = (report.get("band") or {}).get("p50") or []
         ponded = dict(zip(report.get("band_dates") or [], [v > 0 for v in p50], strict=False))
+        ch4 = methane(p, hydro.get("regime"), p.get("area_ha"))
+        n = nitrogen([r for r in inputs if r.get("field") == p["id"]], hydro.get("regime"))
         parcels.append(
             {
                 "id": p["id"],
                 "stage": p.get("stage"),
                 "water": water(p, days, hydro.get("percolation_mm_day"), ponded),
-                "methane": methane(p, hydro.get("regime"), p.get("area_ha")),
-                "nitrogen": nitrogen(
-                    [r for r in inputs if r.get("field") == p["id"]], hydro.get("regime")
-                ),
+                "methane": ch4,
+                "nitrogen": n,
+                "climate": climate(ch4, n),
             }
         )
     return {

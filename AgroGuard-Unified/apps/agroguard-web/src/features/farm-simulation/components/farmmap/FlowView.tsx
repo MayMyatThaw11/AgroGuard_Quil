@@ -7,6 +7,7 @@ import { AqProgress, AqSectionLabel } from '../aq/aqLayout.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
 
 const TONE: Record<FlowTerm['key'], 'water' | 'accent' | 'warning'> = { rain: 'water', transpiration: 'accent', evaporation: 'warning', percolation: 'water' };
+const GAS_LABEL: Record<string, string> = { n2o: 'N₂O (no fertiliser logged)', urea_co2: 'urea CO₂', fuel: 'machine fuel' };
 const m3 = (v: number) => `${v.toLocaleString('en-US')} m³`;
 
 const Term: React.FC<{ term: FlowTerm; scale: number }> = ({ term, scale }) => (
@@ -65,6 +66,13 @@ export const FlowView: React.FC<{ farmId: string; spec: ContractSpec }> = ({ far
           sub={`${summary.nitrogen.airKg} kg to air · ${summary.nitrogen.waterKg} kg washed out · ${summary.nitrogen.n2oKg} kg as N₂O${summary.nitrogen.notCounted ? ` · ${summary.nitrogen.notCounted} rows without a rate or N %` : ''}`}
         />
       ) : <KV k="Nitrogen this season" v="no fertiliser logged" sub="log fertiliser with its rate and N % to see where it goes" />}
+      {summary.climate ? (
+        <KV
+          k="Greenhouse gases this season"
+          v={`${summary.climate.farmT} t CO₂e`}
+          sub={`${summary.climate.lowT}–${summary.climate.highT} t${summary.climate.leftOut.length ? ` · not counted: ${summary.climate.leftOut.map((k) => GAS_LABEL[k] ?? k).join(', ')}` : ''}`}
+        />
+      ) : null}
       {summary.wettestDay ? <KV k="Leaf wetness" v={`${summary.wettestDay.wetHours} h`} sub={`wettest day ${summary.wettestDay.date} · humid hours favour blast and sheath blight`} /> : null}
       <More label="How these are worked out">
         {(data.parcels ?? []).map((p) => (
@@ -76,6 +84,7 @@ export const FlowView: React.FC<{ farmId: string; spec: ContractSpec }> = ({ far
         <p className="aq-fm-note">Water: {data.sources?.water}</p>
         <p className="aq-fm-note">Methane: {data.sources?.methane}</p>
         <p className="aq-fm-note">Nitrogen: {data.parcels?.[0]?.nitrogen?.source}</p>
+        <p className="aq-fm-note">CO₂e: {data.parcels?.[0]?.climate?.source}</p>
         <p className="aq-fm-note">Weather: {data.sources?.weather}</p>
       </More>
     </DetailSection>

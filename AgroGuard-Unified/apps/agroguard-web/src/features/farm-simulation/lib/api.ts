@@ -532,6 +532,13 @@ export interface ParcelFlows {
     not_counted_reason: string | null;
     source: string;
   };
+  climate?: {
+    co2e_kg_ha: number | null;
+    range_kg_ha?: [number, number];
+    left_out?: string[];
+    reason?: string;
+    source: string;
+  };
 }
 
 export interface FarmFlows {
