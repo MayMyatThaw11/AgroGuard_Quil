@@ -259,17 +259,36 @@ def _band(mid: np.ndarray, sigma: float) -> dict[str, list[float]]:
     return {"p10": _round(mid - spread), "p50": _round(mid), "p90": _round(mid + spread)}
 
 
+def _hybrid_band(draws: np.ndarray, sigma: float) -> dict[str, list[float]]:
+    """MC-dropout quantiles, never narrower than the physics residual band."""
+    q10, q50, q90 = np.quantile(draws, (0.1, 0.5, 0.9), axis=0)
+    spread = Z90 * sigma * np.sqrt(np.arange(1, draws.shape[1] + 1))
+    return {
+        "p10": _round(np.minimum(q10, q50 - spread)),
+        "p50": _round(q50),
+        "p90": _round(np.maximum(q90, q50 + spread)),
+    }
+
+
+def inside_band(band: dict[str, list[float]], actual: np.ndarray) -> int:
+    lo, hi = np.asarray(band["p10"]), np.asarray(band["p90"])
+    return int(np.sum((actual >= lo) & (actual <= hi)))
+
+
+MIN_COVERAGE_N = 10
+
+
 def _backtest(
     targets: list[np.ndarray],
     rain: np.ndarray,
     temp: np.ndarray,
     cfg: ForecastConfig,
-) -> tuple[dict[str, float], int, int]:
+) -> tuple[dict[str, float], dict[str, dict[str, int]], int, int]:
     cut = len(rain) - cfg.horizon
     train = [t[:cut] for t in targets]
     eligible = [i for i, t in enumerate(targets) if not management_events(t, rain)[cut:].any()]
     if not eligible:
-        return {}, 0, 0
+        return {}, {}, 0, 0
     wb = _fit_water_balance(train, rain[:cut], cfg.recency_half_life_days)
     future = rain[cut:]
     predictors: dict[str, Callable[[int], np.ndarray]] = {
@@ -277,25 +296,38 @@ def _backtest(
         DAMPED_TREND: lambda i: _damped(train[i], cfg.horizon),
         WATER_BALANCE: lambda i: wb.roll(i, train[i][-1], future),
     }
+    def residual_band(
+        predict: Callable[[int], np.ndarray],
+    ) -> Callable[[int], dict[str, list[float]]]:
+        return lambda i: _band(predict(i), wb.sigma)
+
+    banders = {name: residual_band(predict) for name, predict in predictors.items()}
     windows = 0
     if _TORCH_AVAILABLE:
         hybrid, windows = _train_hybrid(train, rain[:cut], temp[:cut], wb, cfg)
         if hybrid is not None:
-            predictors[HYBRID] = lambda i: _hybrid_predict(
-                hybrid,
-                train[i],
-                rain[:cut],
-                temp[:cut],
-                future,
-                wb.roll(i, train[i][-1], future),
-                cfg,
-                samples=1,
-            )[0]
+
+            def run(i: int, samples: int) -> np.ndarray:
+                physics = wb.roll(i, train[i][-1], future)
+                assert hybrid is not None
+                return _hybrid_predict(
+                    hybrid, train[i], rain[:cut], temp[:cut], future, physics, cfg, samples
+                )
+
+            predictors[HYBRID] = lambda i: run(i, 1)[0]
+            banders[HYBRID] = lambda i: _hybrid_band(run(i, cfg.mc_samples), wb.sigma)
     scores = {
         name: float(np.mean([np.mean(np.abs(predict(i) - targets[i][cut:])) for i in eligible]))
         for name, predict in predictors.items()
     }
-    return scores, len(eligible), windows
+    coverage = {
+        name: {
+            "inside": sum(inside_band(band(i), targets[i][cut:]) for i in eligible),
+            "n": len(eligible) * cfg.horizon,
+        }
+        for name, band in banders.items()
+    }
+    return scores, coverage, len(eligible), windows
 
 
 def forecast(
@@ -342,7 +374,7 @@ def forecast(
     if _TORCH_AVAILABLE:
         torch.set_num_threads(1)
     try:
-        scores, scored, windows = _backtest(targets, rain, temp, cfg)
+        scores, coverage, scored, windows = _backtest(targets, rain, temp, cfg)
         chosen = min(scores, key=lambda k: scores[k]) if scores else WATER_BALANCE
         wb = _fit_water_balance(targets, rain, cfg.recency_half_life_days)
         hybrid = _train_hybrid(targets, rain, temp, wb, cfg)[0] if chosen == HYBRID else None
@@ -358,13 +390,7 @@ def forecast(
             draws = _hybrid_predict(
                 hybrid, target, rain, temp, future, physics, cfg, samples=cfg.mc_samples
             )
-            q10, q50, q90 = np.quantile(draws, (0.1, 0.5, 0.9), axis=0)
-            spread = Z90 * wb.sigma * np.sqrt(np.arange(1, cfg.horizon + 1))
-            per_series[s.id] = {
-                "p10": _round(np.minimum(q10, q50 - spread)),
-                "p50": _round(q50),
-                "p90": _round(np.maximum(q90, q50 + spread)),
-            }
+            per_series[s.id] = _hybrid_band(draws, wb.sigma)
         elif chosen == PERSISTENCE:
             per_series[s.id] = _band(np.full(cfg.horizon, target[-1]), wb.sigma)
         elif chosen == DAMPED_TREND:
@@ -374,9 +400,13 @@ def forecast(
 
     backtest: dict[str, Any] | None = None
     if scores:
-        mae_model = scores[chosen] if chosen in scores else scores[WATER_BALANCE]
+        scored_as = chosen if chosen in scores else WATER_BALANCE
+        mae_model = scores[scored_as]
         mae_naive = scores[PERSISTENCE]
         backtest = {
+            "band_coverage": coverage,
+            "coverage": coverage[scored_as],
+            "coverage_shown": coverage[scored_as]["n"] >= MIN_COVERAGE_N,
             "holdout_days": cfg.horizon,
             "series_scored": scored,
             "candidates": {name: round(v, 3) for name, v in sorted(scores.items())},

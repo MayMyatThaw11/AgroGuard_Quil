@@ -238,6 +238,11 @@ function PaddyDetail({ paddy, farm, history, forecastDates, forecastWeather, fie
               : 'Measured in the last 3 hours and fused with the water balance. Band is the 80% range if no one irrigates.'
             : 'Demo fixture: synthetic history, not field telemetry.'}
         </p>
+        {source !== 'live' && plan?.forecast.backtest?.coverage_shown && plan.forecast.backtest.coverage ? (
+          <p className="mt-1 text-[11px] font-semibold text-(--ops-ink-2)">
+            Right in {plan.forecast.backtest.coverage.inside} of {plan.forecast.backtest.coverage.n} checks on this farm (held-out readings inside the band)
+          </p>
+        ) : null}
       </section>
 
       <section className="ops-section">
@@ -462,24 +467,31 @@ function FarmSummary({ farm, forecastDates, forecastWeather, field, onReplan }: 
                   <tr className="text-(--ops-ink-3)">
                     <th className="text-left font-semibold pb-1">Candidate</th>
                     <th className="text-right font-semibold pb-1">Hold-out MAE</th>
+                    <th className="text-right font-semibold pb-1">In P10–P90 band</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(plan.forecast.backtest.candidates)
                     .sort((a, b) => a[1] - b[1])
-                    .map(([name, mae]) => (
-                      <tr key={name} className={name === plan.forecast.method ? 'font-bold' : ''}>
-                        <td className="py-0.5">{methodLabel(name)}</td>
-                        <td className="py-0.5 text-right tabular-nums">{mae.toFixed(2)} cm</td>
-                      </tr>
-                    ))}
+                    .map(([name, mae]) => {
+                      const cover = plan.forecast.backtest?.band_coverage?.[name];
+                      return (
+                        <tr key={name} className={name === plan.forecast.method ? 'font-bold' : ''}>
+                          <td className="py-0.5">{methodLabel(name)}</td>
+                          <td className="py-0.5 text-right tabular-nums">{mae.toFixed(2)} cm</td>
+                          <td className="py-0.5 text-right tabular-nums">
+                            {cover && plan.forecast.backtest?.coverage_shown ? `${cover.inside} of ${cover.n}` : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             )}
             {plan.forecast.backtest && (
               <p className="mt-1 text-[11px] text-(--ops-ink-3)">
                 Neural residual: {plan.forecast.backtest.neural_candidate}. Scored on {plan.forecast.backtest.series_scored}{' '}
-                paddies.
+                paddies.{plan.forecast.backtest.coverage_shown === false ? ' Band coverage shows after 10 held-out readings.' : ' An honest 80 % band holds about 8 of every 10.'}
               </p>
             )}
             {plan.forecast.physics && (
