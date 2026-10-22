@@ -5,6 +5,10 @@ Myanmar agronomist or the Plant Protection Division (PPD) before the app says th
 
 ## 1. What the disease model can name
 
+Correction (checked against the class files): there are 62 disease and pest classes and 4 fruit-grading
+classes (pepper fruit, tomato fruit ripe, unripe and reject), plus 15 healthy and 5 not-a-plant classes.
+Earlier notes said 63 and 3.
+
 86 classes across 5 group models (25 crops). 66 are disease or condition classes; the rest are
 healthy or background. By cause:
 

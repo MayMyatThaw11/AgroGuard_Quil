@@ -22,6 +22,7 @@ import { API_BASE_URL } from '../api.js'
 import CameraCapture from '../components/CameraCapture.jsx'
 import DiseaseVerdict from '../components/DiseaseVerdict.jsx'
 import PhotoQualityNotice from '../components/PhotoQualityNotice.jsx'
+import DiseaseAdvice from '../components/DiseaseAdvice.jsx'
 import { interpretDisease } from '../lib/diseaseVerdict.js'
 import { checkPhotoQuality } from '../lib/photoQuality.js'
 import { PLANT_GROUPS } from '../data/plantGroups.js'
@@ -69,6 +70,8 @@ function DiseaseDetectionPage() {
   // What the disease service can diagnose: { [groupId]: { available, crops: { [cropId]: leafAndFruit } } }.
   // Null until it answers, and the full PLANT_GROUPS list shows meanwhile.
   const [groupSupport, setGroupSupport] = useState(null)
+  // The five steps: 1 plant, 2 photo, 3 checking, 4 result, 5 what to do.
+  const [step, setStep] = useState(1)
 
   useEffect(() => {
     let cancelled = false
@@ -164,6 +167,14 @@ function DiseaseDetectionPage() {
       runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language, { skipQuality: true })
     }
   }, [language])
+
+  // Step 3 hands over by itself: to the result when the answer arrives, or back to the photo
+  // step when the check failed (the error message is already set).
+  useEffect(() => {
+    if (step !== 3 || isAnalyzing) return
+    if (analysisResult) setStep(4)
+    else if (!qualityIssue) setStep(2)
+  }, [step, isAnalyzing, analysisResult, qualityIssue])
 
   const filteredGuideGroups = useMemo(() => {
     const q = guideSearch.trim().toLowerCase()
@@ -327,6 +338,7 @@ function DiseaseDetectionPage() {
       return
     }
 
+    setStep(3)
     await runPredictionRequest(selectedFile, selectedGroup, selectedCrop, language)
   }
 
@@ -338,6 +350,7 @@ function DiseaseDetectionPage() {
     setQualityIssue(null)
     setAnalysisResult(null)
     if (inputRef.current) inputRef.current.value = ''
+    setStep(2)
     if (fromCamera) setIsCameraOpen(true)
   }
 
@@ -356,6 +369,7 @@ function DiseaseDetectionPage() {
     setValidationError('')
     setIsAnalyzing(false)
     setAnalysisResult(null)
+    setStep(1)
 
     if (inputRef.current) {
       inputRef.current.value = ''
@@ -370,8 +384,24 @@ function DiseaseDetectionPage() {
       }
     : undefined
 
+  const stepLabels = [
+    t('wizard.plant'),
+    t('wizard.photo'),
+    t('wizard.check'),
+    t('wizard.result'),
+    t('wizard.action'),
+  ]
+  const goToStep = (n) => {
+    if (n === 4 && !analysisResult) return
+    setStep(n)
+  }
+  const primaryButton =
+    'inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-(--ag-accent) px-6 py-3 text-sm font-bold text-(--ag-bg) transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40'
+  const quietButton =
+    'inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-(--ag-line) bg-transparent px-5 py-3 text-sm font-semibold text-(--ag-text) transition hover:bg-(--ag-card-2) disabled:cursor-not-allowed disabled:opacity-40'
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* HERO HEADER */}
       <section className="rounded-[2rem] border border-(--ag-line) bg-white p-5 shadow-[0_20px_60px_rgba(20,26,22,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -400,257 +430,290 @@ function DiseaseDetectionPage() {
         </div>
       </section>
 
-      {/* PLANT GROUP SELECTOR */}
-      <SectionCard
-        title={t('disease.chooseGroupTitle')}
-        action={
-          <button
-            type="button"
-            onClick={() => setIsGuideOpen(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-myanglow-forest underline-offset-4 hover:underline sm:text-sm"
-          >
-            <HelpCircle size={16} />
-            <span>{t('disease.notSureGuide')}</span>
-          </button>
-        }
-      >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {plantGroups.map((group) => {
-            const isSelected = selectedGroup === group.id
-            return (
-              <button
-                key={group.id}
-                type="button"
-                onClick={() => handleGroupClick(group.id)}
-                disabled={!group.available}
-                className={`flex flex-col justify-between rounded-[1.4rem] border p-4 text-left transition ${
-                  !group.available
-                    ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-70'
-                    : isSelected
-                    ? 'border-myanglow-forest bg-myanglow-sage/35 ring-2 ring-myanglow-forest/20'
-                    : 'border-myanglow-sage/70 bg-white hover:border-myanglow-medium hover:bg-myanglow-sage/15'
+      {/* STEP BAR */}
+      <nav aria-label={t('wizard.progress')} className="flex gap-2">
+        {stepLabels.map((label, index) => {
+          const n = index + 1
+          const done = n < step
+          const here = n === step
+          const clickable = done && n !== 3
+          return (
+            <button
+              key={n}
+              type="button"
+              disabled={!clickable}
+              onClick={() => goToStep(n)}
+              aria-current={here ? 'step' : undefined}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl border px-2 py-2.5 text-sm font-semibold transition sm:justify-start sm:px-3 ${
+                here ? 'border-(--ag-accent) bg-white' : 'border-(--ag-line)'
+              } ${!done && !here ? 'opacity-60' : ''} disabled:cursor-default`}
+            >
+              <span
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
+                  done || here ? 'bg-(--ag-accent) text-(--ag-bg)' : 'bg-(--ag-card-2) text-(--ag-muted)'
                 }`}
               >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-full bg-myanglow-forest/10 px-2.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wider text-myanglow-forest">
-                      {group.shortTitle[langKey]}
-                    </span>
-                    {isSelected ? (
-                      <CheckCircle2 size={18} className="text-myanglow-forest" />
-                    ) : (
-                      <Layers size={16} className="text-slate-400" />
-                    )}
-                  </div>
-                  <h3 className="mt-3 text-sm font-semibold leading-snug text-myanglow-navy">
-                    {group.name[langKey]}
-                  </h3>
-                  {!group.available ? (
-                    <p className="mt-1.5 text-xs font-semibold text-amber-700">
-                      {t('disease.modelNotReady')}
-                    </p>
-                  ) : null}
-                </div>
-              </button>
-            )
-          })}
-        </div>
+                {done ? '✓' : n}
+              </span>
+              <span className="hidden text-(--ag-text) sm:inline">{label}</span>
+            </button>
+          )
+        })}
+      </nav>
 
-        {activeGroupObj ? (
-          <div className="mt-4 rounded-2xl border border-myanglow-sage/80 bg-myanglow-sage/20 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-myanglow-forest">
-                  {t('disease.selectedGroup')}: {activeGroupObj.name[langKey]}
-                </p>
-                <p className="mt-1 text-xs text-slate-600 sm:text-sm">
-                  <strong>{t('disease.photoTip')}</strong>{' '}
-                  {activeGroupObj.organTip[langKey]}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-xs font-medium text-slate-500">
-                  {t('disease.specifyCrop')}
-                </span>
+      {/* STEP 1: PLANT GROUP AND CROP */}
+      {step === 1 ? (
+        <SectionCard
+          title={t('disease.chooseGroupTitle')}
+          action={
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-myanglow-forest underline-offset-4 hover:underline sm:text-sm"
+            >
+              <HelpCircle size={16} />
+              <span>{t('disease.notSureGuide')}</span>
+            </button>
+          }
+        >
+          <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {plantGroups.map((group) => {
+              const isSelected = selectedGroup === group.id
+              return (
                 <button
+                  key={group.id}
                   type="button"
-                  onClick={() => setSelectedCrop('')}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                    selectedCrop === ''
-                      ? 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white'
-                      : 'bg-white text-myanglow-navy hover:bg-myanglow-sage/40'
+                  onClick={() => handleGroupClick(group.id)}
+                  disabled={!group.available}
+                  className={`flex h-full min-h-28 flex-col justify-between rounded-[1.4rem] border p-4 text-left transition ${
+                    !group.available
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-70'
+                      : isSelected
+                      ? 'border-myanglow-forest bg-myanglow-sage/35 ring-2 ring-myanglow-forest/20'
+                      : 'border-myanglow-sage/70 bg-white hover:border-myanglow-medium hover:bg-myanglow-sage/15'
                   }`}
                 >
-                  {t('disease.allGroupCrops')}
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="rounded-full bg-myanglow-forest/10 px-2.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wider text-myanglow-forest">
+                        {group.shortTitle[langKey]}
+                      </span>
+                      {isSelected ? (
+                        <CheckCircle2 size={18} className="text-myanglow-forest" />
+                      ) : (
+                        <Layers size={16} className="text-slate-400" />
+                      )}
+                    </div>
+                    <h3 className="mt-3 text-sm font-semibold leading-snug text-myanglow-navy">
+                      {group.name[langKey]}
+                    </h3>
+                    {!group.available ? (
+                      <p className="mt-1.5 text-xs font-semibold text-amber-700">
+                        {t('disease.modelNotReady')}
+                      </p>
+                    ) : null}
+                  </div>
                 </button>
-                {activeGroupObj.crops.map((crop) => (
+              )
+            })}
+          </div>
+
+          {activeGroupObj ? (
+            <div className="mt-4 rounded-2xl border border-myanglow-sage/80 bg-myanglow-sage/20 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-myanglow-forest">
+                {t('disease.selectedGroup')}: {activeGroupObj.name[langKey]}
+              </p>
+              <p className="mt-1 text-xs text-slate-600 sm:text-sm">
+                <strong>{t('disease.photoTip')}</strong> {activeGroupObj.organTip[langKey]}
+              </p>
+
+              <p className="mt-4 text-xs font-semibold text-slate-500">{t('disease.specifyCrop')}</p>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {[{ id: '', label: t('disease.allGroupCrops') }, ...activeGroupObj.crops.map((crop) => ({
+                  id: crop.id,
+                  label:
+                    crop[langKey] +
+                    (activeGroupObj.supportsFruitSplit.includes(crop.id)
+                      ? ` (${t('disease.leafFruit')})`
+                      : ''),
+                }))].map((option) => (
                   <button
-                    key={crop.id}
+                    key={option.id || 'all'}
                     type="button"
-                    onClick={() => setSelectedCrop(crop.id)}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                      selectedCrop === crop.id
-                        ? 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white'
-                        : 'bg-white text-myanglow-navy hover:bg-myanglow-sage/40'
+                    onClick={() => setSelectedCrop(option.id)}
+                    className={`flex min-h-12 w-full items-center justify-center rounded-xl px-3 py-2 text-center text-sm font-semibold leading-tight transition ${
+                      selectedCrop === option.id
+                        ? 'bg-(--ag-accent) text-(--ag-bg)'
+                        : 'border border-(--ag-line) bg-white text-myanglow-navy hover:bg-myanglow-sage/40'
                     }`}
                   >
-                    {crop[langKey]}
-                    {activeGroupObj.supportsFruitSplit.includes(crop.id)
-                      ? ` (${t('disease.leafFruit')})`
-                      : ''}
+                    {option.label}
                   </button>
                 ))}
               </div>
             </div>
+          ) : null}
+
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              disabled={!selectedGroup}
+              className={primaryButton}
+            >
+              {t('wizard.nextPhoto')}
+            </button>
           </div>
-        ) : null}
-      </SectionCard>
+        </SectionCard>
+      ) : null}
 
-      {/* STEP 2 & 3: UPLOAD AND ANALYSIS RESULTS */}
-      <section className="grid items-stretch gap-6 xl:grid-cols-2">
-        <div className="h-full w-full">
-          <SectionCard title={t('disease.upload')} className="h-full">
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <label
-                htmlFor="plant-image"
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed p-6 text-center transition ${
-                  isDragging
-                    ? 'border-myanglow-medium bg-myanglow-sage/50'
-                    : 'border-myanglow-sage bg-(--ag-card-2) hover:border-myanglow-medium hover:bg-myanglow-sage/30'
-                }`}
-              >
-                <input
-                  ref={inputRef}
-                  id="plant-image"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-myanglow-forest/10 text-myanglow-forest transition group-hover:bg-myanglow-forest/15">
-                  <ImagePlus size={28} />
-                </div>
-                <p className="mt-4 text-lg font-semibold text-myanglow-navy">
-                  {isDragging ? t('disease.dropHere') : t('disease.uploadPrompt')}
-                </p>
-                <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
-                  {t('disease.formats')}
-                </p>
-                <p className="mt-2 text-xs text-slate-500">{t('disease.orDrag')}</p>
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-emerald-500">
-                    <UploadCloud size={16} />
-                    {t('disease.choose')}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      // Inside the <label>: don't let this click also open the file dialog.
-                      event.preventDefault()
-                      event.stopPropagation()
-                      setIsCameraOpen(true)
-                    }}
-                    className="inline-flex items-center gap-2 rounded-full border border-emerald-500 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
-                  >
-                    <Camera size={16} />
-                    {t('disease.useCamera')}
-                  </button>
-                </div>
-              </label>
-
-              <div className="overflow-hidden rounded-[1.5rem] border border-myanglow-sage/70 bg-white p-4">
-                <div className="flex items-center justify-between gap-3 border-b border-myanglow-sage/60 pb-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-myanglow-medium">
-                      {t('disease.preview')}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      {selectedFile ? selectedFile.name : t('disease.noImage')}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-myanglow-sage/50 px-3 py-1 text-xs font-semibold text-myanglow-darkGreen">
-                    {selectedFile ? t('disease.ready') : t('disease.waiting')}
-                  </span>
-                </div>
-
-                <div className="mt-4 flex min-h-[18rem] items-center justify-center rounded-[1.3rem] bg-(--ag-card-2) p-3">
-                  {previewUrl ? (
-                    <img
-                      src={previewUrl}
-                      alt="Plant preview"
-                      className="max-h-[18rem] w-full rounded-[1rem] object-cover shadow-lg"
-                    />
-                  ) : (
-                    <div className="flex max-w-sm flex-col items-center text-center text-slate-500">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-myanglow-medium shadow-sm">
-                        <ScanSearch size={28} />
-                      </div>
-                      <p className="mt-4 text-lg font-semibold text-myanglow-navy">
-                        {t('disease.previewHere')}
-                      </p>
-                      <p className="mt-2 text-sm leading-6">
-                        {t('disease.previewHelp')}
-                      </p>
-                    </div>
-                  )}
-                </div>
+      {/* STEP 2: PHOTO */}
+      {step === 2 ? (
+        <SectionCard title={t('disease.upload')}>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <label
+              htmlFor="plant-image"
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`group flex cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed p-6 text-center transition ${
+                isDragging
+                  ? 'border-myanglow-medium bg-myanglow-sage/50'
+                  : 'border-myanglow-sage bg-(--ag-card-2) hover:border-myanglow-medium hover:bg-myanglow-sage/30'
+              }`}
+            >
+              <input
+                ref={inputRef}
+                id="plant-image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-myanglow-forest/10 text-myanglow-forest transition group-hover:bg-myanglow-forest/15">
+                <ImagePlus size={28} />
               </div>
-            </div>
-
-            {validationError ? (
-              <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-                <p>{validationError}</p>
+              <p className="mt-4 text-lg font-semibold text-myanglow-navy">
+                {isDragging ? t('disease.dropHere') : t('disease.uploadPrompt')}
+              </p>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">{t('disease.formats')}</p>
+              <p className="mt-2 text-xs text-slate-500">{t('disease.orDrag')}</p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-emerald-600">
+                  <UploadCloud size={16} />
+                  {t('disease.choose')}
+                </span>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    // Inside the <label>: don't let this click also open the file dialog.
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setIsCameraOpen(true)
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full border border-emerald-500 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                >
+                  <Camera size={16} />
+                  {t('disease.useCamera')}
+                </button>
               </div>
-            ) : null}
+            </label>
 
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={handleAnalyze}
-                disabled={!selectedGroup || !selectedFile || isAnalyzing}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isAnalyzing ? (
-                  <Loader2 size={18} className="animate-spin" />
+            <div className="overflow-hidden rounded-[1.5rem] border border-myanglow-sage/70 bg-white p-4">
+              <div className="flex items-center justify-between gap-3 border-b border-myanglow-sage/60 pb-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-myanglow-medium">
+                    {t('disease.preview')}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    {selectedFile ? selectedFile.name : t('disease.noImage')}
+                  </p>
+                </div>
+                <span className="rounded-full bg-myanglow-sage/50 px-3 py-1 text-xs font-semibold text-myanglow-darkGreen">
+                  {selectedFile ? t('disease.ready') : t('disease.waiting')}
+                </span>
+              </div>
+
+              <div className="mt-4 flex min-h-[18rem] items-center justify-center rounded-[1.3rem] bg-(--ag-card-2) p-3">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Plant preview"
+                    className="max-h-[18rem] w-full rounded-[1rem] object-cover shadow-lg"
+                  />
                 ) : (
-                  <Sparkles size={18} />
+                  <div className="flex max-w-sm flex-col items-center text-center text-slate-500">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-myanglow-medium shadow-sm">
+                      <ScanSearch size={28} />
+                    </div>
+                    <p className="mt-4 text-lg font-semibold text-myanglow-navy">
+                      {t('disease.previewHere')}
+                    </p>
+                    <p className="mt-2 text-sm leading-6">{t('disease.previewHelp')}</p>
+                  </div>
                 )}
-                {t('disease.analyze')}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleReset}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-myanglow-sage bg-white px-5 py-3 text-sm font-semibold text-myanglow-navy transition hover:border-myanglow-soft hover:bg-myanglow-sage/40"
-              >
-                {t('disease.reset')}
-              </button>
-            </div>
-          </SectionCard>
-        </div>
-
-        <div className="h-full w-full">
-          <SectionCard title={t('disease.result')} className="h-full">
-            {isAnalyzing ? (
-              <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[1.5rem] border border-myanglow-sage/70 bg-myanglow-sage/20 px-6 py-10 text-center">
-                <Loader2 size={34} className="animate-spin text-myanglow-forest" />
-                <p className="mt-4 text-lg font-semibold text-myanglow-navy">
-                  {t('disease.analyzing')}
-                </p>
               </div>
-            ) : qualityIssue ? (
-              <PhotoQualityNotice quality={qualityIssue} onRetake={handleRetake} onUseAnyway={handleUseAnyway} />
-            ) : analysisResult ? (
-              <div className="space-y-5">
-                <DiseaseVerdict verdict={verdict} result={analysisResult} onRetake={handleRetake} />
-                {verdict.showDetails && (
-                <>
+            </div>
+          </div>
+
+          {activeGroupObj ? (
+            <p className="mt-4 rounded-2xl bg-(--ag-card-2) px-4 py-3 text-sm text-slate-600">
+              <strong>{t('disease.photoTip')}</strong> {activeGroupObj.organTip[langKey]}
+            </p>
+          ) : null}
+
+          {validationError ? (
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+              <p>{validationError}</p>
+            </div>
+          ) : null}
+
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <button type="button" onClick={() => setStep(1)} className={quietButton}>
+              {t('wizard.back')}
+            </button>
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              disabled={!selectedGroup || !selectedFile || isAnalyzing}
+              className={primaryButton}
+            >
+              <Sparkles size={18} />
+              {t('wizard.checkPlant')}
+            </button>
+          </div>
+        </SectionCard>
+      ) : null}
+
+      {/* STEP 3: CHECKING */}
+      {step === 3 ? (
+        <SectionCard title={t('wizard.checkTitle')}>
+          {qualityIssue && !isAnalyzing ? (
+            <PhotoQualityNotice quality={qualityIssue} onRetake={handleRetake} onUseAnyway={handleUseAnyway} />
+          ) : (
+            <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[1.5rem] border border-myanglow-sage/70 bg-myanglow-sage/20 px-6 py-10 text-center">
+              <Loader2 size={34} className="animate-spin text-myanglow-forest" />
+              <p className="mt-4 text-lg font-semibold text-myanglow-navy">{t('disease.analyzing')}</p>
+              <p className="mt-1 text-sm text-slate-600">{t('wizard.checkHelp')}</p>
+              <ul className="mt-5 space-y-1.5 text-sm text-slate-600">
+                <li>{t('wizard.checkItemQuality')}</li>
+                <li>{t('wizard.checkItemPlant')}</li>
+                <li>{t('wizard.checkItemCompare')}</li>
+              </ul>
+            </div>
+          )}
+        </SectionCard>
+      ) : null}
+
+      {/* STEP 4: RESULT */}
+      {step === 4 && analysisResult ? (
+        <SectionCard title={t('disease.result')}>
+          <div className="space-y-5">
+            <DiseaseVerdict verdict={verdict} result={analysisResult} onRetake={handleRetake} />
+            {verdict.showDetails && (
+              <>
                 <div className="flex flex-col gap-5 rounded-[1.5rem] border border-myanglow-sage/70 bg-white p-4 sm:flex-row sm:items-center">
                   <div className="flex shrink-0 items-center justify-center">
                     <div
@@ -675,9 +738,7 @@ function DiseaseDetectionPage() {
                     <h3 className="text-2xl font-semibold text-myanglow-navy">
                       {analysisResult.plantName}
                     </h3>
-                    <p className="text-sm italic text-slate-500">
-                      {analysisResult.scientificName}
-                    </p>
+                    <p className="text-sm italic text-slate-500">{analysisResult.scientificName}</p>
                     <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
                       <span className="rounded-full bg-myanglow-sage/60 px-3 py-1 text-xs font-semibold text-myanglow-darkGreen">
                         {analysisResult.healthStatus}
@@ -693,17 +754,14 @@ function DiseaseDetectionPage() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <InfoCard
-                    label={t('disease.severityLabel')}
-                    value={analysisResult.diseaseSeverity}
-                  />
+                  <InfoCard label={t('disease.severityLabel')} value={analysisResult.diseaseSeverity} />
                   <InfoCard
                     label={t('disease.affectedAreaLabel')}
                     value={analysisResult.estimatedAffectedArea}
                   />
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-3">
                   <DetailPanel
                     title={t('disease.symptomsTitle')}
                     items={analysisResult.visibleSymptoms}
@@ -715,35 +773,42 @@ function DiseaseDetectionPage() {
                     accent="text-myanglow-darkGreen"
                   />
                   <DetailPanel
-                    title={t('disease.treatmentTitle')}
-                    items={analysisResult.treatmentRecommendations}
-                    accent="text-myanglow-medium"
-                  />
-                  <DetailPanel
                     title={t('disease.preventionTitle')}
                     items={analysisResult.preventionRecommendations}
                     accent="text-myanglow-muted"
                   />
                 </div>
-                </>
-                )}
-              </div>
-            ) : (
-              <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-myanglow-sage bg-myanglow-sage/15 px-6 py-10 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-myanglow-forest shadow-sm">
-                  <ShieldCheck size={28} />
-                </div>
-                <p className="mt-4 text-lg font-semibold text-myanglow-navy">
-                  {t('disease.noAnalysis')}
-                </p>
-                <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
-                  {t('disease.noAnalysisHelp')}
-                </p>
-              </div>
+              </>
             )}
-          </SectionCard>
-        </div>
-      </section>
+          </div>
+
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <button type="button" onClick={handleRetake} className={quietButton}>
+              {t('wizard.retake')}
+            </button>
+            {verdict.showDetails ? (
+              <button type="button" onClick={() => setStep(5)} className={primaryButton}>
+                {t('wizard.seeAction')}
+              </button>
+            ) : null}
+          </div>
+        </SectionCard>
+      ) : null}
+
+      {/* STEP 5: WHAT TO DO */}
+      {step === 5 && analysisResult ? (
+        <SectionCard title={t('wizard.action')}>
+          <DiseaseAdvice rawClassName={analysisResult.rawClassName} />
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <button type="button" onClick={() => setStep(4)} className={quietButton}>
+              {t('wizard.back')}
+            </button>
+            <button type="button" onClick={handleReset} className={primaryButton}>
+              {t('wizard.another')}
+            </button>
+          </div>
+        </SectionCard>
+      ) : null}
 
       {/* BILINGUAL GROUP SELECTION GUIDE MODAL */}
       {isGuideOpen ? (

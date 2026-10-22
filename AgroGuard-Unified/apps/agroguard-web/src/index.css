@@ -212,7 +212,6 @@ body {
   --ag-warn: #ffd2a8;
   --ag-ok-bg: #1d3a2a;
 
-  --color-white: #172a20;
   --color-slate-50: #12201a;
   --color-slate-100: #172a20;
   --color-slate-200: #2c4636;
@@ -374,4 +373,63 @@ html:lang(my) body {
   border-color: var(--ag-line);
   background: var(--ag-card);
   color: var(--ag-text);
+}
+
+/* Dark mode: the darkest shades are used as text on light cards, so they flip to light shades. */
+[data-theme="dark"] {
+  --color-emerald-800: #c4e9d1;
+  --color-emerald-900: #d8f2e0;
+  --color-emerald-950: #e6f7ec;
+  --color-amber-900: #ffe3c8;
+  --color-sky-800: #a8e3e8;
+  --color-rose-800: #ffc9c5;
+  --color-rose-900: #ffd6d3;
+  --color-myanglow-muted: #8fd3a0;
+}
+
+/* The badge behind a white icon turns light green in dark mode, so its icon goes dark. */
+[data-theme="dark"] .bg-myanglow-forest.text-white {
+  color: #0f1a14;
+}
+
+/* The Council page mixes light cards with dark panels written for a light page. In dark mode the
+   cards follow the palette above; the panels stay dark and their text and borders stay light. */
+[data-theme="dark"] .council-root {
+  background: var(--ag-bg);
+}
+
+[data-theme="dark"] .council-root [class*="bg-slate-950"] {
+  background-color: #1b3226;
+}
+
+[data-theme="dark"] .council-root [class*="bg-slate-900"] {
+  background-color: #20382b;
+}
+
+[data-theme="dark"] .council-root [class*="bg-slate-800"] {
+  background-color: rgba(48, 78, 61, 0.7);
+}
+
+[data-theme="dark"] .council-root .text-slate-200 {
+  color: #d9e8dd;
+}
+
+[data-theme="dark"] .council-root .text-slate-300 {
+  color: #b9d4c0;
+}
+
+[data-theme="dark"] .council-root [class*="border-slate-700"],
+[data-theme="dark"] .council-root [class*="border-slate-800"] {
+  border-color: rgba(143, 211, 160, 0.2);
+}
+
+/* White backgrounds follow the card colour. This is done on the utilities, not by changing
+   --color-white, because text-white must stay white in dark mode. */
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .hover\:bg-white:hover {
+  background-color: var(--ag-card);
+}
+
+[data-theme="dark"] [class*="bg-white/"] {
+  background-color: color-mix(in srgb, var(--ag-card) 88%, transparent);
 }

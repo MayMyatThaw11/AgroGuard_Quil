@@ -667,7 +667,7 @@ export default function CouncilPage() {
   const spatialRatio = ((affectedNodes / Math.max(1, activeNodes)) * 100).toFixed(0);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 pb-16 pt-2 font-sans antialiased selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="council-root min-h-screen bg-[#f8fafc] text-slate-800 pb-16 pt-2 font-sans antialiased selection:bg-emerald-100 selection:text-emerald-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
         
         {/* TOP HEADER */}

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Protects the agronomist photo-review routes (the queue and labelling). Unset means
     # those routes are off: reviewed labels become training data, so they need a gate.
     review_token: SecretStr | None = None
+    # Disease advice lists spray kinds only for diseases an agronomist has signed off. Set this to
+    # true to list them for every disease too (still no doses, and never a banned ingredient).
+    disease_advice_unreviewed_sprays: bool = True
     cors_origins: list[str] = ["http://localhost:5173"]
 
     telegram_bot_token: SecretStr | None = None
