@@ -45,28 +45,36 @@ The farm map feature (code name AgriQill) runs on branch `farm-simulation`. The 
 - **B-AG-1** (8479fb7): `prohibited_inputs.csv` from fetched eCFR (205.105/.601/.602/.604/.271) and EU 2021/1165 Annexes I and II. Each row has a clause, URL and date, and is TO VERIFY. NOP now blocks carbamates, per 205.105(a). ASOA and GB/T 19630 texts are not fetched.
 - **Plan-order correction:** W1 was deferred earlier because I resumed from a plan the owner had rejected (transcript lines 3239–3241). W1 now runs first, in the owner's order.
 
-## Next 5-hour block, in this order
-1. **Finish W1:**
-   - **B-AG-2:** conversion record per plot plus `AGRI-E030`. EU anchor 24 months before sowing, NOP 36 months before harvest, ASOA 12 months TO VERIFY. Test: an EU plot sown at month 23 is blocked even if harvested at month 28.
-   - **B-AG-3:** `certificates` table with alerts at 60 and 14 days and an SPS reminder before 30 June.
-   - **B-AG-12:** `POST /farms/{id}/fumigations`, reusing `_banned_match` and the new `synthetic_storage_fumigant` conditional row (205.271(d)), plus `AGRI-E033`.
-   - **B-TR-6:** error contract `{code, message, status, timestamp, request_id, detail}` in `api/main.py`, plus `ApiError.code` on the frontend.
-   - **Re-verify only:** B-OP-1, B-OP-4, B-ML-1 and B-GIS-1, by tests.
-2. **The 22 Oct plan, in its order:**
-   - **Phase A+ OSM suggestion:** hidden.
-   - **Trace interaction fixes 1–4:**
-     - corner at the centre with Enter
-     - Esc cancels
-     - `aria-live` on the count and area
-     - focus moves on start and save
-   - **Phase E:** manual and tech persona plans with budget, crew and machines; five variations sharing one forecast per farm (measured: up to 9.6 s per forecast when the neural path trains).
-   - **Flow view:** the water balance first, with ET split into T and E by FAO-56 dual Kc; then nitrogen (NH₃ volatilisation, nitrification and denitrification), CH₄ under AWD (IPCC 2019 Tier 1) and canopy VPD, all with cited equations.
-   - **Phase B:** palette via the ui-color-palette MCP.
-   - **Phase D:** W2 items in shadow.
-3. **Also open:**
-   - rolling-origin evaluation and the future-rain leak fix (Open-Meteo Previous Runs, field names TO VERIFY)
-   - the GLEAM breaker flaky test
-   - rebuild the regions snapshot (network) so SPI-1/6 and harvest rain fill
+## Done on 22 Oct, third block (rest of W1, the 22 Oct plan, Phase D)
+Scope set by the owner during this block: ASEAN-wide, small to large farms.
+- **W1 finished:**
+  - B-AG-2 (cf7aa3c): conversion per plot, anchors read from EU 2018/848 Annex II 1.7.1 and 7 CFR 205.202(b); ASOA 12 months TO VERIFY. Codes E030/E031/E033 were taken, so it uses `AGRI-E034` and `AGRI-W034`.
+  - B-AG-3 (e34c362): certificate calendar, country-agnostic kinds, alerts at 60 and 14 days, China GACC 30 June reminder TO VERIFY.
+  - B-AG-12 (d0fbd5a, 8a3c19c): fumigation records, `AGRI-E035`, EU fumigant rows absent from 2021/1165 Annex I, up to 500 plots per co-op store.
+  - B-TR-6 (2d3efec): error contract with stable codes and request id; `ApiError.code` and `requestId`.
+  - Re-verified by tests: B-OP-1, B-OP-4, B-ML-1, B-GIS-1 (22 passed). Gap: B-OP-1's "lower lateness on fixture farms" has no comparison test yet.
+- **ASEAN scope** (2b68143): harvest reference for any ASEAN farm and size = area x FAOSTAT national 5-year yield range. FAOSTAT is packed locally by `faostat_sync` (76 s).
+- **Trace fixes 1-4** (c96c5f0): Enter adds the corner under a crosshair that follows the padded map centre, Esc cancels, live region, focus moves.
+- **OSM suggestion, hidden** (929ea77): `?experimental` only. Both public Overpass mirrors timed out during the live check; the failure path is verified, a live suggestion is not.
+- **Phase E** (90f655c, 2dedb8d): `POST /contracts/{id}/persona-plan`, up to 5 variations on one forecast; by hand vs with your machines, budget drops whole jobs, long hand jobs split into 8 h days, user-entered hand hours.
+- **Flow view** (2bebc1d, c81ea83, ba6c259): water (FAO-56 dual Kc, fetched), canopy VPD and wet hours, CH4 (IPCC 2019 Eq. 5.2, SE Asia EFc 1.22), nitrogen fate (IPCC 2019 Tables 11.1 and 11.3). All coefficients were read from the source texts.
+- **Phase B** (dbe0e96): water and stone ramps from the palette MCP; the old blue and the unknown grey (2.85:1) are replaced.
+- **Phase D, W2 in shadow:** B-TS-5 (185d086), B-TS-3 (1854226), B-TS-6 (1062872), B-AG-9 (a2d9e03), lots for B-TR-5, B-AG-13, B-AG-15, B-AG-16 and B-OP-6 (0b03bc2), B-AG-10 evidence pack (0cc90ee), B-OP-2 (9dae9b0).
+- **Blocked W2 and W3 harnesses** (4af7356): `GET /roadmap`; each blocked item names its missing licence, value, photos or dependency.
+- **Backtest honesty** (79867c9): the forecast backtest can use the rain forecast issued at the cut (Previous Runs API, field names now verified) and always says which rain it used.
+- **Team review:** Thant Zin Moe's disease-advice commits (b6cddd5, f038cab) are merged clean. One bug fixed in 80f6489: banned names of 3 letters or fewer (DDT, EPN, EDB, HCB, PCP) and the BHC alias were never matched.
+
+## Next block, in this order
+1. **Owner decisions:**
+   - `disease_advice_unreviewed_sprays` defaults to true while no review is on file, so every spray shown is unreviewed
+   - the GLEAM breaker flake
+   - the 44 px touch targets
+2. **Wire the issued rain:** call `weather.issued_rain` from the plan caller so live backtests stop being optimistic; then rolling-origin cuts.
+3. **B-OP-1 lateness test:** compare a travel-aware plan against a travel-blind plan executed with real travel times on the fixture farms.
+4. **Panels for the new records:** lots, certificates, fumigations and the evidence pack download.
+5. **GIS deepening** (older list, item 2).
+6. **Rebuild the regions snapshot** (network) so SPI-1/6 and harvest rain fill.
+7. **Retry the live OSM suggestion** when Overpass is not at capacity.
 
 ## Older ordered list (before this block)
 1. Phase A+ last item: OSM outline suggestion, hidden in the demo.
