@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
+import { CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
 import { getHarvestReference, getRadar, getRisk, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type HarvestReference, type MonitoringPaddy, type RiverCell } from '../../lib/api.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
@@ -9,7 +9,8 @@ import { PROVENANCE_CLASS, PROVENANCE_LABEL, type ProvenanceLevel } from '../../
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
 import { OpsForecastChart } from '../ops/OpsForecastChart.tsx';
-import { DetailSection, KV, UpdatedLine } from './detailParts.tsx';
+import { DetailSection, KV, More, UpdatedLine } from './detailParts.tsx';
+import { PersonaPlan } from './PersonaPlan.tsx';
 import type { OwnFarmLive } from './useOwnFarms.ts';
 
 const MIN_TRUST_CHECKS = 10;
@@ -48,19 +49,6 @@ const Tile: React.FC<{ label: string; value: string; unit?: string; level: Prove
     <Prov level={level} />
   </div>
 );
-
-const More: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <div>
-      <AqButton variant="ghost" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <ChevronDown size={14} aria-hidden="true" style={{ transform: open ? 'rotate(180deg)' : undefined }} />
-        {label}
-      </AqButton>
-      {open ? <div>{children}</div> : null}
-    </div>
-  );
-};
 
 const FLOOD_WORD = { low: 'Low', watch: 'Watch', high: 'High', unknown: 'Unknown' } as const;
 
@@ -257,6 +245,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           </div>
         </DetailSection>
       ) : null}
+
+      <PersonaPlan farmId={farm.id} assets={farm.spec.assets} />
 
       <DetailSection>
         <More label="Details and sources">

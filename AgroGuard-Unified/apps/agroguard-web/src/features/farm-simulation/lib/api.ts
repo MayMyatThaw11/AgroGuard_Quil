@@ -490,6 +490,72 @@ export async function getHarvestReference(farmId: string) {
   return request<HarvestReference>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/harvest-reference`);
 }
 
+export type JobKind = 'irrigate' | 'drain' | 'scout' | 'spray' | 'harvest';
+
+export interface PersonaVariation {
+  label?: string;
+  persona: 'manual' | 'tech';
+  crew: number;
+  machines?: string[] | null;
+  budget?: number | null;
+  unit_prices?: Partial<Record<JobKind, number>>;
+  inflation_pct?: number;
+  durations_h?: Partial<Record<JobKind, number>>;
+}
+
+export interface PersonaTask {
+  id: string;
+  title: string;
+  date: string;
+  paddy_id: string | null;
+  asset_id: string | null;
+  manual_kind?: JobKind;
+  blocked_reason: string | null;
+  cost?: number | null;
+  schedule: { status: string; kind?: JobKind; start?: string; duration_h?: number };
+}
+
+export interface PersonaPlanResult {
+  label: string;
+  persona: 'manual' | 'tech';
+  crew: number;
+  machines: string[];
+  own_hours: JobKind[];
+  outcome: {
+    scheduled: number;
+    blocked: { id: string; title: string; reason: string | null }[];
+    lateness_h: number;
+    by_hand: number;
+    solver: string | null;
+    cost: {
+      priced_total: number;
+      unpriced_jobs: number;
+      budget: number | null;
+      inflation_pct: number;
+      within_budget: boolean | null;
+      dropped: { id: string; title: string; cost: number; days: number }[];
+      note: string | null;
+    };
+  };
+  tasks: PersonaTask[];
+}
+
+export interface PersonaPlans {
+  farm_id: string;
+  status: string;
+  plans?: PersonaPlanResult[];
+  missing?: { field: string; reason: string }[];
+  shared_forecast?: { generated_at: string; weather_source: string };
+  approval?: string;
+}
+
+export async function getPersonaPlans(farmId: string, variations: PersonaVariation[]) {
+  return request<PersonaPlans>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/persona-plan`, {
+    method: 'POST',
+    body: JSON.stringify({ variations }),
+  });
+}
+
 export async function getRadar(farmId: string, days = 60) {
   return request<FarmRadar>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/radar?days=${days}`);
 }

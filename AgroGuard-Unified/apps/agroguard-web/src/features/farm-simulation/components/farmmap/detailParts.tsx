@@ -1,5 +1,6 @@
-import React from 'react';
-import { Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown, Clock } from 'lucide-react';
+import { AqButton } from '../aq/aqPrimitives.tsx';
 
 export const KV: React.FC<{ k: string; v: React.ReactNode; sub?: string }> = ({ k, v, sub }) => (
   <div className="aq-fm-kv">
@@ -35,3 +36,16 @@ export const BarRow: React.FC<BarRowProps> = ({ label, percent, children }) => (
     <span className="aq-fm-bar-value">{percent}%</span>
   </div>
 );
+
+export const More: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <AqButton variant="ghost" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <ChevronDown size={14} aria-hidden="true" style={{ transform: open ? 'rotate(180deg)' : undefined }} />
+        {label}
+      </AqButton>
+      {open ? <div>{children}</div> : null}
+    </div>
+  );
+};

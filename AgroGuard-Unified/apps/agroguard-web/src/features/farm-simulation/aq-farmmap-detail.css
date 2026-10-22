@@ -183,3 +183,29 @@
   font: var(--aq-type-label);
   text-align: right;
 }
+
+.aq-fm-persona-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--aq-space-3);
+}
+
+.aq-fm-persona-title {
+  margin: 0 0 var(--aq-space-1);
+  font: var(--aq-type-label);
+  color: var(--aq-text-strong);
+}
+
+.aq-fm-check {
+  display: flex;
+  align-items: center;
+  gap: var(--aq-space-2);
+  min-height: 32px;
+  color: var(--aq-text-body);
+}
+
+@media (max-width: 639px) {
+  .aq-fm-persona-grid {
+    grid-template-columns: 1fr;
+  }
+}
