@@ -539,7 +539,8 @@ def forecast(
             if issued is not None
             else "observed, optimistic: the backtest saw the rain that fell"
         )
-        held_out = next(iter(report.get("band_coverage", {}).values()), {}).get("n", 0)
+        coverage: dict[str, dict[str, int]] = report.get("band_coverage") or {}
+        held_out = min((c["n"] for c in coverage.values()), default=0)
         eligible = {
             k: v for k, v in scores.items() if k != HYBRID or held_out >= MIN_PROMOTION_PAIRS
         }
