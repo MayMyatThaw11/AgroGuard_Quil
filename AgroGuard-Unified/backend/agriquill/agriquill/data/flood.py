@@ -114,7 +114,8 @@ def advice(
         return {
             "action": "harvest_early",
             "text": f"Plan to harvest before {flood_date}. The crop matures about "
-            f"{mature.isoformat()}, {max(short, 0)} days after that date.",
+            f"{mature.isoformat()}, "
+            + (f"{short} days after that date." if short > 0 else "before that date."),
             "mature": mature.isoformat(),
         }
     return {

@@ -194,7 +194,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           {harvest ? <p className="aq-fm-note">Harvest: Paw San {harvest.areaHa} ha × {PAW_SAN_T_HA[0]}–{PAW_SAN_T_HA[1]} t/ha · TO VERIFY</p> : null}
           {actions.map((p) => (
             <div key={`flood-${p.id}`} className={`aq-alert ${p.advice.action === 'harvest_early' ? 'is-warning' : 'is-error'}`} role="status">
-              <b>{p.id}:</b> {p.advice.text}
+              <span><b>{p.id}:</b> {p.advice.text}</span>
             </div>
           ))}
         </DetailSection>

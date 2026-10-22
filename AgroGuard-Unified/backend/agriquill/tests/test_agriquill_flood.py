@@ -55,7 +55,9 @@ def test_early_harvest_only_when_the_crop_can_mature_before_the_flood():
     today = date(2026, 10, 22)
     near = flood.advice("high", "2026-11-05", date(2026, 7, 1), 120, today)
     assert near["action"] == "harvest_early"
-    assert "2026-11-05" in near["text"]
+    assert "2026-11-05" in near["text"] and "before that date" in near["text"]
+    late = flood.advice("high", "2026-11-05", date(2026, 7, 10), 120, today)
+    assert late["action"] == "harvest_early" and "2 days after" in late["text"]
     far = flood.advice("high", "2026-11-05", date(2026, 9, 20), 120, today)
     assert far["action"] == "protect"
     assert flood.advice("low", None, date(2026, 9, 20), 120, today)["action"] == "none"
