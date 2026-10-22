@@ -491,7 +491,8 @@ function FarmSummary({ farm, forecastDates, forecastWeather, field, onReplan }: 
             {plan.forecast.backtest && (
               <p className="mt-1 text-[11px] text-(--ops-ink-3)">
                 Neural residual: {plan.forecast.backtest.neural_candidate}. Scored on {plan.forecast.backtest.series_scored}{' '}
-                paddies.{plan.forecast.backtest.coverage_shown === false ? ' Band coverage shows after 10 held-out readings.' : ' An honest 80 % band holds about 8 of every 10.'}
+                paddies.{plan.forecast.backtest.band_method ? ` Band: ${plan.forecast.backtest.band_method}.` : ''}
+                {plan.forecast.backtest.coverage_shown === false ? ' Band coverage shows after 10 held-out readings.' : ' An honest 80 % band holds about 8 of every 10.'}
               </p>
             )}
             {plan.forecast.physics && (

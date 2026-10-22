@@ -111,6 +111,44 @@ def test_every_backtest_candidate_reports_band_coverage_as_x_of_n():
     assert out["backtest"]["coverage_shown"] == (expected_n >= forecast.MIN_COVERAGE_N)
 
 
+def test_interval_score_is_width_plus_scaled_misses():
+    band = {"p10": [0.0, 0.0], "p50": [1.0, 1.0], "p90": [2.0, 2.0]}
+    inside = forecast.interval_score(band, np.asarray([1.0, 1.5]))
+    assert inside == 2.0
+    missed = forecast.interval_score(band, np.asarray([3.0, -1.0]))
+    assert missed == 2.0 + (2 / 0.2) * 1.0
+
+
+def test_pinball_loss_penalises_each_quantile_asymmetrically():
+    import torch
+
+    pred = torch.tensor([[[0.0, 0.0, 0.0]]])
+    truth = torch.tensor([[1.0]])
+    loss = forecast.pinball_loss(pred, truth).item()
+    assert abs(loss - (0.1 + 0.5 + 0.9) / 3) < 1e-6
+
+
+def test_quantile_heads_run_in_shadow_and_promote_only_on_the_plan_rule():
+    series, rain, temp = _series(6)
+    cfg = forecast.ForecastConfig(min_neural_windows=20, epochs=40)
+    out = forecast.forecast(
+        series, rain[:HISTORY_DAYS], temp[:HISTORY_DAYS], rain[HISTORY_DAYS:], cfg
+    )
+    shadow = out["backtest"]["quantile_heads"]
+    assert shadow["pairs"] == out["backtest"]["series_scored"] * HORIZON
+    rule = (
+        shadow["pairs"] >= forecast.MIN_PROMOTION_PAIRS
+        and shadow["interval_score"] < shadow["mc_interval_score"]
+        and abs(shadow["coverage"] - 0.8) < abs(shadow["mc_coverage"] - 0.8)
+    )
+    assert shadow["promoted"] is rule
+    assert set(out["backtest"]["interval_score"]) == set(out["backtest"]["candidates"])
+    for band in out["series"].values():
+        assert all(
+            a <= b <= c for a, b, c in zip(band["p10"], band["p50"], band["p90"], strict=True)
+        )
+
+
 def test_forecast_falls_back_on_short_history():
     out = forecast.forecast(
         [forecast.SeriesInput("pd", [5, 4, 3, 2, 1, 0, -1, -2])],
