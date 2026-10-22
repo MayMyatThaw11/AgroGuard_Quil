@@ -33,6 +33,7 @@ from .. import (
     cropvalue,
     dsl,
     evidence,
+    evidence_pack,
     fleet,
     flows,
     fumigation,
@@ -1380,6 +1381,27 @@ def _lot_call(fn: Any, *args: Any) -> dict[str, Any]:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/contracts/{farm_id}/evidence-pack")
+async def contracts_evidence_pack(
+    farm_id: str,
+    parcel: str = Query(min_length=1, max_length=60),
+    start: date | None = None,
+    end: date | None = None,
+    format: Literal["json", "csv", "html"] = "json",
+    caller: Caller | None = _READER,
+) -> Any:
+    _see(caller, farm_id)
+    try:
+        pack = await asyncio.to_thread(evidence_pack.build, farm_id, parcel, start, end)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"not found: {exc.args[0]}") from exc
+    if format == "csv":
+        return Response(evidence_pack.to_csv(pack), media_type="text/csv")
+    if format == "html":
+        return Response(evidence_pack.to_html(pack), media_type="text/html")
+    return pack
 
 
 @router.get("/farms/{farm_id}/lots")

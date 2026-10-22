@@ -157,8 +157,12 @@ def drying_order(
     ]
 
 
+def farm_lots_raw(farm_id: str) -> list[dict[str, Any]]:
+    return [with_flags(lot) for lot in _STORE.items("lot") if lot.get("farm_id") == farm_id]
+
+
 def farm_lots(farm_id: str) -> dict[str, Any]:
-    rows = [with_flags(lot) for lot in _STORE.items("lot") if lot.get("farm_id") == farm_id]
+    rows = farm_lots_raw(farm_id)
     rain: dict[str, float] = {}
     try:
         days = live.build_live(farm_id).get("weather", {}).get("days") or []
