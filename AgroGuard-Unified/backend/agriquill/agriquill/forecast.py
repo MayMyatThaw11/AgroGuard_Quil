@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -305,6 +306,50 @@ def interval_score(band: dict[str, list[float]], actual: np.ndarray) -> float:
 
 
 MIN_COVERAGE_N = 10
+CONFORMAL_TARGET = (0.75, 0.85)
+
+
+def conformal_quantile(residuals: list[float], alpha: float = ALPHA) -> float | None:
+    """Split-conformal radius: the ceil((n + 1)(1 - alpha))-th smallest absolute residual."""
+    k = math.ceil((len(residuals) + 1) * (1 - alpha))
+    return sorted(residuals)[k - 1] if 0 < k <= len(residuals) else None
+
+
+def conformal_check(
+    points: dict[int, np.ndarray],
+    actual: dict[int, np.ndarray],
+    old_bands: dict[int, dict[str, list[float]]],
+) -> dict[str, Any]:
+    """B-TS-3 shadow: alternate paddies calibrate a per-lead radius, the others test it."""
+    ids = sorted(points)
+    cal, test = ids[0::2], ids[1::2]
+    horizon = len(next(iter(points.values()))) if points else 0
+    radius = [
+        conformal_quantile([abs(float(actual[i][h] - points[i][h])) for i in cal])
+        for h in range(horizon)
+    ]
+    if not test or any(r is None for r in radius):
+        return {"status": "shadow", "pairs": 0, "reason": "too few paddies to calibrate a radius"}
+    n = len(test) * horizon
+    inside = sum(
+        abs(float(actual[i][h] - points[i][h])) <= float(radius[h] or 0.0)
+        for i in test
+        for h in range(horizon)
+    )
+    old = sum(inside_band(old_bands[i], actual[i]) for i in test)
+    cov, old_cov = inside / n, old / n
+    lo, hi = CONFORMAL_TARGET
+    return {
+        "status": "promote"
+        if n >= MIN_PROMOTION_PAIRS and lo <= cov <= hi and not lo <= old_cov <= hi
+        else "shadow",
+        "pairs": n,
+        "coverage": round(cov, 3),
+        "old_coverage": round(old_cov, 3),
+        "radius_cm": [round(float(r or 0.0), 2) for r in radius],
+        "rule": f"promote when coverage is {lo:.0%}-{hi:.0%} on {MIN_PROMOTION_PAIRS}+ test "
+        "pairs while the old band falls outside",
+    }
 
 
 def _backtest(
@@ -367,6 +412,9 @@ def _backtest(
         "band_coverage": {name: {"inside": s[0], "n": n} for name, s in stats.items()},
         "interval_score": {name: round(s[1], 3) for name, s in stats.items()},
         "quantile_heads": None,
+        "conformal": conformal_check(
+            {i: predictors[WATER_BALANCE](i) for i in eligible}, actual, bands[WATER_BALANCE]
+        ),
     }
     if quantile_bander is not None:
         q_inside, q_score = summary({i: quantile_bander(i) for i in eligible})
