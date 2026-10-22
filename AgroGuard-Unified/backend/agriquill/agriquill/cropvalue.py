@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from . import yieldcast
 from .data import ecocrop, fao_pack, pinksheet, regions
 from .store import missing
 
@@ -137,6 +138,7 @@ def _yield(iso3: str, item: str | None) -> dict[str, Any]:
         "flag": last["flag"],
         "flag_meaning": last["flag_meaning"],
         "item": last["item"],
+        "backtest": yieldcast.persistence_check({r["year"]: r["value"] for r in rows}),
         "source": out.get("source"),
     }
 

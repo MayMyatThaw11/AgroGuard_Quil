@@ -126,6 +126,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const water = advisoryLitres(local.advisory, farm.fieldId, area);
   const harvest = pawSanHarvest(farm.spec);
   const national = harvest ? null : nationalHarvest(yieldRef);
+  const nationalCheck = yieldRef?.parcels.find((p) => p.yield?.backtest)?.yield?.backtest ?? null;
   const flood = risk && risk !== 'error' ? risk : null;
   const elev = flood?.elevation?.mean_m ?? null;
   const actions = (flood?.parcels ?? []).filter((p) => p.advice.action !== 'none');
@@ -189,6 +190,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           {water.litres !== null ? <p className="aq-fm-note">Water: {fmt(water.litres)} L net, before field losses · {local.advisory?.netDepthMm} mm over {area.toFixed(2)} ha</p> : null}
           {harvest ? <p className="aq-fm-note">Harvest: Paw San {harvest.areaHa} ha × {PAW_SAN_T_HA[0]}–{PAW_SAN_T_HA[1]} t/ha · TO VERIFY</p> : null}
           {national ? <p className="aq-fm-note">Harvest: {national.areaHa} ha × FAOSTAT {yieldRef?.country_name} 5-year yield range to {national.year ?? '?'} · a national reference, not a forecast for this field</p> : null}
+          {national && nationalCheck ? <p className="aq-fm-note">Backtest: last year's national yield came within 10 % of the next in {nationalCheck.within_10} of {nationalCheck.n} years ({nationalCheck.years}), average error {nationalCheck.mape_pct} %</p> : null}
           {actions.map((p) => (
             <div key={`flood-${p.id}`} className={`aq-alert ${p.advice.action === 'harvest_early' ? 'is-warning' : 'is-error'}`} role="status">
               <span><b>{p.id}:</b> {p.advice.text}</span>

@@ -158,6 +158,21 @@ def backtest(data: Mapping[str, Series], test_years: Iterable[int]) -> dict[str,
     }
 
 
+def persistence_check(s: Series, last_years: int = 15) -> dict[str, Any] | None:
+    """How often last year's value came within 10 % of the next, over the latest years."""
+    years = sorted(y for y in s if y - 1 in s)[-last_years:]
+    if len(years) < last_years:
+        return None
+    errors = [abs(s[y - 1] - s[y]) / s[y] for y in years]
+    return {
+        "within_10": sum(e <= 0.10 for e in errors),
+        "n": len(years),
+        "mape_pct": round(100 * sum(errors) / len(errors), 2),
+        "years": f"{years[0]}-{years[-1]}",
+        "rule": "last year's national yield used as next year's; hit = within 10 %",
+    }
+
+
 def faostat_rice(countries: Iterable[str]) -> dict[str, dict[int, float]]:
     from .data import fao_pack
 

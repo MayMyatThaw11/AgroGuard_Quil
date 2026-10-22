@@ -44,6 +44,14 @@ def test_hit_rates_and_the_promotion_rule_are_reported_per_candidate():
     assert out["pairs_total"] == 3 * 15
 
 
+def test_persistence_check_counts_years_within_ten_percent():
+    s = {2000 + i: 1000.0 for i in range(16)}
+    s[2015] = 1200.0
+    out = yieldcast.persistence_check(s)
+    assert out["n"] == 15 and out["within_10"] == 14 and out["years"] == "2001-2015"
+    assert yieldcast.persistence_check({2000: 1.0, 2001: 1.0}) is None
+
+
 def test_short_series_are_left_out_with_a_reason():
     out = yieldcast.backtest({"AAA": series(n=8)}, test_years=range(1985, 1988))
     assert out["pairs_total"] == 0 and out["skipped"]["AAA"]

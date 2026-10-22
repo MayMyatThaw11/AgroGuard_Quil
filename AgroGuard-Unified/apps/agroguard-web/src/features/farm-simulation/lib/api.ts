@@ -476,7 +476,14 @@ export interface HarvestParcel {
   tonnes: [number, number] | null;
   area_ha?: number;
   reason?: string;
-  yield?: { t_ha: number | null; t_ha_5y?: [number, number]; year?: number; item?: string; flag_meaning?: string };
+  yield?: {
+    t_ha: number | null;
+    t_ha_5y?: [number, number];
+    year?: number;
+    item?: string;
+    flag_meaning?: string;
+    backtest?: { within_10: number; n: number; mape_pct: number; years: string; rule: string } | null;
+  };
 }
 
 export interface HarvestReference {
