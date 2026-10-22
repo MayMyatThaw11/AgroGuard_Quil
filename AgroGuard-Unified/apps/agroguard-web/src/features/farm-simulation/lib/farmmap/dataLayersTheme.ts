@@ -61,7 +61,7 @@ function groundLayers(): LayerEntry[] {
   return [
     { before: BEFORE, spec: { id: 'soil', type: 'fill', source: 'aq-soil', paint: { 'fill-color': getProp('color'), 'fill-opacity': 0.34, 'fill-outline-color': MAP_COLOR.soilEdge } } },
     { spec: { id: 'soil-label', type: 'symbol', source: 'aq-soil', minzoom: 7, maxzoom: 11.5, layout: { 'text-field': getProp('label'), 'text-font': ['Noto Sans Italic'], 'text-size': 11 }, paint: { 'text-color': MAP_COLOR.soilLabel, 'text-halo-color': 'rgba(255,255,255,.85)', 'text-halo-width': 1.2 } } },
-    risk('flood', 'flood', [0, 'rgba(0,0,0,0)', 0.2, 'rgba(151,211,209,.5)', 0.45, '#5bbcb9', 0.7, '#0b9fa9', 1, '#2563eb']),
+    risk('flood', 'flood', [0, 'rgba(0,0,0,0)', 0.2, 'rgba(151,211,209,.5)', 0.45, '#5bbcb9', 0.7, '#006e78', 1, '#005660']),
     risk('drought', 'drought', [0, 'rgba(0,0,0,0)', 0.2, 'rgba(240,197,106,.45)', 0.5, '#f0c56a', 0.75, '#d77a11', 1, '#bc6c2f']),
     { before: BEFORE, spec: { id: 'paddies', type: 'fill', source: 'aq-fields', minzoom: 10, filter: ex('==', getProp('rice'), 1), paint: { 'fill-color': getProp('color'), 'fill-opacity': hoverOpacity(0.9) } } },
     { before: BEFORE, spec: { id: 'crops', type: 'fill', source: 'aq-fields', minzoom: 10, filter: ex('==', getProp('rice'), 0), paint: { 'fill-color': getProp('color'), 'fill-opacity': hoverOpacity(0.88) } } },
@@ -69,7 +69,7 @@ function groundLayers(): LayerEntry[] {
     { spec: { id: 'bounds', type: 'line', source: 'aq-bounds', minzoom: 10.5, paint: { 'line-color': ex('match', getProp('status'), 'risk', STATUS_COLOR.risk, 'watch', STATUS_COLOR.watch, BOUND_COLOR), 'line-width': zoomInterp(10.5, 0.8, 16, 2.2), 'line-dasharray': [3, 2], 'line-opacity': 0.75 } } },
     { spec: { id: 'canals-main', type: 'line', source: 'aq-canals', minzoom: 9, filter: ex('==', getProp('kind'), 'main'), layout: round, paint: { 'line-color': MAP_COLOR.canalMain, 'line-width': zoomInterp(9, 1.2, 15, 4.5) } } },
     { spec: { id: 'canals-lat', type: 'line', source: 'aq-canals', minzoom: 11, filter: ex('==', getProp('kind'), 'lateral'), layout: round, paint: { 'line-color': MAP_COLOR.canalLateral, 'line-width': zoomInterp(11, 0.8, 15, 2.4), 'line-dasharray': [2, 1.2] } } },
-    { spec: { id: 'weather', type: 'heatmap', source: 'aq-wx', paint: { 'heatmap-weight': getProp('rain'), 'heatmap-radius': zoomInterp(4, 14, 8, 42, 12, 110), 'heatmap-intensity': zoomInterp(4, 0.7, 10, 1.3), 'heatmap-opacity': 0.55, 'heatmap-color': density(0, 'rgba(0,0,0,0)', 0.15, 'rgba(196,230,229,.5)', 0.4, 'rgba(91,188,185,.75)', 0.7, '#2563eb', 1, '#5b21b6') } } },
+    { spec: { id: 'weather', type: 'heatmap', source: 'aq-wx', paint: { 'heatmap-weight': getProp('rain'), 'heatmap-radius': zoomInterp(4, 14, 8, 42, 12, 110), 'heatmap-intensity': zoomInterp(4, 0.7, 10, 1.3), 'heatmap-opacity': 0.55, 'heatmap-color': density(0, 'rgba(0,0,0,0)', 0.15, 'rgba(196,230,229,.5)', 0.4, 'rgba(91,188,185,.75)', 0.7, '#006e78', 1, '#003f48') } } },
     { spec: { id: 'weather-temp', type: 'symbol', source: 'aq-temps', minzoom: 5.4, maxzoom: 12, layout: { 'icon-image': 'aq-pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [2, 7, 2, 7], 'text-field': getProp('label'), 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, -2.6], 'icon-allow-overlap': false }, paint: { 'text-color': MAP_COLOR.waterLabel } } },
   ];
 }

@@ -23,9 +23,9 @@ export function legendFor(key: LayerKey): LegendSpec | null {
     case 'water':
       return { items: [{ tint: POI_COLOR.water, label: 'Reservoir, weir, pump station' }] };
     case 'weather':
-      return { gradient: ['#c4e6e5', '#5bbcb9', '#2563eb', '#5b21b6'], labels: ['0.5', '12+'], unit: 'mm/h' };
+      return { gradient: ['#c4e6e5', '#5bbcb9', '#006e78', '#003f48'], labels: ['0.5', '12+'], unit: 'mm/h' };
     case 'flood':
-      return { gradient: ['#97d3d1', '#5bbcb9', '#0b9fa9', '#2563eb'], labels: ['Low', 'High'] };
+      return { gradient: ['#97d3d1', '#5bbcb9', '#006e78', '#005660'], labels: ['Low', 'High'] };
     case 'drought':
       return { gradient: ['#f0c56a', '#d77a11', '#bc6c2f'], labels: ['Low', 'High'] };
     case 'markets':

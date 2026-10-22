@@ -40,7 +40,7 @@ export const POI_COLOR: Record<PoiType, string> = {
   mill: '#535d57',
   water: '#0b9fa9',
   station: '#5bbcb9',
-  machine: '#2563eb',
+  machine: '#006e78',
   livestock: '#bc6c2f',
 };
 
@@ -64,9 +64,9 @@ export const MAP_COLOR = {
   clayDeep: '#b42520',
   stone: '#6f7a74',
   stoneLine: '#dbe2dd',
-  route: '#2563eb',
+  route: '#2d3530',
   ownLine: '#141a16',
-  ownUnknown: '#8a948e',
+  ownUnknown: '#6e7771',
   routeStart: '#17aa51',
   canalMain: '#0b9fa9',
   canalLateral: '#5bbcb9',

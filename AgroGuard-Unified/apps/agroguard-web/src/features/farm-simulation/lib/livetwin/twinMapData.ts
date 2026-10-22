@@ -18,7 +18,7 @@ export const STAGE_COLOR: Record<string, string> = {
 
 export const NO_STAGE_COLOR = '#c3ccc6';
 
-export const MACHINE_COLOR: Record<string, string> = { travelling: '#2563eb', working: '#1caa3e', idle: '#c3ccc6', offline: '#e5322d', maintenance: '#e5322d' };
+export const MACHINE_COLOR: Record<string, string> = { travelling: '#006e78', working: '#1caa3e', idle: '#c3ccc6', offline: '#e5322d', maintenance: '#e5322d' };
 
 export const MACHINE_LETTER: Record<string, string> = { drone: 'D', robot: 'R', tractor: 'T', pump: 'P' };
 
