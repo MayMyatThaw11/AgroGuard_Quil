@@ -34,6 +34,7 @@ from .. import (
     dsl,
     evidence,
     fleet,
+    flows,
     fumigation,
     jobs,
     knowledge,
@@ -1400,6 +1401,12 @@ def _harvest(farm_id: str) -> dict[str, Any]:
     if loaded is None or loaded[1]["contract"] is None:
         raise KeyError(farm_id)
     return {"farm_id": farm_id, **cropvalue.harvest_reference(loaded[1]["contract"])}
+
+
+@router.get("/contracts/{farm_id}/flows")
+async def contracts_flows(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(_live_call, flows.farm_flows, farm_id)
 
 
 @router.get("/contracts/{farm_id}/harvest-reference")

@@ -688,6 +688,7 @@ def _build(root: Block, diags: list[dict[str, Any]]) -> dict[str, Any] | None:
                 "crop_id": _scalar(block, "crop_id"),
                 "stage": _scalar(block, "stage"),
                 "planted": _scalar(block, "planted"),
+                "harvest": _scalar(block, "harvest"),
                 "standard": _scalar(block, "standard") or standard,
                 "terms": _terms(block, diags),
                 "conversion": _conversion(block, _scalar(block, "standard") or standard, diags),
