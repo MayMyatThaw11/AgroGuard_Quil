@@ -82,7 +82,7 @@ function backoffDelay(attempt: number, policy: RetryPolicy, retryAfterSeconds?: 
   return Math.floor(Math.random() * ceiling);
 }
 
-function parseRetryAfter(header: string | null): number | undefined {
+export function parseRetryAfter(header: string | null): number | undefined {
   if (!header) return undefined;
   const seconds = Number(header);
   if (Number.isFinite(seconds)) return seconds;

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getFlows, type FarmFlows } from '../../lib/api.ts';
+import { failedText } from '../../lib/apiError.ts';
 import type { ContractSpec } from '../../lib/contractFarm.ts';
 import { flowSummary, type FlowTerm } from '../../lib/farmmap/flowSummary.ts';
 import { PROVENANCE_CLASS, PROVENANCE_LABEL } from '../../lib/provenance.ts';
@@ -19,25 +20,25 @@ const Term: React.FC<{ term: FlowTerm; scale: number }> = ({ term, scale }) => (
 );
 
 export const FlowView: React.FC<{ farmId: string; spec: ContractSpec }> = ({ farmId, spec }) => {
-  const [flows, setFlows] = useState<FarmFlows | 'error' | null>(null);
+  const [data, setData] = useState<FarmFlows | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    setFlows(null);
-    getFlows(farmId).then((f) => alive && setFlows(f), () => alive && setFlows('error'));
+    setData(null);
+    setFailed(null);
+    getFlows(farmId).then((f) => alive && setData(f), (err: unknown) => alive && setFailed(failedText(err, 'Flows are unavailable right now')));
     return () => {
       alive = false;
     };
   }, [farmId]);
   const areas = useMemo(() => Object.fromEntries(spec.parcels.map((p) => [p.id, p.area_ha ?? null])), [spec]);
-  const data = flows && flows !== 'error' ? flows : null;
   const summary = flowSummary(data, areas);
 
-  if (flows === null) return null;
   if (!summary || !data) {
     return (
       <DetailSection>
         <AqSectionLabel>Water and methane flows</AqSectionLabel>
-        <p className="aq-fm-note">{flows === 'error' ? 'Flows are unavailable right now.' : data?.missing?.[0]?.reason ?? 'Add field areas to see the flows.'}</p>
+        <p className="aq-fm-note">{failed ?? (data ? data.missing?.[0]?.reason ?? 'Add field areas to see the flows.' : 'Loading the water and methane flows…')}</p>
       </DetailSection>
     );
   }

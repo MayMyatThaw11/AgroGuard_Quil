@@ -7,8 +7,9 @@
  */
 
 import type { ActuationVerdict, CropCatalog, FarmCheck, LivePlan, OpsPlan, Proposal } from '../data/ops/types';
-import { ApiError } from './apiError.ts';
+import { ApiError, BusyError } from './apiError.ts';
 import type { ContractSpec } from './contractFarm.ts';
+import { parseRetryAfter } from './http.ts';
 import type { DailyWeather } from './signinField.ts';
 
 const BASE = (import.meta.env?.VITE_API_BASE ?? '').replace(/\/$/, '');
@@ -44,15 +45,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
     let code: string | null = null;
+    let explained = false;
     try {
       const body = await res.json();
       const raw = body.detail ?? body;
+      explained = typeof body.detail === 'string';
       detail = typeof raw === 'string' ? raw : JSON.stringify(raw);
       code = typeof body.code === 'string' ? body.code : null;
     } catch {
       /* ignore */
     }
-    throw new ApiError(detail, res.status, code, res.headers.get('x-request-id'));
+    const requestId = res.headers.get('x-request-id');
+    const retryAfter = parseRetryAfter(res.headers.get('retry-after'));
+    // A 503 that names its cause and gives no Retry-After is a server fault the user must read, not load.
+    const busy = res.status === 429 || (res.status === 503 && (retryAfter !== undefined || !explained));
+    if (busy) throw new BusyError(res.status, retryAfter ?? null, code, requestId);
+    throw new ApiError(detail, res.status, code, requestId);
   }
   return (await res.json()) as T;
 }
@@ -457,6 +465,7 @@ export interface RiverCell {
 export interface FarmRisk {
   farm_id: string;
   level: FloodLevel;
+  provider?: string;
   flood_date?: string | null;
   elevation?: { mean_m: number | null; min_m: number | null; max_m: number | null; within_dem_error: boolean | null; accuracy?: string };
   nearest?: RiverCell;

@@ -12,6 +12,26 @@ export class ApiError extends Error {
   }
 }
 
+export function busyText(retryAfterS: number | null): string {
+  const wait = retryAfterS === null ? 0 : Math.ceil(retryAfterS);
+  return wait > 0 ? `Busy, try again in ${wait} s` : 'Busy, try again';
+}
+
+export class BusyError extends ApiError {
+  readonly retryAfterS: number | null;
+
+  constructor(status: number, retryAfterS: number | null, code: string | null = null, requestId: string | null = null) {
+    super(busyText(retryAfterS), status, code, requestId);
+    this.name = 'BusyError';
+    this.retryAfterS = retryAfterS;
+  }
+}
+
+export function failedText(err: unknown, what: string): string {
+  if (err instanceof BusyError) return `${what} · ${err.message}`;
+  return err instanceof ApiError && err.requestId ? `${what} · request ${err.requestId}` : what;
+}
+
 export const SIGN_IN_TO_WRITE = 'Sign in to approve or record anything';
 export const SIGN_IN_TO_APPROVE = 'Sign in to approve';
 
