@@ -1310,7 +1310,7 @@ async def farms_add_certificate(
 
 class FumigationReq(BaseModel):
     store: str = Field(min_length=1, max_length=60, pattern=r"^[^\n|]*$")
-    parcels: list[str] = Field(min_length=1, max_length=50)
+    parcels: list[str] = Field(min_length=1, max_length=500)
     product: str = Field(min_length=1, max_length=80, pattern=r"^[^\n|]*$")
     active_ingredient: str | None = Field(default=None, max_length=80)
     method: Literal["synthetic_chemical", "controlled_atmosphere", "hermetic", "heat", "other"]
