@@ -48,6 +48,7 @@ export interface AdvisoryLocal {
   netDepthMm: number | null;
   mode: string | null;
   cropType: string | null;
+  fieldId: number | null;
   capturedAt: string | null;
 }
 
@@ -216,10 +217,32 @@ export function readAgroguardLocal(storage: StorageReader): { crop: CropLocal | 
           netDepthMm: num(w.netDepthMm),
           mode: str(w.mode),
           cropType: str(w.cropType),
+          fieldId: num(w.fieldId),
           capturedAt: str(w.capturedAt),
         }
       : null;
   return { crop, advisory };
+}
+
+export const PAW_SAN_T_HA: readonly [number, number] = [2.6, 3.37];
+const M2_PER_HA = 10000;
+const PAW_SAN = /paw\s*san/i;
+
+export function advisoryLitres(advisory: AdvisoryLocal | null, linked: number | null, areaHa: number): { litres: number | null; reason: string | null } {
+  const none = (reason: string) => ({ litres: null, reason });
+  if (!advisory) return none('no water advice saved in this browser');
+  if (linked === null) return none('link the AgroGuard field the water advice was made for');
+  if (advisory.fieldId !== linked) return none(`the water advice was made for AgroGuard field ${advisory.fieldId ?? 'unknown'}, not the linked field ${linked}`);
+  if (advisory.netDepthMm === null) return none('the water advice computed no deficit');
+  if (!(areaHa > 0)) return none('the boundary has no measured area');
+  return { litres: Math.round(advisory.netDepthMm * areaHa * M2_PER_HA), reason: null };
+}
+
+export function pawSanHarvest(spec: ContractSpec): { areaHa: number; lowT: number; highT: number } | null {
+  const areaHa = spec.parcels.filter((p) => p.crop && PAW_SAN.test(p.crop)).reduce((s, p) => s + (p.area_ha ?? 0), 0);
+  if (!(areaHa > 0)) return null;
+  const round2 = (v: number) => Math.round(v * 100) / 100;
+  return { areaHa: round2(areaHa), lowT: round2(areaHa * PAW_SAN_T_HA[0]), highT: round2(areaHa * PAW_SAN_T_HA[1]) };
 }
 
 export function linkedField(storage: StorageReader, farmId: string): number | null {

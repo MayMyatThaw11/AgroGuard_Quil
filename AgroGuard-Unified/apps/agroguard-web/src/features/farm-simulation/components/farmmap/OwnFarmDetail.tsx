@@ -3,7 +3,7 @@ import { ChevronDown, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } fro
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
 import { getSatellite, getSummary, type FarmSatellite, type FarmSummary, type MonitoringPaddy } from '../../lib/api.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
-import { AWD_SAFE_DEPTH_CM, farmCentroid, readAgroguardLocal, type OwnStatus } from '../../lib/farmmap/ownFarms.ts';
+import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, pawSanHarvest, readAgroguardLocal, type OwnStatus } from '../../lib/farmmap/ownFarms.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 import { PROVENANCE_CLASS, PROVENANCE_LABEL, type ProvenanceLevel } from '../../lib/provenance.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
@@ -23,6 +23,7 @@ const STATUS: Record<OwnStatus, { tone: 'accent' | 'warning' | 'alert' | 'neutra
 const Prov: React.FC<{ level: ProvenanceLevel }> = ({ level }) => <span className={PROVENANCE_CLASS[level]}>{PROVENANCE_LABEL[level]}</span>;
 
 const cm = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
+const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 1 });
 
 function ago(iso: string | null | undefined): string {
   const minutes = iso ? Math.round((Date.now() - Date.parse(iso)) / 60000) : Number.NaN;
@@ -105,6 +106,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const assessment = farm.field?.latestAssessment ?? null;
   const decisions = summary?.decisions;
   const charted = paddies.filter((p) => p.model?.band && p.model.band_dates.length > 0);
+  const water = advisoryLitres(local.advisory, farm.fieldId, area);
+  const harvest = pawSanHarvest(farm.spec);
 
   return (
     <>
@@ -143,6 +146,17 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           ) : <Tile label="Suggested crop" value="—" level="unavailable" />}
         </div>
       </DetailSection>
+
+      {water.litres !== null || harvest ? (
+        <DetailSection>
+          <div className="aq-fm-tiles">
+            {water.litres !== null ? <Tile label="Water to add" value={fmt(water.litres / 1000)} unit="m³" level="inferred" /> : null}
+            {harvest ? <Tile label="Expected harvest" value={`${fmt(harvest.lowT)}–${fmt(harvest.highT)}`} unit="t" level="inferred" /> : null}
+          </div>
+          {water.litres !== null ? <p className="aq-fm-note">Water: {fmt(water.litres)} L net, before field losses · {local.advisory?.netDepthMm} mm over {area.toFixed(2)} ha</p> : null}
+          {harvest ? <p className="aq-fm-note">Harvest: Paw San {harvest.areaHa} ha × {PAW_SAN_T_HA[0]}–{PAW_SAN_T_HA[1]} t/ha · TO VERIFY</p> : null}
+        </DetailSection>
+      ) : null}
 
       {charted.length > 0 ? (
         <DetailSection>
@@ -216,6 +230,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
             </>
           ) : null}
           {local.advisory ? <KV k="Water advice" v={local.advisory.netDepthMm !== null ? `${local.advisory.netDepthMm} mm deficit` : 'no deficit computed'} sub={`advisory only · this browser · ${ago(local.advisory.capturedAt)}`} /> : null}
+          {water.reason ? <KV k="Water to add" v="Not computed" sub={water.reason} /> : null}
+          {!harvest ? <KV k="Expected harvest" v="Not available" sub={`a range is given only for Paw San (${PAW_SAN_T_HA[0]}–${PAW_SAN_T_HA[1]} t/ha, TO VERIFY)`} /> : null}
           {local.crop ? <KV k="Crop conditions" v={`pH ${local.crop.soilPh} · ${local.crop.rainfallMm} mm · ${local.crop.temperatureC} °C`} sub={`${local.crop.validatedOnFieldData ? 'field-validated' : 'not field-validated'} · ${km(centre, local.crop.lat, local.crop.lon)}`} /> : null}
           {health === 'error' ? <KV k="Health update" v="Unavailable" sub="service not reachable" /> : health ? (
             <KV k="Health update" v={`Looks like ${health.diseaseName ?? health.healthStatus}`} sub={`${health.detection?.confidence != null ? `${Math.round(health.detection.confidence)} % · ` : ''}${health.township ?? km(centre, health.latitude, health.longitude)} · ${ago(health.reportedAt)}`} />

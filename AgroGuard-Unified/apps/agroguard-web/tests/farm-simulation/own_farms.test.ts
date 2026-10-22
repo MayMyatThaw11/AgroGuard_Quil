@@ -4,7 +4,9 @@ import type { ContractSpec } from '../../src/features/farm-simulation/lib/contra
 import {
   contractFeatures,
   farmCentroid,
+  advisoryLitres,
   linkedField,
+  pawSanHarvest,
   paddyInputs,
   parcelStatuses,
   readAgroguardLocal,
@@ -156,4 +158,36 @@ test('each parcel is coloured from its own reading, the farm from all of them', 
   assert.equal(out.P1, 'risk');
   assert.equal(out.P2, 'unknown');
   assert.equal(out[''], 'risk');
+});
+
+const advisory = (netDepthMm: number | null, fieldId: number | null) => ({
+  status: 'irrigate', reasonCode: null, reason: null, dataQuality: 'high', netDepthMm, mode: 'upland', cropType: 'rice', fieldId, capturedAt: NOW.toISOString(),
+});
+
+test('net water to add is the advisory deficit over the boundary area (1 mm on 1 m2 is 1 L)', () => {
+  const out = advisoryLitres(advisory(36, 1), 1, 4.26);
+  assert.ok(out.litres !== null);
+  assert.equal(out.litres, 36 * 42600);
+  assert.equal(out.reason, null);
+});
+
+test('litres stay null with a reason when the advice was made for another field', () => {
+  assert.deepEqual(advisoryLitres(advisory(36, 2), 1, 4.26), { litres: null, reason: 'the water advice was made for AgroGuard field 2, not the linked field 1' });
+  assert.equal(advisoryLitres(advisory(36, 1), null, 4.26).reason, 'link the AgroGuard field the water advice was made for');
+  assert.equal(advisoryLitres(advisory(null, 1), 1, 4.26).reason, 'the water advice computed no deficit');
+  assert.equal(advisoryLitres(null, 1, 4.26).reason, 'no water advice saved in this browser');
+  assert.equal(advisoryLitres(advisory(36, 1), 1, 0).reason, 'the boundary has no measured area');
+});
+
+test('a harvest range is given only for Paw San, from the plan range 2.6 to 3.37 t/ha', () => {
+  const s = spec([SQUARE, SQUARE]);
+  s.parcels[0].crop = 'Paw San Hmwe';
+  s.parcels[0].area_ha = 2;
+  s.parcels[1].crop = 'Sin Thu Kha';
+  const out = pawSanHarvest(s);
+  assert.ok(out);
+  assert.equal(out.areaHa, 2);
+  assert.deepEqual([out.lowT, out.highT], [5.2, 6.74]);
+  s.parcels[0].crop = null;
+  assert.equal(pawSanHarvest(s), null);
 });
