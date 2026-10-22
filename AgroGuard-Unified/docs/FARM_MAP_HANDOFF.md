@@ -64,17 +64,41 @@ Scope set by the owner during this block: ASEAN-wide, small to large farms.
 - **Backtest honesty** (79867c9): the forecast backtest can use the rain forecast issued at the cut (Previous Runs API, field names now verified) and always says which rain it used.
 - **Team review:** Thant Zin Moe's disease-advice commits (b6cddd5, f038cab) are merged clean. One bug fixed in 80f6489: banned names of 3 letters or fewer (DDT, EPN, EDB, HCB, PCP) and the BHC alias were never matched.
 
+## Done on 22 Oct, fourth block
+- **Rolling origins** (d8fb9c8): `backtest.rolling_origin` pools MAE and band coverage over up to 4 cuts, each fit only on earlier days. The neural candidate is still scored on the newest cut only.
+- **B-OP-1 lateness** (23eac20): `lateness_h` is in the schedule summary. On six fields 9.6 km apart with one crew, replayed with real drives and the daylight gate, the travel-aware plan is 96 h late as planned and as executed. The blind plan promises 30 h and delivers 168 h. On the demo coop every drive rounds to 0 h at 5 km/h, so both plans match there.
+- **GLEAM flake** (7dc9e13): with 3 workers, up to threshold + workers - 1 = 5 calls start before the breaker opens, which is 15 file opens. The old bound of 12 was wrong. The worst case measured over 300 threaded trials was 5.
+- **CO2e** (8074508): urea CO2 (IPCC 2006 Eq. 11.13; the 2019 Refinement says no refinement) and CO2e with AR6 GWP-100 (CH4 27.0, N2O 273). N2O and urea are left out, not counted as zero, when no fertiliser is logged. Fuel stays null until litres are logged. Demo farm: 10.7 t CO2e (2.8–32.7), methane only.
+- **Issued rain for /ops/plan** (8503647): fetched when a location is sent. Correction to the last block: the live view never sends a backtest (`liveOps.ts`, `backtest: null`). Only the fixture page calls `/ops/plan`, and its weather is synthetic, so real issued rain would not match it. The real-weather backtest belongs in the model card.
+- **Seasons** (56ccecf): `GET /contracts/{id}/seasons` from NASA POWER monthly normals (2001–2025).
+  - Rule: a month under 60 mm is dry (Peel et al. 2007 Table 1). Dry months above the place's mean temperature are hot dry, the rest cool dry. The temperature split is our rule.
+  - Live: delta hot dry Mar–Apr, rainy May–Oct, cool dry Nov–Feb; Hanoi rainy Apr–Oct, cool dry Nov–Mar; Singapore and Davao wet all year; Bali dry Jun–Oct.
+  - MERRA-2 totals run low (the delta comes out at 927 mm a year), so only the month pattern is used, and no Köppen class is shown.
+- **Yield backtest** (0bb1498, 9c933e2): FAOSTAT rice, 10 ASEAN countries, 2010–2024, 150 held-out pairs, seed 7, replicates exactly.
+
+  | Candidate | MAPE | Within 10 % |
+  |---|---|---|
+  | Persistence | 4.83 % | 89.3 % |
+  | Numpy MLP | 5.18 % | 88.0 % |
+  | 5-year mean | 6.49 % | 84.0 % |
+  | Trend + MLP hybrid | 6.72 % | 83.3 % |
+  | 10-year trend | 6.87 % | 81.3 % |
+
+  - The seven main producers are within 10 % in 105 of 105 years; Brunei and Timor-Leste in 53 %.
+  - The neural models do not beat persistence. The panel shows the persistence check per country (Myanmar 15 of 15, 1.29 %).
+- **Owner requests this block:**
+  - 95 % accuracy everywhere: reported honestly instead. Accuracy is only measured where a category output and real labels exist; regressions get error and coverage.
+  - Root and stem uptake: not built yet. FAO-56 Ch. 8 Ks is next; no sap-flow model without a sensor.
+
 ## Next block, in this order
-1. **Owner decisions:**
-   - `disease_advice_unreviewed_sprays` defaults to true while no review is on file, so every spray shown is unreviewed
-   - the GLEAM breaker flake
-   - the 44 px touch targets
-2. **Wire the issued rain:** call `weather.issued_rain` from the plan caller so live backtests stop being optimistic; then rolling-origin cuts.
-3. **B-OP-1 lateness test:** compare a travel-aware plan against a travel-blind plan executed with real travel times on the fixture farms.
-4. **Panels for the new records:** lots, certificates, fumigations and the evidence pack download.
-5. **GIS deepening** (older list, item 2).
-6. **Rebuild the regions snapshot** (network) so SPI-1/6 and harvest rain fill.
-7. **Retry the live OSM suggestion** when Overpass is not at capacity.
+1. **Owner decision:** `disease_advice_unreviewed_sprays` defaults to true while no review is on file.
+2. **FAO-56 Ch. 8 water stress (Ks):** find and fetch the chapter page (x0490e0d to 0h return 404; 0b and 0c worked) and reduce crop uptake when the root zone dries.
+3. **Model card** (`GET /contracts/{id}/model-card`): forecast backtest with issued rain on real contract weather, yield backtest, decisions, shadow promotion status, B-ML-1 null.
+4. **Heavy use (plan Part 5):** prefix reads for records, atomic lot updates, correct and void records, the in-process load harness (20 farms in the gate), large-farm and seeded invariant tests.
+5. **Records panels:** lots, certificates, fumigations, evidence pack download, roadmap list.
+6. **Polish:** the Today card, translation of the farm map into all 7 locales, 44 px on touch screens, a real "Your farms" roll-up with the sample overview badged.
+7. **Site context endpoint** (ring facts, 50 km coast search, GVP volcanoes, heat days) and SDG indicator mapping.
+8. **Network jobs:** regions snapshot rebuild, live OSM retry.
 
 ## Older ordered list (before this block)
 1. Phase A+ last item: OSM outline suggestion, hidden in the demo.
@@ -124,7 +148,8 @@ Every phase ends with:
 - Screenshot scripts in the scratchpad: `trace.mjs`, `own.mjs` and `own_exp.mjs` (`?experimental`).
 
 ## Known issues
-- `test_gleam_outage_gives_null_with_reasons_and_the_breaker_stops_hammering` is flaky in the full suite. The shared Breaker races; fixing it needs a design decision.
+- Map tiles from openfreemap can fail to load when the network drops. Screenshot scripts wait for `domcontentloaded`, not `load`.
+- Test modules that touch a `RecordCache` must point `data_dir` at a temp folder. The global conftest does not, so a test without the fixture writes into the real dev cache.
 - Mongo is not running locally, so Health Updates shows as unavailable.
 - The Open-Meteo free tier limits requests per minute. A cold flood read for two farms in one minute can return 429. After that the 30-day history cache absorbs it.
 - The high-risk flood alert is unit-tested, but has not yet been seen live, because the current forecast is low.
