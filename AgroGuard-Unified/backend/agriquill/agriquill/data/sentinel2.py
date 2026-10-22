@@ -211,7 +211,16 @@ def scene_stats(
 
 
 def as_series(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return sorted(scenes, key=lambda s: s["datetime"])
+    """One entry per acquisition day: a pass over a tile edge yields one scene per tile."""
+    by_day: dict[str, list[dict[str, Any]]] = {}
+    for scene in scenes:
+        by_day.setdefault(scene["datetime"][:10], []).append(scene)
+    out = []
+    for same_day in by_day.values():
+        best = max(same_day, key=lambda s: s.get("clear_pixels") or 0)
+        others = [s["scene_id"] for s in same_day if s is not best]
+        out.append({**best, "also": others} if others else best)
+    return sorted(out, key=lambda s: s["datetime"])
 
 
 def search(

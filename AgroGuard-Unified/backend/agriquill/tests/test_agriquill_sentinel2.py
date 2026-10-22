@@ -138,6 +138,30 @@ def test_series_keeps_cloudy_dates_as_gaps_in_date_order():
     assert all(s["scene_id"] for s in series)
 
 
+def test_one_pass_seen_by_two_tiles_counts_once_keeping_the_clearer_scene():
+    def scene(sid: str, when: str, clear: int, ndvi: float | None) -> dict:
+        status = "clear" if ndvi is not None else "cloudy"
+        return {
+            "scene_id": sid,
+            "datetime": when,
+            "status": status,
+            "clear_pixels": clear,
+            "ndvi": ndvi,
+            "ndwi": None,
+        }
+
+    series = sentinel2.as_series(
+        [
+            scene("S2A_46QGE_20261018", "2026-10-18T04:23:09Z", 40, 0.79),
+            scene("S2A_47QKV_20261018", "2026-10-18T04:23:05Z", 120, 0.78),
+            scene("S2A_46QGE_20261013", "2026-10-13T04:23:09Z", 0, None),
+        ]
+    )
+    assert [s["scene_id"] for s in series] == ["S2A_46QGE_20261013", "S2A_47QKV_20261018"]
+    assert series[1]["also"] == ["S2A_46QGE_20261018"]
+    assert "also" not in series[0]
+
+
 def test_physically_impossible_pixels_are_dropped_and_counted_never_averaged():
     red, nir, green, scl = _bands(0.05, 0.45, 0.08, 4)
     red[:, :2] = 300
