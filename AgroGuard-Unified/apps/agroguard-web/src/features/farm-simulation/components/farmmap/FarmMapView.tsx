@@ -1,7 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Marker } from 'maplibre-gl';
-import { X } from 'lucide-react';
+import { PenLine, X } from 'lucide-react';
 import type { Filters, MapView, PickTarget } from '../../lib/farmmap/engine/engineTypes.ts';
 import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
 import type { LayerKey } from '../../lib/farmmap/farmMapLayerKeys.ts';
@@ -11,6 +11,7 @@ import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 import { applyPanelToggle, type PanelState, type PanelToggle } from '../../lib/panelShortcuts.ts';
 import { usePanelShortcuts } from '../../lib/usePanelShortcuts.ts';
 import { AqPanel, AqReopen } from '../aq/aqLayout.tsx';
+import { AqButton } from '../aq/aqPrimitives.tsx';
 import { TechniqueFit } from '../site/TechniqueFit.tsx';
 import { BootScreen } from './BootScreen.tsx';
 import { DetailSection } from './detailParts.tsx';
@@ -27,8 +28,11 @@ import { Minimap } from './Minimap.tsx';
 import { OfflineBanner } from './OfflineBanner.tsx';
 import { OverviewPanel } from './OverviewPanel.tsx';
 import { OwnFarmDetail } from './OwnFarmDetail.tsx';
+import { TraceDetail } from './TraceDetail.tsx';
 import { useOwnFarms } from './useOwnFarms.ts';
+import { useTrace } from './useTrace.ts';
 import { farmCentroid } from '../../lib/farmmap/ownFarms.ts';
+import { TRACE_MIN_ZOOM } from '../../lib/farmmap/trace.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { PoiDetail } from './PoiDetail.tsx';
 import { RoutePanel } from './RoutePanel.tsx';
@@ -79,6 +83,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const [panels, setPanels] = useState<PanelState>({ left: true, right: true });
   const [offline, setOffline] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
+  const [tracing, setTracing] = useState(false);
   const toasts = useToasts();
   const { push } = toasts;
 
@@ -129,9 +134,23 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
     setSpot(spotAt(centre.lat, centre.lng));
   }, [engine, pick, planner]);
 
+  const trace = useTrace(engine, tracing);
+  const startTrace = () => {
+    pick(null);
+    planner.dismiss();
+    trace.clear();
+    setView('sat');
+    setPanels({ left: false, right: true });
+    setTracing(true);
+  };
+  const stopTrace = () => {
+    setTracing(false);
+    trace.clear();
+  };
+
   useEffect(() => {
-    pickRef.current = pick;
-  }, [pick]);
+    pickRef.current = tracing ? () => undefined : pick;
+  }, [pick, tracing]);
 
   const pickSearch = (result: SearchResult) => {
     if (result.kind === 'farm') pick({ kind: 'farm', id: result.id });
@@ -199,12 +218,12 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const surroundings = useSurroundings(engine, farm?.lat ?? Number.NaN, farm?.lon ?? Number.NaN);
   const poi = selection?.kind === 'poi' ? data.poiById[selection.id] : null;
   const ownFarm = selection?.kind === 'own' ? ownFarms.find((f) => f.id === selection.id) ?? null : null;
-  const rightKey = route ? 'route' : selection ? `${selection.kind}-${selection.id}` : spot ? `site-${spot.lat}-${spot.lon}` : 'overview';
+  const rightKey = tracing ? 'trace' : route ? 'route' : selection ? `${selection.kind}-${selection.id}` : spot ? `site-${spot.lat}-${spot.lon}` : 'overview';
   const setLayer = (key: LayerKey, on: boolean) => setLayers((current) => ({ ...current, [key]: on }));
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
 
   return (
-    <div ref={rootRef} className="aq-root aq-farmmap">
+    <div ref={rootRef} className={`aq-root aq-farmmap${tracing ? ' is-tracing' : ''}`}>
       <div className="aq-fm-stage">
         <div ref={mapRef} className="aq-fm-map" />
         <canvas ref={fogRef} className="aq-fm-fog" aria-hidden="true" />
@@ -240,13 +259,34 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       <div className="aq-fm-right">
         {panels.right ? (
           <AqPanel label="Farm map details" side="right" hideLabel="Hide details panel ( ] )" onHide={() => togglePanels('right')}>
-            {(selection || spot) && !route ? (
+            {(selection || spot) && !route && !tracing ? (
               <button type="button" className="aq-fm-close aq-icon-btn" aria-label="Close details (Esc)" onClick={() => pick(null)}>
                 <X size={15} aria-hidden="true" />
               </button>
             ) : null}
             <div key={rightKey} className="aq-panel-scroll aq-fm-right-body aq-fm-slide">
-              {route ? (
+              {tracing ? (
+                <TraceDetail
+                  corners={trace.corners}
+                  zoom={stats.zoom}
+                  onZoomIn={() => {
+                    const centre = engine?.map().getCenter();
+                    if (centre) engine?.fly({ center: [centre.lng, centre.lat], zoom: TRACE_MIN_ZOOM + 2, duration: 1800 });
+                  }}
+                  onUndo={trace.undo}
+                  onClear={trace.clear}
+                  onCancel={stopTrace}
+                  onSaved={(farmId) => {
+                    const corners = trace.corners;
+                    const lat = corners.reduce((s, c) => s + c[0], 0) / corners.length;
+                    const lon = corners.reduce((s, c) => s + c[1], 0) / corners.length;
+                    stopTrace();
+                    own.reload();
+                    pick({ kind: 'own', farm: farmId }, true);
+                    engine?.fly({ center: [lon, lat], zoom: 16, duration: 1800 });
+                  }}
+                />
+              ) : route ? (
                 <RoutePanel route={route} onChange={planner.patch} onClose={planner.close} onStart={planner.start} />
               ) : farm && selection?.kind === 'farm' ? (
                 <FarmDetail farm={farm} field={selection.field} onRoute={planner.open} onFocus={() => engine?.focusFarm(farm)} onPick={pick} onOpenOps={onOpenOps} surroundings={surroundings} />
@@ -261,7 +301,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                 />
               ) : selection?.kind === 'own' ? (
                 <DetailSection>
-                  <p className="aq-fm-note">This farm is no longer listed. It may have been removed or the Farm Simulation API is not reachable.</p>
+                  <p className="aq-fm-note">Loading this farm. If it does not appear, it may have been removed or the farm map API is not reachable.</p>
                 </DetailSection>
               ) : poi ? (
                 <PoiDetail poi={poi} onRoute={planner.open} onPick={pick} />
@@ -280,7 +320,8 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                   <DetailSection>
                     <AqSectionLabel aside={own.error ? 'unavailable' : String(yours.length)}>Your farms</AqSectionLabel>
                     {own.error ? <p className="aq-fm-note">Could not load your farms: {own.error}</p> : null}
-                    {!own.error && yours.length === 0 ? <p className="aq-fm-note">No farm onboarded yet. Import your boundary file to see a replica of your real farm here.</p> : null}
+                    {!own.error && yours.length === 0 ? <p className="aq-fm-note">No farm onboarded yet. Trace your field or import a boundary file to see a replica of your real farm here.</p> : null}
+                    <AqButton onClick={startTrace}><PenLine size={14} aria-hidden="true" />Trace your field</AqButton>
                     {[...yours, ...demos].map((f) => (
                       <button key={f.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'own', farm: f.id })}>
                         <i className={`aq-fm-flag is-${f.status}`} aria-hidden="true" />

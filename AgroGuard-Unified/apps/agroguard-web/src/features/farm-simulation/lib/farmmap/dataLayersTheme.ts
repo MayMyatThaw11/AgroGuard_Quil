@@ -6,7 +6,7 @@ import type { PoiType } from './farmMapTypes.ts';
 
 export const OVERVIEW_ZOOM = 5.4;
 
-export const PLAIN_SOURCES = ['aq-soil', 'aq-fields', 'aq-bounds', 'aq-canals', 'aq-risk', 'aq-wx', 'aq-temps', 'aq-pois', 'aq-regions', 'aq-route', 'aq-route-pts', 'aq-veh', 'aq-sel', 'aq-own'];
+export const PLAIN_SOURCES = ['aq-soil', 'aq-fields', 'aq-bounds', 'aq-canals', 'aq-risk', 'aq-wx', 'aq-temps', 'aq-pois', 'aq-regions', 'aq-route', 'aq-route-pts', 'aq-veh', 'aq-sel', 'aq-own', 'aq-trace'];
 
 export interface LayerEntry {
   spec: LayerSpecification;
@@ -114,6 +114,16 @@ function ownLayers(): LayerEntry[] {
   ];
 }
 
+function traceLayers(): LayerEntry[] {
+  const polygon = ex('==', ['geometry-type'], 'Polygon');
+  return [
+    { spec: { id: 'trace-fill', type: 'fill', source: 'aq-trace', filter: polygon, paint: { 'fill-color': MAP_COLOR.white, 'fill-opacity': 0.18 } } },
+    { spec: { id: 'trace-casing', type: 'line', source: 'aq-trace', filter: polygon, layout: round, paint: { 'line-color': MAP_COLOR.ink, 'line-width': 5 } } },
+    { spec: { id: 'trace-line', type: 'line', source: 'aq-trace', filter: polygon, layout: round, paint: { 'line-color': MAP_COLOR.white, 'line-width': 2, 'line-dasharray': [2, 1.5] } } },
+    { spec: { id: 'trace-corner', type: 'circle', source: 'aq-trace', filter: ex('==', ['geometry-type'], 'Point'), paint: { 'circle-radius': 6, 'circle-color': MAP_COLOR.white, 'circle-stroke-color': MAP_COLOR.ink, 'circle-stroke-width': 2.5 } } },
+  ];
+}
+
 export function buildDataLayers(): LayerEntry[] {
   const ground = groundLayers();
   const poiLayers = [
@@ -121,5 +131,5 @@ export function buildDataLayers(): LayerEntry[] {
     poiLayer('poi-mill', 'mill', 8.5), poiLayer('poi-market', 'market', 7.5), poiLayer('poi-livestock', 'livestock', 12),
     poiLayer('poi-machine', 'machine', 11.5),
   ];
-  return [...ground, ...overlayLayers(), ...poiLayers, ...pinLayers(), ...ownLayers()];
+  return [...ground, ...overlayLayers(), ...poiLayers, ...pinLayers(), ...ownLayers(), ...traceLayers()];
 }

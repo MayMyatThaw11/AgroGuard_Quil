@@ -72,6 +72,15 @@
   gap: var(--aq-space-3);
 }
 
+.aq-fm-trace-field {
+  display: grid;
+  gap: var(--aq-space-1);
+}
+
+.aq-farmmap.is-tracing .aq-fm-map canvas {
+  cursor: crosshair !important;
+}
+
 .aq-fm-tiles {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

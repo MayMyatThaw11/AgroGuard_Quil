@@ -205,6 +205,10 @@
     left: var(--aq-fm-gutter);
     width: auto;
   }
+
+  .aq-farmmap.is-tracing .aq-fm-right {
+    top: 55%;
+  }
 }
 
 .aq-fm-left > *,

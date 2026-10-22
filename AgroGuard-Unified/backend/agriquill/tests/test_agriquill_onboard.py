@@ -114,6 +114,28 @@ def log_inputs(tmp_path: Path, rows: list[str], utc_offset: str | None = None) -
     return onboard.import_inputs(FARM, sheet, utc_offset, "Ko Aung")
 
 
+def test_a_boundary_traced_on_the_farm_map_round_trips(tmp_path: Path):
+    traced = [[96.13, 19.75], [96.131, 19.75], [96.131, 19.751], [96.13, 19.751], [96.13, 19.75]]
+    doc = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {"field": "Plot A", "source": "traced on the farm map"},
+                "geometry": {"type": "Polygon", "coordinates": [traced]},
+            }
+        ],
+    }
+    rings = onboard.read_boundaries(write(tmp_path / "traced.geojson", json.dumps(doc)))
+    assert list(rings) == ["Plot-A"]
+    assert rings["Plot-A"][0] == [19.75, 96.13] == rings["Plot-A"][-1]
+    assert contract.ring_area_ha(rings["Plot-A"]) == 1.158
+    bow_tie = [[96.13, 19.75], [96.131, 19.751], [96.131, 19.75], [96.13, 19.751], [96.13, 19.75]]
+    doc["features"][0]["geometry"]["coordinates"] = [bow_tie]
+    with pytest.raises(ValueError, match="edges cross"):
+        onboard.read_boundaries(write(tmp_path / "bad.geojson", json.dumps(doc)))
+
+
 def test_boundaries_become_closed_lat_lon_rings(tmp_path: Path):
     geo = {
         "type": "FeatureCollection",

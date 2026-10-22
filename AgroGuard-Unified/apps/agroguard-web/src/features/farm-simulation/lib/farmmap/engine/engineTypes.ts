@@ -1,3 +1,4 @@
+import type { FeatureCollection } from 'geojson';
 import type { LngLat, Map as MapLibreMap } from 'maplibre-gl';
 import type { FarmMap } from '../farmMapData.ts';
 import type { LayerFlags } from '../farmMapLayerKeys.ts';
@@ -165,6 +166,7 @@ export interface FarmMapEngine {
   inView: () => Farm[];
   setLayers: (flags: LayerFlags) => void;
   setOwnFarms: (features: OwnFeatures) => void;
+  setTrace: (features: FeatureCollection) => void;
   setView: (view: MapView) => void;
   setFilters: (filters: Filters) => void;
   setOffline: (offline: boolean) => void;

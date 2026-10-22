@@ -1,5 +1,6 @@
 import { Map as MapLibreMap, AttributionControl, setWorkerUrl } from 'maplibre-gl';
 import type { GeoJSONSource } from 'maplibre-gl';
+import type { FeatureCollection } from 'geojson';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { basemapStyle } from '../basemapTheme.ts';
 import { basemapImage } from '../basemapImagesTheme.ts';
@@ -57,9 +58,11 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
   let unbind: (() => void) | null = null;
   let stopped = false;
   let own: OwnFeatures = { polygons: [], points: [] };
+  let trace: FeatureCollection = { type: 'FeatureCollection', features: [] };
   const paintOwn = () => {
     const source = map.getSource('aq-own') as GeoJSONSource | undefined;
     source?.setData({ type: 'FeatureCollection', features: [...own.polygons, ...own.points] });
+    (map.getSource('aq-trace') as GeoJSONSource | undefined)?.setData(trace);
   };
 
   const loop = (now: number) => {
@@ -108,6 +111,10 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     setLayers: (flags) => setLayers(ctx, flags),
     setOwnFarms: (features) => {
       own = features;
+      if (ctx.state.ready) paintOwn();
+    },
+    setTrace: (features) => {
+      trace = features;
       if (ctx.state.ready) paintOwn();
     },
     setView: (view) => setView(ctx, view),
