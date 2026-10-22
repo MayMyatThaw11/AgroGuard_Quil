@@ -93,7 +93,7 @@
 
 .aq-fm-kv {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(6.5em, 40%) minmax(0, 1fr);
   gap: var(--aq-space-4);
   align-items: baseline;
   width: 100%;
@@ -143,6 +143,7 @@
 .aq-fm-kv-sub {
   color: var(--aq-text-muted);
   font: var(--aq-type-caption);
+  overflow-wrap: anywhere;
 }
 
 .aq-fm-soil {
