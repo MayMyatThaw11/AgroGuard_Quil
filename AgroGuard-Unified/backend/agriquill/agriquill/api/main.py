@@ -39,6 +39,7 @@ from .. import (
     jobs,
     knowledge,
     live,
+    lots,
     ml,
     onboard,
     ops,
@@ -1339,6 +1340,82 @@ async def farms_add_fumigation(
         raise HTTPException(status_code=404, detail="no contract for this farm") from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+LotId = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,40}$")
+
+
+class LotReq(BaseModel):
+    id: str = LotId
+    parcels: list[str] = Field(min_length=1, max_length=500)
+    harvested_on: date
+    mass_kg: float = Field(gt=0, le=10_000_000)
+    certifier: str | None = Field(default=None, max_length=80)
+    recorded_by: str = Field(min_length=1, max_length=80)
+
+
+class MoistureReq(BaseModel):
+    measured_at: datetime
+    moisture_pct: float = Field(ge=5, le=40)
+    drying_method: Literal["sun", "flatbed", "recirculating", "none", "other"] = "none"
+    storage: Literal["hermetic", "sack", "bin", "silo", "other"] | None = None
+    recorded_by: str = Field(min_length=1, max_length=80)
+
+
+class MillReq(BaseModel):
+    broken_pct: float = Field(ge=0, le=100)
+    grade: str | None = Field(default=None, max_length=60)
+    moisture_pct: float | None = Field(default=None, ge=5, le=40)
+    buyer_max_broken_pct: float | None = Field(default=None, ge=0, le=100)
+    buyer_max_moisture_pct: float | None = Field(default=None, ge=5, le=40)
+    recorded_by: str = Field(min_length=1, max_length=80)
+
+
+def _lot_call(fn: Any, *args: Any) -> dict[str, Any]:
+    try:
+        return fn(*args)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"not found: {exc.args[0]}") from exc
+    except lots.LotConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/farms/{farm_id}/lots")
+async def farms_lots(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(lots.farm_lots, farm_id)
+
+
+@router.post("/farms/{farm_id}/lots")
+async def farms_add_lot(farm_id: str, req: LotReq, caller: Caller = _AS_MANAGER) -> dict[str, Any]:
+    _named(caller, req.recorded_by)
+    _own(caller, farm_id)
+    body = req.model_dump(mode="json", exclude={"recorded_by"})
+    return await asyncio.to_thread(_lot_call, lots.record, farm_id, body, req.recorded_by)
+
+
+@router.post("/farms/{farm_id}/lots/{lot_id}/moisture")
+async def farms_lot_moisture(
+    farm_id: str, lot_id: str, req: MoistureReq, caller: Caller = _AS_CREW
+) -> dict[str, Any]:
+    _named(caller, req.recorded_by)
+    _own(caller, farm_id)
+    body = req.model_dump(mode="json", exclude={"recorded_by"})
+    return await asyncio.to_thread(
+        _lot_call, lots.add_moisture, farm_id, lot_id, body, req.recorded_by
+    )
+
+
+@router.post("/farms/{farm_id}/lots/{lot_id}/mill")
+async def farms_lot_mill(
+    farm_id: str, lot_id: str, req: MillReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    _named(caller, req.recorded_by)
+    _own(caller, farm_id)
+    body = req.model_dump(mode="json", exclude={"recorded_by"})
+    return await asyncio.to_thread(_lot_call, lots.add_mill, farm_id, lot_id, body, req.recorded_by)
 
 
 @router.get("/contracts/{farm_id}/monitoring")
