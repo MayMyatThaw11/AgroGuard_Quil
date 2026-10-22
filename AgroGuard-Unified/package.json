@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node scripts/start.mjs",
     "stop": "node scripts/stop.mjs",
-    "verify": "npm run verify --prefix gateway"
+    "verify": "npm run verify --prefix gateway",
+    "verify:farm-map": "node scripts/verify-farm-map.mjs"
   }
 }
