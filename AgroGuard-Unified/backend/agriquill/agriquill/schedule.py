@@ -9,7 +9,7 @@ from .config import get_settings
 from .gates import DEFAULT_GATES, window_mask
 
 PRIORITY_WEIGHT = {"high": 100, "medium": 30, "low": 10}
-SLACK_DAYS = {"irrigate": 1, "drain": 1, "scout": 2, "harvest": 2, "spray": 3}
+SLACK_DAYS = {"irrigate": 1, "drain": 1, "scout": 2, "harvest": 2, "spray": 3, "dry": 1}
 DEFAULT_DURATION_H = 1
 # Walking pace along the bunds; a farm that drives or rides declares travel_kmh. TO VERIFY.
 DEFAULT_TRAVEL_KMH = 5.0
@@ -27,6 +27,8 @@ def task_kind(task: Mapping[str, Any]) -> str | None:
         return "irrigate"
     if actuation.get("target") == "sluice_gate":
         return "drain"
+    if actuation.get("target") == "dryer":
+        return "dry"
     if task.get("agent") == "harvest_planner" and task.get("asset_id"):
         return "harvest"
     if task.get("agent") == "crop_scout":
