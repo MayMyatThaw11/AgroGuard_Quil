@@ -143,3 +143,61 @@ def test_nearby_fields_and_unknown_positions_cost_no_travel():
 
 def test_faster_travel_shortens_the_gap():
     assert schedule.travel_hours(FAR["PD-1"], FAR["PD-2"], 20) == 0
+
+
+SPREAD = {f"PD-{i}": (16.0, 95.0 + 0.09 * i) for i in range(1, 7)}  # about 9.6 km steps
+
+
+def executed_lateness(out, positions, is_day, kmh=5.0):
+    """Replay a plan with real drives: the crew starts once it has arrived, in daylight only."""
+    done = sorted(
+        (t for t in out["tasks"] if t["schedule"]["status"] == "scheduled"),
+        key=lambda t: t["schedule"]["start_index"],
+    )
+    total, free_at, last = 0, None, None
+    for t in done:
+        start, hours = t["schedule"]["start_index"], t["schedule"]["duration_h"]
+        if free_at is not None:
+            gap = schedule.travel_hours(positions[last], positions[t["paddy_id"]], kmh)
+            start = max(start, free_at + gap)
+        while not all(is_day[start : start + hours]) or start + hours > len(is_day):
+            start += 1
+        total += abs(start - (24 * t["day_offset"] + 6))
+        free_at, last = start + t["schedule"]["duration_h"], t["paddy_id"]
+    return total
+
+
+def stops(positions):
+    return [
+        task(f"w{n}", 0, "irrigation_valve", f"P-{n}", paddy=pid) for n, pid in enumerate(positions)
+    ]
+
+
+def test_travel_aware_plans_are_less_late_once_the_drives_are_real():
+    kw = {"durations_h": {"irrigate": 2}, "crew": 1, "travel_kmh": 5.0}
+    day = hourly(days=3)
+    aware = schedule.solve(stops(SPREAD), day, positions=SPREAD, **kw)
+    blind = schedule.solve(stops(SPREAD), day, positions=None, **kw)
+    aware_late = executed_lateness(aware, SPREAD, day["is_day"])
+    assert aware_late == aware["summary"]["lateness_h"]
+    assert aware_late < executed_lateness(blind, SPREAD, day["is_day"])
+    assert blind["summary"]["lateness_h"] < executed_lateness(blind, SPREAD, day["is_day"])
+
+
+def test_fields_within_walking_rounding_gain_nothing_from_travel():
+    from pathlib import Path
+
+    from agriquill import contract
+
+    text = (Path(__file__).resolve().parents[1] / "parcels" / "delta_demo_coop.agri").read_text(
+        encoding="utf-8"
+    )
+    positions = contract.parcel_positions(contract.verify(text)["contract"])
+    kw = {"durations_h": {"irrigate": 2}, "crew": 1, "travel_kmh": 5.0}
+    day = hourly(days=3)
+    aware = schedule.solve(stops(positions), day, positions=positions, **kw)
+    blind = schedule.solve(stops(positions), day, positions=None, **kw)
+    assert aware["summary"]["lateness_h"] == blind["summary"]["lateness_h"]
+    assert executed_lateness(aware, positions, day["is_day"]) == executed_lateness(
+        blind, positions, day["is_day"]
+    )

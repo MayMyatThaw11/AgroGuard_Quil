@@ -250,6 +250,9 @@ def solve(
             "scheduled": sum(1 for t in out if t["schedule"]["status"] == "scheduled"),
             "blocked": sum(1 for t in out if t["schedule"]["status"] == "blocked"),
             "objective": solver.ObjectiveValue(),
+            "lateness_h": sum(
+                solver.Value(j["lateness"]) for j in jobs if solver.Value(j["present"])
+            ),
         },
     }
 
