@@ -1359,6 +1359,19 @@ async def contracts_risk(farm_id: str, caller: Caller | None = _READER) -> dict[
     return await asyncio.to_thread(_live_call, live.risk, farm_id)
 
 
+def _harvest(farm_id: str) -> dict[str, Any]:
+    loaded = live.load(farm_id)
+    if loaded is None or loaded[1]["contract"] is None:
+        raise KeyError(farm_id)
+    return {"farm_id": farm_id, **cropvalue.harvest_reference(loaded[1]["contract"])}
+
+
+@router.get("/contracts/{farm_id}/harvest-reference")
+async def contracts_harvest(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(_live_call, _harvest, farm_id)
+
+
 @router.get("/contracts/{farm_id}/radar")
 async def contracts_radar(
     farm_id: str, days: int = Query(60, ge=24, le=120), caller: Caller | None = _READER

@@ -1,4 +1,4 @@
-import type { FarmMonitoring } from '../api.ts';
+import type { FarmMonitoring, HarvestReference } from '../api.ts';
 import type { ContractSpec } from '../contractFarm.ts';
 import type { FarmStatus, PointFeature, PolygonFeature, Position } from './farmMapTypes.ts';
 
@@ -243,6 +243,18 @@ export function pawSanHarvest(spec: ContractSpec): { areaHa: number; lowT: numbe
   if (!(areaHa > 0)) return null;
   const round2 = (v: number) => Math.round(v * 100) / 100;
   return { areaHa: round2(areaHa), lowT: round2(areaHa * PAW_SAN_T_HA[0]), highT: round2(areaHa * PAW_SAN_T_HA[1]) };
+}
+
+export function nationalHarvest(ref: HarvestReference | null): { areaHa: number; lowT: number; highT: number; year: number | null } | null {
+  const priced = (ref?.parcels ?? []).filter((p) => p.tonnes);
+  if (priced.length === 0) return null;
+  const round2 = (v: number) => Math.round(v * 100) / 100;
+  return {
+    areaHa: round2(priced.reduce((s, p) => s + (p.area_ha ?? 0), 0)),
+    lowT: round2(priced.reduce((s, p) => s + (p.tonnes?.[0] ?? 0), 0)),
+    highT: round2(priced.reduce((s, p) => s + (p.tonnes?.[1] ?? 0), 0)),
+    year: priced[0].yield?.year ?? null,
+  };
 }
 
 export function linkedField(storage: StorageReader, farmId: string): number | null {

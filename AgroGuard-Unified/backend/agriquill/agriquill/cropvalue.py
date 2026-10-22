@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .data import ecocrop, fao_pack, pinksheet, regions
@@ -128,13 +129,80 @@ def _yield(iso3: str, item: str | None) -> dict[str, Any]:
     factor = {"kg/ha": 0.001, "t/ha": 1.0, "hg/ha": 0.0001}.get(last["unit"])
     if factor is None:
         return {"t_ha": None, "reason": f"unexpected FAOSTAT unit {last['unit']}"}
+    recent = [r["value"] * factor for r in rows if r["year"] > last["year"] - 5]
     return {
         "t_ha": round(last["value"] * factor, 3),
+        "t_ha_5y": [round(min(recent), 3), round(max(recent), 3)],
         "year": last["year"],
         "flag": last["flag"],
         "flag_meaning": last["flag_meaning"],
         "item": last["item"],
         "source": out.get("source"),
+    }
+
+
+CROP_WORDS: dict[str, tuple[str, ...]] = {
+    "rice": ("rice", "paddy", "paw san", "oryza"),
+    "maize": ("maize", "corn"),
+    "coffee": ("coffee",),
+    "rubber": ("rubber",),
+    "cocoa": ("cocoa", "cacao"),
+    "palm": ("oil palm", "palm oil"),
+    "sugarcane": ("sugar cane", "sugarcane"),
+    "tea": ("tea",),
+    "cassava": ("cassava", "tapioca"),
+    "durian": ("durian",),
+}
+HARVEST_NOTE = (
+    "National average yield from FAOSTAT times the field area. It is a reference for the "
+    "country, not a forecast for this field."
+)
+
+
+def crop_option(crop: str | None) -> dict[str, Any] | None:
+    words = re.findall(r"[a-z]+", (crop or "").lower().replace("_", " "))
+    text = " ".join(words)
+    for spec in CROP_OPTIONS:
+        if any(re.search(rf"\b{w}\b", text) for w in CROP_WORDS[spec["id"]]):
+            return spec
+    return None
+
+
+def harvest_reference(spec: dict[str, Any]) -> dict[str, Any]:
+    """Per parcel: area times the national FAOSTAT yield for the farm's own country and crop."""
+    country = (spec.get("farm") or {}).get("country")
+    try:
+        iso3 = fao_pack.resolve_country(str(country)) if country else None
+    except KeyError:
+        iso3 = None
+    parcels = []
+    for p in spec.get("parcels", []):
+        option = crop_option(p.get("crop") or p.get("crop_id"))
+        area = p.get("area_ha")
+        row: dict[str, Any] = {"parcel": p["id"], "crop": p.get("crop"), "tonnes": None}
+        if iso3 is None:
+            row["reason"] = f"country {country!r} is not an ASEAN member in the FAOSTAT pack"
+        elif option is None:
+            row["reason"] = "crop not matched to a FAOSTAT item"
+        elif not area:
+            row["reason"] = "field area unknown"
+        else:
+            found = _yield(iso3, option["faostat"])
+            row["yield"] = found
+            if found.get("t_ha") is None:
+                row["reason"] = found["reason"]
+            else:
+                lo, hi = found["t_ha_5y"]
+                row["tonnes"] = [round(area * lo, 2), round(area * hi, 2)]
+                row["area_ha"] = area
+        parcels.append(row)
+    name = fao_pack.COUNTRIES[iso3]["name"] if iso3 else None
+    return {
+        "country": iso3,
+        "country_name": name,
+        "parcels": parcels,
+        "note": HARVEST_NOTE,
+        "provenance": "modelled",
     }
 
 

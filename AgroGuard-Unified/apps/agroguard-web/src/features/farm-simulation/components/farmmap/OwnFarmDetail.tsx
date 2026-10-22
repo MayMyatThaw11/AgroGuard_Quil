@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
-import { getRadar, getRisk, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type MonitoringPaddy, type RiverCell } from '../../lib/api.ts';
+import { getHarvestReference, getRadar, getRisk, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type HarvestReference, type MonitoringPaddy, type RiverCell } from '../../lib/api.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
-import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, pawSanHarvest, readAgroguardLocal, type OwnStatus } from '../../lib/farmmap/ownFarms.ts';
+import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, nationalHarvest, pawSanHarvest, readAgroguardLocal, type OwnStatus } from '../../lib/farmmap/ownFarms.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 import { PROVENANCE_CLASS, PROVENANCE_LABEL, type ProvenanceLevel } from '../../lib/provenance.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
@@ -25,6 +25,7 @@ const Prov: React.FC<{ level: ProvenanceLevel }> = ({ level }) => <span classNam
 
 const cm = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 1 });
+const span = (lo: number, hi: number) => (fmt(lo) === fmt(hi) ? `${lo.toFixed(2)}–${hi.toFixed(2)}` : `${fmt(lo)}–${fmt(hi)}`);
 
 function ago(iso: string | null | undefined): string {
   const minutes = iso ? Math.round((Date.now() - Date.parse(iso)) / 60000) : Number.NaN;
@@ -92,6 +93,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const [fieldDraft, setFieldDraft] = useState('1');
   const [radar, setRadar] = useState<FarmRadar | 'error' | null>(null);
   const [risk, setRisk] = useState<FarmRisk | 'error' | null>(null);
+  const [yieldRef, setYieldRef] = useState<HarvestReference | null>(null);
   const centre = useMemo(() => farmCentroid(farm.spec), [farm.spec]);
   const local = useMemo(() => {
     const storage = browserStorage();
@@ -107,6 +109,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
     setRadar(null);
     setRisk(null);
     getRisk(farm.id).then((r) => alive && setRisk(r), () => alive && setRisk('error'));
+    setYieldRef(null);
+    getHarvestReference(farm.id).then((r) => alive && setYieldRef(r), () => alive && setYieldRef(null));
     if (EXPERIMENTAL) getRadar(farm.id).then((r) => alive && setRadar(r), () => alive && setRadar('error'));
     return () => {
       alive = false;
@@ -131,6 +135,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const charted = paddies.filter((p) => p.model?.band && p.model.band_dates.length > 0);
   const water = advisoryLitres(local.advisory, farm.fieldId, area);
   const harvest = pawSanHarvest(farm.spec);
+  const national = harvest ? null : nationalHarvest(yieldRef);
   const flood = risk && risk !== 'error' ? risk : null;
   const elev = flood?.elevation?.mean_m ?? null;
   const actions = (flood?.parcels ?? []).filter((p) => p.advice.action !== 'none');
@@ -176,7 +181,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
         </div>
       </DetailSection>
 
-      {water.litres !== null || harvest || risk ? (
+      {water.litres !== null || harvest || national || risk ? (
         <DetailSection>
           <div className="aq-fm-tiles">
             {risk ? (
@@ -189,9 +194,11 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
             ) : null}
             {water.litres !== null ? <Tile label="Water to add" value={fmt(water.litres / 1000)} unit="m³" level="inferred" /> : null}
             {harvest ? <Tile label="Expected harvest" value={`${fmt(harvest.lowT)}–${fmt(harvest.highT)}`} unit="t" level="inferred" /> : null}
+            {national ? <Tile label="Harvest at national yield" value={span(national.lowT, national.highT)} unit="t" level="modelled" /> : null}
           </div>
           {water.litres !== null ? <p className="aq-fm-note">Water: {fmt(water.litres)} L net, before field losses · {local.advisory?.netDepthMm} mm over {area.toFixed(2)} ha</p> : null}
           {harvest ? <p className="aq-fm-note">Harvest: Paw San {harvest.areaHa} ha × {PAW_SAN_T_HA[0]}–{PAW_SAN_T_HA[1]} t/ha · TO VERIFY</p> : null}
+          {national ? <p className="aq-fm-note">Harvest: {national.areaHa} ha × FAOSTAT {yieldRef?.country_name} 5-year yield range to {national.year ?? '?'} · a national reference, not a forecast for this field</p> : null}
           {actions.map((p) => (
             <div key={`flood-${p.id}`} className={`aq-alert ${p.advice.action === 'harvest_early' ? 'is-warning' : 'is-error'}`} role="status">
               <span><b>{p.id}:</b> {p.advice.text}</span>
@@ -273,7 +280,10 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
           ) : null}
           {local.advisory ? <KV k="Water advice" v={local.advisory.netDepthMm !== null ? `${local.advisory.netDepthMm} mm deficit` : 'no deficit computed'} sub={`advisory only · this browser · ${ago(local.advisory.capturedAt)}`} /> : null}
           {water.reason ? <KV k="Water to add" v="Not computed" sub={water.reason} /> : null}
-          {!harvest ? <KV k="Expected harvest" v="Not available" sub={`a range is given only for Paw San (${PAW_SAN_T_HA[0]}–${PAW_SAN_T_HA[1]} t/ha, TO VERIFY)`} /> : null}
+          {!harvest ? (yieldRef?.parcels ?? []).map((p) => (
+            <KV key={`yield-${p.parcel}`} k={`${p.parcel} harvest`} v={p.tonnes ? `${span(p.tonnes[0], p.tonnes[1])} t` : 'Not available'} sub={p.tonnes ? `${p.yield?.item} · ${p.yield?.t_ha_5y?.join('–')} t/ha · ${p.yield?.flag_meaning ?? 'FAOSTAT'}` : p.reason} />
+          )) : null}
+          {!harvest && !yieldRef ? <KV k="Expected harvest" v="Not available" sub="harvest reference not reachable" /> : null}
           {local.crop ? <KV k="Crop conditions" v={`pH ${local.crop.soilPh} · ${local.crop.rainfallMm} mm · ${local.crop.temperatureC} °C`} sub={`${local.crop.validatedOnFieldData ? 'field-validated' : 'not field-validated'} · ${km(centre, local.crop.lat, local.crop.lon)}`} /> : null}
           {health === 'error' ? <KV k="Health update" v="Unavailable" sub="service not reachable" /> : health ? (
             <KV k="Health update" v={`Looks like ${health.diseaseName ?? health.healthStatus}`} sub={`${health.detection?.confidence != null ? `${Math.round(health.detection.confidence)} % · ` : ''}${health.township ?? km(centre, health.latitude, health.longitude)} · ${ago(health.reportedAt)}`} />
