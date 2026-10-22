@@ -302,6 +302,45 @@ def test_ops_plan_endpoint_returns_forecast_and_crew_tasks():
     assert all(t["requires_human_approval"] == (t["actuation"] is not None) for t in data["tasks"])
 
 
+def test_ops_plan_fetches_the_rain_issued_at_the_cut_when_a_location_is_sent(monkeypatch):
+    seen = {}
+
+    def fake(lat, lon, cut, horizon, client=None):
+        seen.update(lat=lat, lon=lon, cut=cut, horizon=horizon)
+        return {"rain_mm": [2.0] * horizon, "source": "stub", "cut": cut.isoformat(), "missing": []}
+
+    monkeypatch.setattr("agriquill.api.main.issued_rain", fake)
+    body = {**_plan_body(), "lat": 16.7, "lon": 95.6}
+    data = client.post("/api/v1/agriquill/ops/plan", json=body).json()
+    assert seen["horizon"] == HORIZON and str(seen["cut"]) == "2026-09-29"
+    assert data["forecast"]["issued_rain"] == {"source": "stub", "cut": "2026-09-29"}
+    if data["forecast"]["backtest"]:
+        assert data["forecast"]["backtest"]["backtest_rain"] == "forecast issued at the cut"
+
+
+def test_ops_plan_keeps_observed_rain_and_says_why_when_issued_rain_is_missing(monkeypatch):
+    gap = {
+        "rain_mm": None,
+        "missing": [{"field": "rain_mm", "reason": "previous runs unavailable"}],
+    }
+    monkeypatch.setattr("agriquill.api.main.issued_rain", lambda *a, **k: gap)
+    body = {**_plan_body(), "lat": 16.7, "lon": 95.6}
+    data = client.post("/api/v1/agriquill/ops/plan", json=body).json()
+    assert data["forecast"]["issued_rain"] == {"missing": gap["missing"]}
+    if data["forecast"]["backtest"]:
+        assert data["forecast"]["backtest"]["backtest_rain"].startswith("observed, optimistic")
+
+
+def test_ops_plan_without_a_location_or_with_sent_rain_does_not_call_the_weather_api(monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("issued_rain must not be called")
+
+    monkeypatch.setattr("agriquill.api.main.issued_rain", boom)
+    assert client.post("/api/v1/agriquill/ops/plan", json=_plan_body()).status_code == 200
+    sent = {**_plan_body(), "lat": 16.7, "lon": 95.6, "backtest_rain_issued": [1.0] * HORIZON}
+    assert client.post("/api/v1/agriquill/ops/plan", json=sent).status_code == 200
+
+
 def test_ops_plan_rejects_unknown_crop():
     body = {
         "farm_id": "f",

@@ -14,7 +14,7 @@ import uuid
 import zipfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
@@ -64,7 +64,7 @@ from ..data import (
     regions,
 )
 from ..data.soil import fetch_soil
-from ..data.weather import fetch_weather
+from ..data.weather import fetch_weather, issued_rain
 from ..ledger import Ledger, get_ledger
 
 
@@ -564,14 +564,31 @@ class OpsPlanReq(BaseModel):
         return self
 
 
+async def _issued_rain_for(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Rain forecast issued before the backtest hold-out; history is taken to end the day before."""
+    if payload["lat"] is None or payload.get("backtest_rain_issued") is not None:
+        return None
+    horizon = len(payload["weather_forecast"])
+    cut = payload["start_date"] - timedelta(days=horizon + 1)
+    found = await asyncio.to_thread(issued_rain, payload["lat"], payload["lon"], cut, horizon)
+    if found["rain_mm"] is None:
+        return {"missing": found["missing"]}
+    payload["backtest_rain_issued"] = found["rain_mm"]
+    return {"source": found["source"], "cut": found["cut"]}
+
+
 @router.post("/ops/plan", dependencies=WRITE)
 async def ops_plan(req: OpsPlanReq) -> dict[str, Any]:
+    payload = req.model_dump()
+    issued = await _issued_rain_for(payload)
     try:
-        plan = await asyncio.to_thread(ops.build_plan, req.model_dump())
+        plan = await asyncio.to_thread(ops.build_plan, payload)
     except KeyError as exc:
         raise HTTPException(status_code=422, detail=str(exc.args[0])) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if issued is not None:
+        plan["forecast"]["issued_rain"] = issued
     location = {"lat": req.lat, "lon": req.lon} if req.lat is not None else None
     entry = _ledger().append(
         "ops_plan",
