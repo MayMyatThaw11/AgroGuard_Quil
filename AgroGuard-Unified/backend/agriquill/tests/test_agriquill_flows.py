@@ -60,3 +60,32 @@ def test_water_terms_split_et_and_keep_unmeasured_terms_null():
     out_mm = out["total"]["transpiration_mm"] + out["total"]["evaporation_mm"] + 6.0
     assert out["net_mm"] == pytest.approx(round(10.0 - out_mm, 1))
     assert {m["field"] for m in out["unknown"]} == {"irrigation_mm", "seepage_mm", "runoff_mm"}
+
+
+def fert(product, rate, n_pct, unit="kg/ha"):
+    return {
+        "kind": "fertiliser",
+        "product": product,
+        "rate": rate,
+        "n_pct": n_pct,
+        "rate_unit": unit,
+        "applied_at": "2026-07-01T08:00:00+06:30",
+    }
+
+
+def test_logged_nitrogen_follows_the_ipcc_tier1_fractions():
+    out = flows.nitrogen(
+        [fert("Urea 46%", 100, 46), fert("Cow manure compost", 1000, 1.5)], "AWD_SAFE"
+    )
+    assert out["applied_kg_n_ha"] == 61.0
+    assert out["volatilised_kg_n_ha"] == pytest.approx(round(46 * 0.15 + 15 * 0.21, 1))
+    assert out["leached_kg_n_ha"] == pytest.approx(round(61 * 0.24, 1))
+    assert out["n2o_direct_kg_n_ha"] == pytest.approx(round(61 * 0.005, 2))
+    assert out["factors"]["EF1FR"] == 0.005
+
+
+def test_continuous_flooding_uses_its_own_direct_n2o_factor_and_bad_rows_are_counted_out():
+    out = flows.nitrogen([fert("Ammonium sulphate", 100, 21), fert("Urea", 50, None)], "CONTINUOUS")
+    assert out["factors"]["EF1FR"] == 0.003 and out["not_counted"] == 1
+    assert out["applications"][0]["source"] == "synthetic"
+    assert flows.nitrogen([fert("Urea", 1, 46, unit="L/ha")], None)["not_counted"] == 1

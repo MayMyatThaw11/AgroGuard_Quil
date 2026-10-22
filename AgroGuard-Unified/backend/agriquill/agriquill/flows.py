@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date
 from typing import Any
 
-from . import contract, live
+from . import contract, live, onboard
 from .agronomy import STAGE_KC
 from .store import missing
 
@@ -208,6 +208,66 @@ def methane(parcel: Mapping[str, Any], regime: str | None, area_ha: float | None
     }
 
 
+IPCC_N2O = (
+    "IPCC 2019 Refinement Vol. 4 Ch. 11, Tables 11.1 and 11.3 "
+    "(ipcc-nggip.iges.or.jp/public/2019rf), fetched 2026-10-22"
+)
+FRAC_GAS = {"urea": 0.15, "synthetic": 0.11, "organic": 0.21}  # FracGASF / FracGASM
+FRAC_LEACH_WET = 0.24  # FracLEACH-(H), wet climates
+EF1_FLOODED_RICE = {"continuous": 0.003, "awd": 0.005, "single": 0.005}  # EF1FR
+EF1_FR_DEFAULT = 0.004
+EF4_WET, EF5 = 0.014, 0.011
+ORGANIC_WORDS = ("compost", "manure", "azolla", "vermi", "bio", "organic", "green manure", "straw")
+
+
+def n_source(product: str) -> str:
+    text = product.lower()
+    if "urea" in text:
+        return "urea"
+    return "organic" if any(w in text for w in ORGANIC_WORDS) else "synthetic"
+
+
+def nitrogen(records: Sequence[Mapping[str, Any]], regime: str | None) -> dict[str, Any]:
+    """IPCC Tier 1 fate of the nitrogen the farm logged: lost to air, to water, and as N2O."""
+    ef1 = EF1_FLOODED_RICE.get(_regime(regime) or "", EF1_FR_DEFAULT)
+    rows, skipped = [], 0
+    for r in records:
+        if r.get("kind") != "fertiliser":
+            continue
+        if r.get("rate") is None or r.get("n_pct") is None or r.get("rate_unit") != "kg/ha":
+            skipped += 1
+            continue
+        n = r["rate"] * r["n_pct"] / 100
+        source = n_source(str(r.get("product") or ""))
+        rows.append(
+            {
+                "applied_at": r["applied_at"],
+                "product": r.get("product"),
+                "source": source,
+                "n_kg_ha": round(n, 2),
+            }
+        )
+    applied = sum(x["n_kg_ha"] for x in rows)
+    gas = sum(x["n_kg_ha"] * FRAC_GAS[x["source"]] for x in rows)
+    leach = applied * FRAC_LEACH_WET
+    direct = applied * ef1
+    return {
+        "applied_kg_n_ha": round(applied, 1),
+        "volatilised_kg_n_ha": round(gas, 1),
+        "leached_kg_n_ha": round(leach, 1),
+        "n2o_direct_kg_n_ha": round(direct, 2),
+        "n2o_indirect_kg_n_ha": round(gas * EF4_WET + leach * EF5, 2),
+        "remaining_kg_n_ha": round(applied - gas - leach - direct, 1),
+        "remaining_means": "taken up by the crop or held in the soil; not measured",
+        "applications": rows,
+        "not_counted": skipped,
+        "not_counted_reason": "fertiliser rows without a kg/ha rate or an N %" if skipped else None,
+        "factors": {"EF1FR": ef1, "FracLEACH": FRAC_LEACH_WET, "EF4": EF4_WET, "EF5": EF5},
+        "assumed": "wet climate (rain over 1,000 mm a year); source class from the product name",
+        "source": IPCC_N2O,
+    }
+
+
 def farm_flows(farm_id: str) -> dict[str, Any]:
     current = live.build_live(farm_id)
     if current["status"] != "OK":
@@ -218,6 +278,7 @@ def farm_flows(farm_id: str) -> dict[str, Any]:
         raise KeyError(farm_id)
     days = _days(current["hourly"])
     reports = {r["id"]: r for r in current.get("paddies") or []}
+    inputs = [r for r in onboard._INPUTS.items("input") if r.get("farm_id") == farm_id]
     parcels = []
     for p in spec["parcels"]:
         hydro = contract.terms_for(spec, p["id"]).get("hydrology", {})
@@ -230,6 +291,9 @@ def farm_flows(farm_id: str) -> dict[str, Any]:
                 "stage": p.get("stage"),
                 "water": water(p, days, hydro.get("percolation_mm_day"), ponded),
                 "methane": methane(p, hydro.get("regime"), p.get("area_ha")),
+                "nitrogen": nitrogen(
+                    [r for r in inputs if r.get("field") == p["id"]], hydro.get("regime")
+                ),
             }
         )
     return {

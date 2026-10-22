@@ -58,6 +58,13 @@ export const FlowView: React.FC<{ farmId: string; spec: ContractSpec }> = ({ far
           sub={`${summary.methane.low}–${summary.methane.high} kg/ha · ${summary.methane.regime}${summary.methane.savedKgHa ? ` · ${summary.methane.savedKgHa} kg/ha less than continuous flooding` : ''}`}
         />
       ) : null}
+      {summary.nitrogen ? (
+        <KV
+          k="Nitrogen this season"
+          v={`${summary.nitrogen.appliedKg} kg N applied`}
+          sub={`${summary.nitrogen.airKg} kg to air · ${summary.nitrogen.waterKg} kg washed out · ${summary.nitrogen.n2oKg} kg as N₂O${summary.nitrogen.notCounted ? ` · ${summary.nitrogen.notCounted} rows without a rate or N %` : ''}`}
+        />
+      ) : <KV k="Nitrogen this season" v="no fertiliser logged" sub="log fertiliser with its rate and N % to see where it goes" />}
       {summary.wettestDay ? <KV k="Leaf wetness" v={`${summary.wettestDay.wetHours} h`} sub={`wettest day ${summary.wettestDay.date} · humid hours favour blast and sheath blight`} /> : null}
       <More label="How these are worked out">
         {(data.parcels ?? []).map((p) => (
@@ -68,6 +75,7 @@ export const FlowView: React.FC<{ farmId: string; spec: ContractSpec }> = ({ far
         {data.parcels?.[0]?.methane.assumed?.map((a) => <p key={a} className="aq-fm-note">Assumed: {a}</p>)}
         <p className="aq-fm-note">Water: {data.sources?.water}</p>
         <p className="aq-fm-note">Methane: {data.sources?.methane}</p>
+        <p className="aq-fm-note">Nitrogen: {data.parcels?.[0]?.nitrogen?.source}</p>
         <p className="aq-fm-note">Weather: {data.sources?.weather}</p>
       </More>
     </DetailSection>

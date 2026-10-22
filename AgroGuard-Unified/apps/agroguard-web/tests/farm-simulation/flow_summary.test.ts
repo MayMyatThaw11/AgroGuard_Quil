@@ -48,3 +48,13 @@ test('no field area means no farm totals at all', () => {
   assert.equal(flowSummary(flows([parcel('a', 21)]), { a: null }), null);
   assert.equal(flowSummary(null, {}), null);
 });
+
+test('nitrogen totals are area-weighted and absent when nothing was logged', () => {
+  const withN = (id: string): ParcelFlows => ({
+    ...parcel(id, 21),
+    nitrogen: { applied_kg_n_ha: 60, volatilised_kg_n_ha: 9, leached_kg_n_ha: 14.4, n2o_direct_kg_n_ha: 0.3, n2o_indirect_kg_n_ha: 0.28, remaining_kg_n_ha: 36.3, not_counted: 0, not_counted_reason: null, source: 'IPCC' },
+  });
+  const out = flowSummary(flows([withN('a')]), { a: 2 });
+  assert.deepEqual(out?.nitrogen, { appliedKg: 120, airKg: 18, waterKg: 28.8, n2oKg: 1.2, notCounted: 0 });
+  assert.equal(flowSummary(flows([parcel('a', 21)]), { a: 2 })?.nitrogen, null);
+});

@@ -16,6 +16,7 @@ export interface FlowSummary {
   scale: number;
   evaporationUpperBound: boolean;
   wettestDay: { date: string; wetHours: number; vpdMax: number | null } | null;
+  nitrogen: { appliedKg: number; airKg: number; waterKg: number; n2oKg: number; notCounted: number } | null;
   methane: { kgHa: number; low: number; high: number; savedKgHa: number | null; farmKg: number | null; regime: string; days: number } | null;
 }
 
@@ -45,8 +46,19 @@ export function flowSummary(flows: FarmFlows | null, areaHa: Record<string, numb
   const wettest = [...(flows?.days ?? [])].sort((a, b) => b.canopy.wet_hours - a.canopy.wet_hours)[0];
   const ch4 = sized.find((p) => p.methane.kg_ha !== null)?.methane;
   const farmKg = sized.every((p) => p.methane.kg_ha !== null) ? sized.reduce((s, p) => s + (p.methane.kg_ha ?? 0) * (areaHa[p.id] ?? 0), 0) : null;
+  const nKg = (pick: (p: ParcelFlows) => number) => Math.round(sized.reduce((s, p) => s + (p.nitrogen ? pick(p) * (areaHa[p.id] ?? 0) : 0), 0) * 10) / 10;
+  const logged = sized.some((p) => (p.nitrogen?.applied_kg_n_ha ?? 0) > 0 || (p.nitrogen?.not_counted ?? 0) > 0);
   return {
     days: flows?.days?.length ?? 0,
+    nitrogen: logged
+      ? {
+          appliedKg: nKg((p) => p.nitrogen?.applied_kg_n_ha ?? 0),
+          airKg: nKg((p) => p.nitrogen?.volatilised_kg_n_ha ?? 0),
+          waterKg: nKg((p) => p.nitrogen?.leached_kg_n_ha ?? 0),
+          n2oKg: nKg((p) => (p.nitrogen?.n2o_direct_kg_n_ha ?? 0) + (p.nitrogen?.n2o_indirect_kg_n_ha ?? 0)),
+          notCounted: sized.reduce((s, p) => s + (p.nitrogen?.not_counted ?? 0), 0),
+        }
+      : null,
     inflow: [{ key: 'rain', label: 'Rain', m3: rain }],
     outflow,
     netM3: known ? (rain ?? 0) - out : null,

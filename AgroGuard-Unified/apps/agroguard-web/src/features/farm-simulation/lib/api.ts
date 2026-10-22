@@ -521,6 +521,17 @@ export interface ParcelFlows {
     reason?: string;
     source: string;
   };
+  nitrogen?: {
+    applied_kg_n_ha: number;
+    volatilised_kg_n_ha: number;
+    leached_kg_n_ha: number;
+    n2o_direct_kg_n_ha: number;
+    n2o_indirect_kg_n_ha: number;
+    remaining_kg_n_ha: number;
+    not_counted: number;
+    not_counted_reason: string | null;
+    source: string;
+  };
 }
 
 export interface FarmFlows {
