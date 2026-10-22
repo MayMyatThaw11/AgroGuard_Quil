@@ -44,6 +44,7 @@ from .. import (
     ml,
     onboard,
     ops,
+    pending,
     personas,
     safety,
     sim,
@@ -1402,6 +1403,11 @@ async def contracts_evidence_pack(
     if format == "html":
         return Response(evidence_pack.to_html(pack), media_type="text/html")
     return pack
+
+
+@router.get("/roadmap")
+async def roadmap() -> dict[str, Any]:
+    return pending.roadmap()
 
 
 @router.get("/farms/{farm_id}/lots")
