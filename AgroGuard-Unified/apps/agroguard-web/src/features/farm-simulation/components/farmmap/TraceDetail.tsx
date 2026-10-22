@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Crosshair, Eraser, Undo2 } from 'lucide-react';
+import { Crosshair, Eraser, MapPinned, Undo2 } from 'lucide-react';
 import { getAuthMe, onboardFarm, type OnboardResult } from '../../lib/api.ts';
 import { ApiError } from '../../lib/apiError.ts';
+import { suggestOutline, type OsmOutline } from '../../lib/farmmap/osmOutline.ts';
 import { MIN_CORNERS, TRACE_MIN_ZOOM, ringAreaHa, tracedGeojson, tracedRing, type Corner } from '../../lib/farmmap/trace.ts';
 import { farmProblems, onboardBody, onboardErrorText, type OnboardDraft } from '../../lib/onboardFiles.ts';
 import { PROVENANCE_CLASS, PROVENANCE_LABEL } from '../../lib/provenance.ts';
@@ -15,11 +16,15 @@ interface TraceDetailProps {
   zoom: number;
   onZoomIn: () => void;
   onAddCentre: () => void;
+  crosshair: () => Corner | null;
+  onReplace: (corners: Corner[]) => void;
   onUndo: () => void;
   onClear: () => void;
   onCancel: () => void;
   onSaved: (farmId: string) => void;
 }
+
+const EXPERIMENTAL = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('experimental');
 
 const Field: React.FC<{ label: string; value: string; placeholder?: string; maxLength?: number; onChange: (v: string) => void }> = ({ label, value, placeholder, maxLength, onChange }) => (
   <label className="aq-fm-trace-field">
@@ -30,7 +35,7 @@ const Field: React.FC<{ label: string; value: string; placeholder?: string; maxL
   </label>
 );
 
-export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomIn, onAddCentre, onUndo, onClear, onCancel, onSaved }) => {
+export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomIn, onAddCentre, crosshair, onReplace, onUndo, onClear, onCancel, onSaved }) => {
   const [field, setField] = useState('Field 1');
   const [farmId, setFarmId] = useState('');
   const [name, setName] = useState('');
@@ -40,6 +45,8 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
   const [result, setResult] = useState<OnboardResult | null>(null);
   const registeredBy = activeSession()?.name ?? '';
   const heading = useRef<HTMLHeadingElement>(null);
+  const [osm, setOsm] = useState<OsmOutline | null>(null);
+  const [osmNote, setOsmNote] = useState('');
 
   useEffect(() => heading.current?.focus(), [result]);
 
@@ -55,7 +62,7 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
 
   const area = ringAreaHa(tracedRing(corners));
   const tooFar = zoom < TRACE_MIN_ZOOM;
-  const geojson = tracedGeojson(corners, field.trim() || 'Field 1');
+  const geojson = tracedGeojson(corners, field.trim() || 'Field 1', osm ? `suggested from OpenStreetMap ${osm.osmId}, confirmed by user` : undefined);
   const draft: OnboardDraft = {
     farmId: farmId.trim(),
     name,
@@ -70,6 +77,20 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
     assets: [],
   };
   const problems = geojson ? farmProblems(draft) : [];
+
+  const suggest = async () => {
+    const point = crosshair();
+    if (!point) return;
+    setOsmNote('Asking OpenStreetMap…');
+    try {
+      const found = await suggestOutline(point[0], point[1]);
+      setOsm(found);
+      setOsmNote(found ? '' : 'No farmland, paddy, orchard or plantation outline in OpenStreetMap contains the crosshair.');
+      if (found) onReplace(found.corners);
+    } catch (err) {
+      setOsmNote(`OpenStreetMap is unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
 
   const save = async () => {
     setBusy(true);
@@ -129,7 +150,10 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
           <AqButton disabled={tooFar} onClick={onAddCentre}><Crosshair size={14} aria-hidden="true" />Add corner at centre</AqButton>
           <AqButton disabled={!corners.length} onClick={onUndo}><Undo2 size={14} aria-hidden="true" />Undo</AqButton>
           <AqButton disabled={!corners.length} onClick={onClear}><Eraser size={14} aria-hidden="true" />Clear</AqButton>
+          {EXPERIMENTAL ? <AqButton disabled={tooFar} onClick={() => void suggest()}><MapPinned size={14} aria-hidden="true" />Suggest outline from OSM</AqButton> : null}
         </div>
+        {osm && corners.length ? <p className="aq-fm-note">Suggested from OpenStreetMap {osm.osmId} ({osm.landuse}, {osm.areaHa.toFixed(3)} ha, ODbL). Check every corner against the satellite view before saving.</p> : null}
+        {osmNote ? <p className="aq-fm-note" role="status">{osmNote}</p> : null}
       </DetailSection>
       {geojson ? (
         <DetailSection>

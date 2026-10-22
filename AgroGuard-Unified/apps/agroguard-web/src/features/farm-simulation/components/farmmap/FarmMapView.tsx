@@ -231,7 +231,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         <div ref={mapRef} className="aq-fm-map" />
         <canvas ref={fogRef} className="aq-fm-fog" aria-hidden="true" />
         <div className="aq-fm-tipbox"><HoverTip info={hover} width={mapWidth} /></div>
-        {tracing ? <div className="aq-fm-crosshair" aria-hidden="true" /> : null}
+        {tracing ? <div ref={trace.crosshairRef} className="aq-fm-crosshair" aria-hidden="true" /> : null}
       </div>
       <FarmMapTopBar
         view={view}
@@ -278,6 +278,8 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                     if (centre) engine?.fly({ center: [centre.lng, centre.lat], zoom: TRACE_MIN_ZOOM + 2, duration: 1800 });
                   }}
                   onAddCentre={trace.addCentre}
+                  crosshair={trace.crosshair}
+                  onReplace={trace.replace}
                   onUndo={trace.undo}
                   onClear={trace.clear}
                   onCancel={stopTrace}
