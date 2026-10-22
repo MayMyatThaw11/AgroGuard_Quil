@@ -59,7 +59,11 @@ export const PROHIBITED_INPUTS: Readonly<Record<string, readonly string[]>> = {
     'sodium_fluoaluminate',
     'potassium_chloride',
     'sodium_nitrate',
-    'ash_from_manure_burning'
+    'ash_from_manure_burning',
+    'phosphine',
+    'aluminium_phosphide',
+    'methyl_bromide',
+    'sulfuryl_fluoride'
   ],
   ASEAN_ORGANIC_ASOA: [
     'synthetic_urea',

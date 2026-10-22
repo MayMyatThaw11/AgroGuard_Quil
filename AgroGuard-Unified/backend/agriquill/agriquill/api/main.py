@@ -28,6 +28,7 @@ from .. import (
     dsl,
     evidence,
     fleet,
+    fumigation,
     jobs,
     knowledge,
     live,
@@ -1299,6 +1300,37 @@ async def farms_add_certificate(
     _own(caller, farm_id)
     cert = req.model_dump(mode="json", exclude={"added_by"})
     return await asyncio.to_thread(certificates.add, farm_id, cert, req.added_by)
+
+
+class FumigationReq(BaseModel):
+    store: str = Field(min_length=1, max_length=60, pattern=r"^[^\n|]*$")
+    parcels: list[str] = Field(min_length=1, max_length=50)
+    product: str = Field(min_length=1, max_length=80, pattern=r"^[^\n|]*$")
+    active_ingredient: str | None = Field(default=None, max_length=80)
+    method: Literal["synthetic_chemical", "controlled_atmosphere", "hermetic", "heat", "other"]
+    applied_at: date
+    recorded_by: str = Field(min_length=1, max_length=80)
+
+
+@router.get("/farms/{farm_id}/fumigations")
+async def farms_fumigations(farm_id: str, caller: Caller | None = _READER) -> list[dict[str, Any]]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(fumigation.history, farm_id)
+
+
+@router.post("/farms/{farm_id}/fumigations")
+async def farms_add_fumigation(
+    farm_id: str, req: FumigationReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    _named(caller, req.recorded_by)
+    _own(caller, farm_id)
+    event = req.model_dump(mode="json", exclude={"recorded_by"})
+    try:
+        return await asyncio.to_thread(fumigation.record, farm_id, event, req.recorded_by)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="no contract for this farm") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/contracts/{farm_id}/monitoring")
