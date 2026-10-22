@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from .. import (
     agronomy,
+    certificates,
     contract,
     crops,
     cropvalue,
@@ -1266,6 +1267,38 @@ async def contracts_add_herd(
         raise HTTPException(status_code=422, detail=exc.verdict["diagnostics"]) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+class CertificateReq(BaseModel):
+    kind: str = Field(pattern=f"^({'|'.join(certificates.KINDS)})$")
+    number: str = Field(min_length=1, max_length=60, pattern=r"^[^\n|]*$")
+    issuer: str = Field(min_length=1, max_length=80)
+    country: str = Field(pattern=r"^[A-Z]{2}$")
+    issued: date
+    expires: date
+    added_by: str = Field(min_length=1, max_length=80)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> CertificateReq:
+        if self.expires <= self.issued:
+            raise ValueError("expires must be after issued")
+        return self
+
+
+@router.get("/farms/{farm_id}/certificates")
+async def farms_certificates(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(certificates.calendar, farm_id)
+
+
+@router.post("/farms/{farm_id}/certificates")
+async def farms_add_certificate(
+    farm_id: str, req: CertificateReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    _named(caller, req.added_by)
+    _own(caller, farm_id)
+    cert = req.model_dump(mode="json", exclude={"added_by"})
+    return await asyncio.to_thread(certificates.add, farm_id, cert, req.added_by)
 
 
 @router.get("/contracts/{farm_id}/monitoring")
