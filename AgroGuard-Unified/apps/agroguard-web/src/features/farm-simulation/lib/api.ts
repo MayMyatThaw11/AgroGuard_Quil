@@ -383,6 +383,7 @@ export interface MonitoringPaddy {
     series_dates: string[];
     band: { p10: number[]; p50: number[]; p90: number[] } | null;
     band_dates: string[];
+    shadow?: { status: 'shadow' | 'promote'; pairs: number; mae_cm?: { one_state: number | null; augmented: number | null }; reason?: string } | null;
   } | null;
   missing: { field: string; reason: string }[];
 }

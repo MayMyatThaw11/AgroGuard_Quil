@@ -333,6 +333,7 @@ def _paddy_depth(
         band=fused["band"],
         band_dates=fused["band_dates"],
         flags=fused["flags"],
+        shadow=fusion.next_reading_backtest(readings, hourly, offset_s, kc, perc),
         method={
             "filter": "scalar Kalman filter over an hourly water balance",
             "equation": "D(t+1) = D(t) + rain - ET0 x Kc - percolation",
@@ -632,6 +633,7 @@ def monitoring(
                     "series_dates": paddy.get("series_dates", []),
                     "band": paddy.get("band"),
                     "band_dates": paddy.get("band_dates", []),
+                    "shadow": paddy.get("shadow"),
                 }
                 if has_model
                 else None,
