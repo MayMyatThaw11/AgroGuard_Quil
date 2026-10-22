@@ -41,6 +41,6 @@ def mentions(text: str) -> list[tuple[str, str]]:
         {
             (row["ingredient"], row["status"])
             for name, row in load_rules().items()
-            if len(name) > 3 and f" {name} " in haystack
+            if f" {name} " in haystack
         }
     )

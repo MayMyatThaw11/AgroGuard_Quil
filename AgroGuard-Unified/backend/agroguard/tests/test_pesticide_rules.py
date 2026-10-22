@@ -58,3 +58,18 @@ def test_current_advice_text_names_no_banned_or_restricted_ingredient():
     # Guards the existing generic advice in the disease service until it is replaced.
     assert ADVICE_FILE.exists()
     assert rules.mentions(ADVICE_FILE.read_text(encoding="utf-8")) == []
+
+
+def test_short_banned_names_and_every_alias_are_caught_in_text():
+    text = "Old stock of DDT, EPN, EDB, HCB, PCP or BHC must never be sprayed."
+    found = {name for name, _ in rules.mentions(text)}
+    assert {
+        "DDT",
+        "EPN",
+        "Ethylene dibromide",
+        "Hexachlorobenzene",
+        "Pentachlorophenol",
+        "Beta hexachlorocyclohexane",
+    } <= found
+    assert rules.status_of("BHC") == "banned"
+    assert rules.mentions("Spray the edges at dusk.") == []
