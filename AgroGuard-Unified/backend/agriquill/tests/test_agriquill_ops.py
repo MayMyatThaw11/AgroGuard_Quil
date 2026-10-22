@@ -424,7 +424,7 @@ def test_dsl_linter_and_actuation_gate_share_the_prohibited_list():
         safety.prohibited_for("ASOA_ORGANIC_V2") == safety.PROHIBITED_INPUTS["ASEAN_ORGANIC_ASOA"]
     )
     usda = dsl.lint('standard: "USDA_NOP"\nspray: carbamate_insecticide')
-    assert usda["is_valid"] is True
+    assert usda["is_valid"] is False, "7 CFR 205.105(a): synthetics not listed in 205.601"
 
 
 def test_mcp_http_transport_refuses_actuation_tools():

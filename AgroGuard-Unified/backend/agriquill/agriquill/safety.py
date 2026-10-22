@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import hmac
 import threading
@@ -7,31 +8,30 @@ import time
 import uuid
 from collections import deque
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from .config import get_settings
 
+ANNEX_FILE = Path(__file__).parent / "data" / "prohibited_inputs.csv"
+BLOCKING_RULES = frozenset({"prohibited", "not_authorised"})
+
+
+def annex_rows(standard: str | None = None) -> list[dict[str, str]]:
+    """Rows built from fetched regulation text, one per item, each with its clause."""
+    with ANNEX_FILE.open(encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    return rows if standard is None else [r for r in rows if r["standard"] == standard]
+
+
 # Mirrors src/lib/safety.ts. Server is authoritative; the UI mirror is advisory.
-PROHIBITED_INPUTS: dict[str, tuple[str, ...]] = {
-    "ASEAN_ORGANIC_ASOA": (
-        "synthetic_urea",
-        "glyphosate",
-        "paraquat",
-        "synthetic_pyrethroids",
-        "organophosphate_insecticide",
-        "synthetic_herbicide",
-        "carbamate_insecticide",
-    ),
-    "EU_2018_848": (
-        "synthetic_urea",
-        "glyphosate",
-        "paraquat",
-        "synthetic_pyrethroids",
-        "organophosphate_insecticide",
-        "carbamate_insecticide",
-    ),
-    "USDA_NOP": ("synthetic_urea", "glyphosate", "paraquat", "synthetic_pyrethroids"),
-}
+PROHIBITED_INPUTS: dict[str, tuple[str, ...]] = {}
+for _row in annex_rows():
+    if _row["rule"] in BLOCKING_RULES:
+        PROHIBITED_INPUTS[_row["standard"]] = (
+            *PROHIBITED_INPUTS.get(_row["standard"], ()),
+            _row["item"],
+        )
 
 
 STANDARD_ALIASES: dict[str, str] = {
@@ -57,6 +57,17 @@ def prohibited_for(standard: str | None) -> tuple[str, ...] | None:
 
 def all_prohibited_inputs() -> set[str]:
     return {item for items in PROHIBITED_INPUTS.values() for item in items}
+
+
+def conditional_for(standard: str | None) -> list[dict[str, str]]:
+    resolved = resolve_standard(standard)
+    return [r for r in annex_rows(resolved) if r["rule"] == "conditional"] if resolved else []
+
+
+def clause_for(standard: str | None, item: str) -> str | None:
+    resolved = resolve_standard(standard)
+    row = next((r for r in annex_rows(resolved) if r["item"] == item), None) if resolved else None
+    return row["clause"] if row else None
 
 
 class SafetyError(ValueError):
