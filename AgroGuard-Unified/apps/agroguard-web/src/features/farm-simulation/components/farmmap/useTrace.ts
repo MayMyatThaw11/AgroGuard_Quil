@@ -27,7 +27,14 @@ export function useTrace(engine: FarmMapEngine | null, active: boolean) {
     };
   }, [engine, active]);
 
+  const addCentre = useCallback(() => {
+    const map = engine?.map();
+    if (!map || map.getZoom() < TRACE_MIN_ZOOM) return;
+    const box = map.getContainer();
+    const centre = map.unproject([box.clientWidth / 2, box.clientHeight / 2]);
+    setCorners((c) => [...c, [round6(centre.lat), round6(centre.lng)]]);
+  }, [engine]);
   const undo = useCallback(() => setCorners((c) => c.slice(0, -1)), []);
   const clear = useCallback(() => setCorners([]), []);
-  return { corners, undo, clear };
+  return { corners, addCentre, undo, clear };
 }

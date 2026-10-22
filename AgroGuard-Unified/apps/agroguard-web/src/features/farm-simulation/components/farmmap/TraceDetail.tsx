@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Eraser, Undo2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Crosshair, Eraser, Undo2 } from 'lucide-react';
 import { getAuthMe, onboardFarm, type OnboardResult } from '../../lib/api.ts';
 import { ApiError } from '../../lib/apiError.ts';
 import { MIN_CORNERS, TRACE_MIN_ZOOM, ringAreaHa, tracedGeojson, tracedRing, type Corner } from '../../lib/farmmap/trace.ts';
@@ -14,6 +14,7 @@ interface TraceDetailProps {
   corners: Corner[];
   zoom: number;
   onZoomIn: () => void;
+  onAddCentre: () => void;
   onUndo: () => void;
   onClear: () => void;
   onCancel: () => void;
@@ -29,7 +30,7 @@ const Field: React.FC<{ label: string; value: string; placeholder?: string; maxL
   </label>
 );
 
-export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomIn, onUndo, onClear, onCancel, onSaved }) => {
+export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomIn, onAddCentre, onUndo, onClear, onCancel, onSaved }) => {
   const [field, setField] = useState('Field 1');
   const [farmId, setFarmId] = useState('');
   const [name, setName] = useState('');
@@ -38,6 +39,9 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
   const [error, setError] = useState('');
   const [result, setResult] = useState<OnboardResult | null>(null);
   const registeredBy = activeSession()?.name ?? '';
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => heading.current?.focus(), [result]);
 
   useEffect(() => {
     let alive = true;
@@ -83,7 +87,7 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
     return (
       <>
         <DetailSection className="is-head">
-          <h2 className="aq-title">Field saved</h2>
+          <h2 ref={heading} tabIndex={-1} className="aq-title">Field saved</h2>
           <p className="aq-meta">{result.farm_id} · checked by the server: corners, crossing edges and area</p>
         </DetailSection>
         <DetailSection>
@@ -98,8 +102,8 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
   return (
     <>
       <DetailSection className="is-head">
-        <h2 className="aq-title">Trace your field</h2>
-        <p className="aq-meta">Click each corner of the field on the satellite view.</p>
+        <h2 ref={heading} tabIndex={-1} className="aq-title">Trace your field</h2>
+        <p className="aq-meta">Click each corner of the field on the satellite view, or move the map and press Enter to add the corner under the crosshair. Esc cancels.</p>
       </DetailSection>
       {tooFar ? (
         <DetailSection>
@@ -108,18 +112,21 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
         </DetailSection>
       ) : null}
       <DetailSection>
+        <div aria-live="polite" aria-atomic="true">
         <KV k="Corners" v={String(corners.length)} sub={corners.length < MIN_CORNERS ? `at least ${MIN_CORNERS}` : undefined} />
         <KV
           k="Area"
           v={corners.length >= MIN_CORNERS ? `${area.toFixed(3)} ha` : 'not yet'}
           sub={corners.length >= MIN_CORNERS ? undefined : 'needs three corners'}
         />
+        </div>
         {corners.length >= MIN_CORNERS ? (
           <div className="aq-fm-badges">
             <span className={PROVENANCE_CLASS.measured}>{PROVENANCE_LABEL.measured}</span>
           </div>
         ) : null}
         <div className="aq-fm-badges">
+          <AqButton disabled={tooFar} onClick={onAddCentre}><Crosshair size={14} aria-hidden="true" />Add corner at centre</AqButton>
           <AqButton disabled={!corners.length} onClick={onUndo}><Undo2 size={14} aria-hidden="true" />Undo</AqButton>
           <AqButton disabled={!corners.length} onClick={onClear}><Eraser size={14} aria-hidden="true" />Clear</AqButton>
         </div>
