@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from . import conversion, geometry
+from . import conversion, geometry, safety
 from .config import get_settings
 
 TOKEN = re.compile(
@@ -634,6 +634,43 @@ def _conversion(
     return out
 
 
+ZONE_MAX_VARIETIES = 3
+
+
+def _zone_rules(contract: dict[str, Any], farm: Block | None, diags: list[dict[str, Any]]) -> None:
+    """Rice Export Zone rules (B-AG-9); the organic and record rules stay warnings until checked."""
+    zone = contract["farm"].get("zone")
+    if not zone or farm is None:
+        return
+    varieties = sorted({str(p["crop"]) for p in contract["parcels"] if p.get("crop")})
+    if len(varieties) > ZONE_MAX_VARIETIES:
+        diags.append(
+            _diag(
+                "AGRI-E032",
+                "ERROR",
+                farm.line,
+                1,
+                f"zone {zone} allows at most {ZONE_MAX_VARIETIES} varieties; this farm grows "
+                f"{len(varieties)}: {', '.join(varieties)}.",
+                "Keep the zone's agreed varieties and move the others out of the zone contract.",
+            )
+        )
+    for p in contract["parcels"]:
+        if safety.resolve_standard(p.get("standard")) is None:
+            diags.append(
+                _diag(
+                    "AGRI-W030",
+                    "WARNING",
+                    farm.line,
+                    1,
+                    f"parcel {p['id']} in zone {zone} has no organic standard; zone contracts may "
+                    "ask for organic inputs and a 3-season record (TO VERIFY against the "
+                    "Ministry of Commerce directive).",
+                    "Declare the parcel's standard and keep three seasons of input records.",
+                )
+            )
+
+
 def _build(root: Block, diags: list[dict[str, Any]]) -> dict[str, Any] | None:
     farm = next((b for b in root.blocks if b.type == "farm"), None)
     parcels = [b for b in root.blocks if b.type == "parcel"]
@@ -652,6 +689,7 @@ def _build(root: Block, diags: list[dict[str, Any]]) -> dict[str, Any] | None:
             "country": _scalar(farm, "country") if farm else None,
             "location": location,
             "standard": standard,
+            "zone": _scalar(farm, "zone") if farm else None,
             "terms": _terms(farm, diags) if farm else {},
         },
         "parcels": [],
@@ -707,6 +745,7 @@ def _build(root: Block, diags: list[dict[str, Any]]) -> dict[str, Any] | None:
             }
         )
     contract["herds"] = [_herd(b, contract, diags) for b in root.blocks if b.type == "herd"]
+    _zone_rules(contract, farm, diags)
     if legacy is not None and isinstance(legacy, Block):
         perched = legacy.fields.get("perched_threshold")
         hydro = contract["farm"]["terms"].setdefault("hydrology", {})
