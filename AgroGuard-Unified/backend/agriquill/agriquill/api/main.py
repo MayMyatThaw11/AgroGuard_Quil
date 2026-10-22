@@ -47,6 +47,7 @@ from .. import (
     pending,
     personas,
     safety,
+    seasons,
     sim,
     telemetry,
     twin,
@@ -1524,6 +1525,23 @@ def _harvest(farm_id: str) -> dict[str, Any]:
     if loaded is None or loaded[1]["contract"] is None:
         raise KeyError(farm_id)
     return {"farm_id": farm_id, **cropvalue.harvest_reference(loaded[1]["contract"])}
+
+
+def _seasons(farm_id: str) -> dict[str, Any]:
+    loaded = live.load(farm_id)
+    if loaded is None or loaded[1]["contract"] is None:
+        raise KeyError(farm_id)
+    location = loaded[1]["contract"]["farm"].get("location")
+    if not location or len(location) != 2:
+        raise ValueError("contract farm block needs location: [lat, lon]")
+    month = datetime.now(UTC).month
+    return {"farm_id": farm_id, **seasons.for_location(location[0], location[1], month)}
+
+
+@router.get("/contracts/{farm_id}/seasons")
+async def contracts_seasons(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(_live_call, _seasons, farm_id)
 
 
 @router.get("/contracts/{farm_id}/flows")

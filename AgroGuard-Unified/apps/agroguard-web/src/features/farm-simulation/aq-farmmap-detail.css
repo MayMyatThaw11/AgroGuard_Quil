@@ -209,6 +209,53 @@
   color: var(--aq-text-body);
 }
 
+.aq-fm-season-now {
+  margin: 0;
+  font: var(--aq-type-label);
+  color: var(--aq-text-strong);
+}
+
+.aq-fm-season-strip {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 2px;
+  margin: var(--aq-space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aq-fm-season {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--aq-space-1) 0;
+  border-radius: var(--aq-radius-xs);
+  font: var(--aq-type-caption);
+  color: var(--aq-text-body);
+}
+
+.aq-fm-season.is-rainy {
+  background: var(--aq-water-100);
+}
+
+.aq-fm-season.is-hot_dry {
+  background: var(--aq-grain-100);
+}
+
+.aq-fm-season.is-cool_dry {
+  background: var(--aq-stone-100);
+}
+
+.aq-fm-season.is-now {
+  outline: 2px solid var(--aq-text-strong);
+  outline-offset: -2px;
+  font-weight: 600;
+}
+
+.aq-fm-season-tag {
+  color: var(--aq-text-muted);
+}
+
 @media (max-width: 639px) {
   .aq-fm-persona-grid {
     grid-template-columns: 1fr;

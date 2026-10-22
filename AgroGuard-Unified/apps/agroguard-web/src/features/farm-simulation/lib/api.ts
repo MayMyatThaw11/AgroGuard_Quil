@@ -491,6 +491,33 @@ export async function getHarvestReference(farmId: string) {
   return request<HarvestReference>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/harvest-reference`);
 }
 
+export type SeasonKey = 'rainy' | 'hot_dry' | 'cool_dry';
+
+export interface SeasonRun {
+  season: SeasonKey;
+  from: number;
+  to: number;
+}
+
+export interface FarmSeasons {
+  farm_id: string;
+  months: { month: number; rain_mm: number; t_c: number; season: SeasonKey; label: string }[] | null;
+  runs: SeasonRun[];
+  wet_all_year?: boolean;
+  wettest_months?: number[];
+  now: { season: SeasonKey; label: string; until_month: number; next: SeasonRun | null } | null;
+  month: number;
+  rule: string;
+  reason?: string;
+  period?: string | null;
+  note?: string | null;
+  source?: { provider: string; url: string; retrieved_at: string; sha256: string } | null;
+}
+
+export async function getSeasons(farmId: string) {
+  return request<FarmSeasons>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/seasons`);
+}
+
 export interface WaterTotals {
   rain_mm: number;
   transpiration_mm: number;

@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     builtin_user: SecretStr | None = SecretStr("Farm Manager:FARMSIM-2026:manager,crew:*")
     public_farms: str = "farm_ayeyarwady_demo"
     nasa_power_endpoint: str = "https://power.larc.nasa.gov/api/temporal/daily/point"
+    nasa_power_climatology_url: str = "https://power.larc.nasa.gov/api/temporal/climatology/point"
     chirps_base: str = "https://data.chc.ucsb.edu/products/CHIRPS-2.0"
     earth_search_url: str = "https://earth-search.aws.element84.com/v1"
     planetary_computer_url: str = "https://planetarycomputer.microsoft.com/api/stac/v1"

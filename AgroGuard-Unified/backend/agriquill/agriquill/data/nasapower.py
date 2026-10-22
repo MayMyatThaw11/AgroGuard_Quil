@@ -129,6 +129,69 @@ def _envelope(
     }
 
 
+MONTH_KEYS = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
+MONTH_DAYS = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+
+def climatology(lat: float, lon: float, client: httpx.Client | None = None) -> dict[str, Any]:
+    """Monthly rain and air temperature normals from the POWER climatology API (MERRA-2 grid)."""
+    s = get_settings()
+    lat2, lon2 = round(lat, 2), round(lon, 2)
+    params = {
+        "parameters": "PRECTOTCORR,T2M",
+        "community": "AG",
+        "latitude": str(lat2),
+        "longitude": str(lon2),
+        "format": "JSON",
+    }
+    key = f"climatology:{lat2}:{lon2}"
+    url = str(httpx.URL(s.nasa_power_climatology_url, params=params))
+    cached = _CACHE.get("nasa_power", key)
+    if cached is not None:
+        return {
+            **cached["payload"],
+            "source": source_ref(PROVIDER, url, cached["retrieved_at"], cached["sha256"]),
+        }
+    try:
+        own = client or httpx.Client(timeout=s.http_timeout_s)
+        try:
+            response = own.get(s.nasa_power_climatology_url, params=params)
+            response.raise_for_status()
+        finally:
+            if client is None:
+                own.close()
+        raw = response.json()
+        series = raw["properties"]["parameter"]
+        fill = float(raw.get("header", {}).get("fill_value", FILL))
+        rows = [
+            (float(series["PRECTOTCORR"][k]), float(series["T2M"][k]), days)
+            for k, days in zip(MONTH_KEYS, MONTH_DAYS, strict=True)
+        ]
+        months: list[dict[str, float]] | None = (
+            None
+            if any(fill in (rate, temp) for rate, temp, _ in rows)
+            else [{"rain_mm": round(rate * days, 1), "t_c": temp} for rate, temp, days in rows]
+        )
+    except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+        reason = f"NASA POWER climatology unavailable: {type(exc).__name__}"
+        return {"months": None, "missing": [missing("months", reason)], "source": None}
+    parsed = {
+        "provider": PROVIDER,
+        "provenance": "RETRIEVED",
+        "months": months,
+        "period": raw.get("header", {}).get("range"),
+        "missing": [] if months else [missing("months", "NASA POWER fill value in a month")],
+        "note": "MERRA-2 grid: monthly totals can be well below gauge totals; use the month "
+        "pattern, not the amounts",
+    }
+    digest = sha256(response.content)
+    if months:
+        _CACHE.put("nasa_power", key, parsed, url, digest, None)
+        log_fetch("nasa_power", key, digest)
+    stamp = datetime.now(UTC).isoformat(timespec="seconds")
+    return {**parsed, "source": source_ref(PROVIDER, url, stamp, digest)}
+
+
 def et0(lat: float, lon: float, day: date, client: httpx.Client | None = None) -> dict[str, Any]:
     from ..agronomy import FAO56_SOURCE, fao56_eto
 
