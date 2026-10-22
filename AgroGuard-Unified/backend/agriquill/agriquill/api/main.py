@@ -41,6 +41,7 @@ from .. import (
     ml,
     onboard,
     ops,
+    personas,
     safety,
     sim,
     telemetry,
@@ -1357,6 +1358,41 @@ async def contracts_satellite(
 async def contracts_risk(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
     _see(caller, farm_id)
     return await asyncio.to_thread(_live_call, live.risk, farm_id)
+
+
+JobKind = Literal["irrigate", "drain", "scout", "spray", "harvest"]
+
+
+class PersonaVariation(BaseModel):
+    label: str | None = Field(default=None, max_length=40)
+    persona: Literal["manual", "tech"]
+    crew: int = Field(ge=1, le=500)
+    machines: list[str] | None = Field(default=None, max_length=200)
+    budget: float | None = Field(default=None, ge=0)
+    unit_prices: dict[JobKind, float] = Field(default_factory=dict)
+    inflation_pct: float = Field(default=0.0, ge=-50, le=200)
+    durations_h: dict[JobKind, float] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _prices(self) -> PersonaVariation:
+        if any(v < 0 for v in self.unit_prices.values()):
+            raise ValueError("prices must be zero or more")
+        if any(not 0.5 <= v <= 240 for v in self.durations_h.values()):
+            raise ValueError("job hours must be from 0.5 to 240")
+        return self
+
+
+class PersonaReq(BaseModel):
+    variations: list[PersonaVariation] = Field(min_length=1, max_length=5)
+
+
+@router.post("/contracts/{farm_id}/persona-plan")
+async def contracts_persona_plan(
+    farm_id: str, req: PersonaReq, caller: Caller | None = _READER
+) -> dict[str, Any]:
+    _see(caller, farm_id)
+    variations = [v.model_dump() for v in req.variations]
+    return await asyncio.to_thread(_live_call, lambda f: personas.run(f, variations), farm_id)
 
 
 def _harvest(farm_id: str) -> dict[str, Any]:

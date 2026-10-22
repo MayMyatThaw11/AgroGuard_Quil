@@ -16,6 +16,8 @@ DEFAULT_TRAVEL_KMH = 5.0
 
 
 def task_kind(task: Mapping[str, Any]) -> str | None:
+    if task.get("manual_kind"):
+        return str(task["manual_kind"])
     actuation = task.get("actuation") or {}
     if actuation.get("command") == "spray":
         return "spray"
@@ -121,7 +123,7 @@ def solve(
         if kind is None or task.get("blocked_reason"):
             task["schedule"] = {"status": "advisory" if kind is None else "blocked"}
             continue
-        declared = durations_h.get(kind)
+        declared = task.get("duration_h") or durations_h.get(kind)
         duration = max(int(round(declared)), 1) if declared else DEFAULT_DURATION_H
         gates = (
             gates_by_paddy.get(task.get("paddy_id")) or gates_by_paddy.get(None) or DEFAULT_GATES
