@@ -19,6 +19,9 @@ HEADER_BYTES = 16384
 WORKERS = 6
 MAX_DAILY_DAYS = 92
 BASELINE = (1991, 2020)
+SPI_SCALES = (1, 3, 6)
+HARVEST_MONTHS = (11, 12, 1)
+HARVEST_RAIN_MM = 25.0
 SPI_SOURCE = "McKee, Doesken and Kleist (1993); WMO-No. 1090 SPI User Guide (2012)"
 _CACHE = RecordCache()
 _HOT = TTLCache()
@@ -389,7 +392,10 @@ def statistics(series: list[dict[str, Any]]) -> dict[str, Any]:
         "baseline": f"{BASELINE[0]}-{BASELINE[1]}",
         "latest_period": latest["period"] if latest else None,
         "latest_percentile": None,
+        "spi1": None,
         "spi3": None,
+        "spi6": None,
+        "harvest_rain": None,
         "spi_source": SPI_SOURCE,
     }
     if latest is None:
@@ -403,24 +409,60 @@ def statistics(series: list[dict[str, Any]]) -> dict[str, Any]:
     out["latest_percentile"] = round(
         100.0 * sum(v <= latest["precip_mm"] for v in base) / len(base), 1
     )
-    out["spi3"] = spi3(series, month)
+    for scale in SPI_SCALES:
+        out[f"spi{scale}"] = spi(series, month, scale)
+    out["harvest_rain"] = harvest_rain(series)
     return out
 
 
 def spi3(series: list[dict[str, Any]], month: int) -> float | None:
+    return spi(series, month, 3)
+
+
+def harvest_rain(series: list[dict[str, Any]]) -> dict[str, Any]:
+    """Baseline odds of a wet harvest month; the damaging total is a named TO VERIFY threshold."""
+    base_years = range(BASELINE[0], BASELINE[1] + 1)
+    values = {s["period"]: s["precip_mm"] for s in series}
+    out: dict[str, Any] = {
+        "baseline": f"{BASELINE[0]}-{BASELINE[1]}",
+        "threshold_mm": HARVEST_RAIN_MM,
+        "threshold_status": "TO VERIFY with DAR Yezin: monthly total treated as harvest-damaging",
+        "months": [],
+    }
+    for month in HARVEST_MONTHS:
+        totals = [v for y in base_years if (v := values.get(f"{y}-{month:02d}")) is not None]
+        if len(totals) < 25:
+            out["months"] = []
+            out["reason"] = f"baseline has {len(totals)} of 30 years for month {month}; need 25"
+            return out
+        arr = np.asarray(totals)
+        out["months"].append(
+            {
+                "month": month,
+                "years": len(totals),
+                "median_mm": round(float(np.median(arr)), 1),
+                "p90_mm": round(float(np.percentile(arr, 90)), 1),
+                "chance_at_or_above": round(float(np.mean(arr >= HARVEST_RAIN_MM)), 3),
+            }
+        )
+    return out
+
+
+def spi(series: list[dict[str, Any]], month: int, scale: int) -> float | None:
+    """SPI over `scale` months ending at `month` (McKee 1993; WMO-No. 1090 gamma-mixed method)."""
     from scipy import stats
 
     values = {s["period"]: s["precip_mm"] for s in series}
     totals: dict[int, float] = {}
     for year in range(BASELINE[0], BASELINE[1] + 2):
-        keys = [_shift(year, month, -k) for k in range(3)]
+        keys = [_shift(year, month, -k) for k in range(scale)]
         parts = [values.get(k) for k in keys]
         if all(p is not None for p in parts):
             totals[year] = float(sum(p for p in parts if p is not None))
     latest_year = max((int(p[:4]) for p in values if int(p[5:7]) == month), default=None)
     if latest_year is None:
         return None
-    keys = [_shift(latest_year, month, -k) for k in range(3)]
+    keys = [_shift(latest_year, month, -k) for k in range(scale)]
     parts = [values.get(k) for k in keys]
     if any(p is None for p in parts):
         return None

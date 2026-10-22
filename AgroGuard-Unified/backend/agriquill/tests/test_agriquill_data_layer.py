@@ -170,6 +170,57 @@ def test_chirps_statistics_need_a_full_baseline() -> None:
     assert short["spi3"] is None and "baseline" in short["reason"]
 
 
+def _monthly(values: dict[tuple[int, int], float]) -> list[dict]:
+    return [{"period": f"{y}-{m:02d}", "precip_mm": v} for (y, m), v in sorted(values.items())]
+
+
+def test_spi_follows_the_wmo_gamma_mixed_distribution_on_reference_cases() -> None:
+    from scipy import stats as st
+
+    rng = np.random.default_rng(3)
+    years = range(1991, 2021)
+    totals = {(y, 7): float(v) for y, v in zip(years, rng.gamma(2.0, 80.0, 30), strict=True)}
+    wet = dict(totals)
+    wet[(2021, 7)] = float(st.gamma.ppf(st.norm.cdf(2.0), 2.0, scale=80.0))
+    assert abs(chirps.spi(_monthly(wet), 7, 1) - 2.0) < 0.35
+    median = dict(totals)
+    median[(2021, 7)] = float(np.median(list(totals.values())))
+    assert abs(chirps.spi(_monthly(median), 7, 1)) < 0.1
+    dry = {k: (0.0 if i < 6 else v) for i, (k, v) in enumerate(totals.items())}
+    dry[(2021, 7)] = 0.0
+    assert chirps.spi(_monthly(dry), 7, 1) == pytest.approx(float(st.norm.ppf(0.2)), abs=0.01)
+
+
+def test_spi_scales_sum_the_right_number_of_months() -> None:
+    rng = np.random.default_rng(5)
+    series = _monthly(
+        {(y, m): float(rng.gamma(2.0, 60.0)) for y in range(1991, 2022) for m in range(1, 13)}
+    )
+    assert chirps.spi3(series, 6) == chirps.spi(series, 6, 3)
+    values = [chirps.spi(series, 6, k) for k in chirps.SPI_SCALES]
+    assert all(v is not None and math.isfinite(v) for v in values)
+    assert len(set(values)) == 3
+    stats = chirps.statistics(series)
+    assert {"spi1", "spi3", "spi6"} <= set(stats)
+
+
+def test_harvest_rain_reports_nov_to_jan_odds_from_the_baseline() -> None:
+    values = {}
+    for i, y in enumerate(range(1991, 2021)):
+        for m in range(1, 13):
+            values[(y, m)] = 100.0
+        values[(y, 11)] = 40.0 if i < 9 else 5.0
+        values[(y, 12)] = 2.0
+        values[(y, 1)] = 0.0
+    out = chirps.harvest_rain(_monthly(values))
+    nov = next(m for m in out["months"] if m["month"] == 11)
+    assert nov["years"] == 30 and nov["chance_at_or_above"] == 0.3
+    assert out["threshold_mm"] == chirps.HARVEST_RAIN_MM
+    assert "TO VERIFY" in out["threshold_status"]
+    short = chirps.harvest_rain(_monthly({(2020, 11): 3.0}))
+    assert short["months"] == [] and "baseline" in short["reason"]
+
+
 def power_server(status: int = 200, fill: bool = False) -> httpx.Client:
     raw = json.loads((DATA / "nasapower_yangon_20240101.json").read_text(encoding="utf-8"))
     if fill:
