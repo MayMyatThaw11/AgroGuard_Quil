@@ -539,7 +539,11 @@ def forecast(
             if issued is not None
             else "observed, optimistic: the backtest saw the rain that fell"
         )
-        chosen = min(scores, key=lambda k: scores[k]) if scores else WATER_BALANCE
+        held_out = next(iter(report.get("band_coverage", {}).values()), {}).get("n", 0)
+        eligible = {
+            k: v for k, v in scores.items() if k != HYBRID or held_out >= MIN_PROMOTION_PAIRS
+        }
+        chosen = min(eligible, key=lambda k: eligible[k]) if eligible else WATER_BALANCE
         wb = _fit_water_balance(targets, rain, cfg.recency_half_life_days)
         hybrid = _train_hybrid(targets, rain, temp, wb, cfg)[0] if chosen == HYBRID else None
         promoted = chosen == HYBRID and bool((report.get("quantile_heads") or {}).get("promoted"))
