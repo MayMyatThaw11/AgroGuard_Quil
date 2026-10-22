@@ -352,6 +352,54 @@ def conformal_check(
     }
 
 
+ROLLING_ORIGINS = 4
+
+
+def rolling_origins(
+    targets: list[np.ndarray], rain: np.ndarray, cfg: ForecastConfig, origins: int = ROLLING_ORIGINS
+) -> dict[str, Any]:
+    """Walk-forward cuts every `horizon` days back; each cut fits only on the days before it."""
+    errors: dict[str, list[float]] = {PERSISTENCE: [], DAMPED_TREND: [], WATER_BALANCE: []}
+    inside = dict.fromkeys(errors, 0)
+    per_origin: list[dict[str, Any]] = []
+    for j in range(origins):
+        cut = len(rain) - cfg.horizon * (j + 1)
+        if cut < cfg.window + cfg.horizon + 4:
+            break
+        end = cut + cfg.horizon
+        train = [t[:cut] for t in targets]
+        ok = [i for i, t in enumerate(targets) if not management_events(t, rain)[cut:end].any()]
+        if not ok:
+            per_origin.append({"cut": cut, "pairs": 0, "mae": {}})
+            continue
+        wb = _fit_water_balance(train, rain[:cut], cfg.recency_half_life_days)
+        predictions = {
+            PERSISTENCE: [np.full(cfg.horizon, train[i][-1]) for i in ok],
+            DAMPED_TREND: [_damped(train[i], cfg.horizon) for i in ok],
+            WATER_BALANCE: [wb.roll(i, train[i][-1], rain[cut:end]) for i in ok],
+        }
+        actual = [targets[i][cut:end] for i in ok]
+        mae: dict[str, float] = {}
+        for name, preds in predictions.items():
+            diffs = [np.abs(p - a) for p, a in zip(preds, actual, strict=True)]
+            errors[name].extend(float(d) for row in diffs for d in row)
+            mae[name] = round(float(np.mean(diffs)), 3)
+            inside[name] += sum(
+                inside_band(_band(p, wb.sigma), a) for p, a in zip(preds, actual, strict=True)
+            )
+        per_origin.append({"cut": cut, "pairs": len(ok) * cfg.horizon, "mae": mae})
+    pairs = len(errors[PERSISTENCE])
+    return {
+        "origins": len(per_origin),
+        "pairs": pairs,
+        "mae": {k: round(float(np.mean(v)), 3) for k, v in errors.items() if v},
+        "coverage": {k: {"inside": inside[k], "n": pairs} for k in errors},
+        "per_origin": per_origin,
+        "rain": "observed at every origin: optimistic, the issued forecast covers the newest cut",
+        "neural": "scored on the newest cut only; retraining per origin is too slow per request",
+    }
+
+
 def _backtest(
     targets: list[np.ndarray],
     rain: np.ndarray,
@@ -531,6 +579,7 @@ def forecast(
             "quantile_heads": report["quantile_heads"],
             "conformal": report.get("conformal"),
             "backtest_rain": report["backtest_rain"],
+            "rolling_origin": rolling_origins(targets, rain, cfg),
             "band_method": "pinball quantile heads"
             if heads is not None
             else "MC dropout"
@@ -553,8 +602,8 @@ def forecast(
             if mae_naive > 1e-9
             else 0.0,
             "note": "Model chosen by lowest hold-out MAE on series without irrigation or drainage "
-            "events in the hold-out; forecasts are the no-intervention trajectory. Observed rain "
-            "stands in for the rain forecast. Not a field validation.",
+            "events in the hold-out; forecasts are the no-intervention trajectory. backtest_rain "
+            "says which rain the hold-out used. Not a field validation.",
         }
     return {
         "method": chosen,
