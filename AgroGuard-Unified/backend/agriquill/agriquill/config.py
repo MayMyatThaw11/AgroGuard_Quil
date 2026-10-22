@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     openmeteo_endpoint: str = "https://api.open-meteo.com/v1/forecast"
     open_meteo_elevation_url: str = "https://api.open-meteo.com/v1/elevation"
     open_meteo_flood_url: str = "https://flood-api.open-meteo.com/v1/flood"
+    open_meteo_previous_runs_url: str = "https://previous-runs-api.open-meteo.com/v1/forecast"
     http_timeout_s: float = 30.0
     soil_cache_ttl_s: float = 180 * 24 * 3600.0
     weather_cache_ttl_s: float = 3600.0

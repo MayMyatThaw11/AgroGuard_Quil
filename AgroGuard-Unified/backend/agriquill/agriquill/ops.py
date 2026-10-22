@@ -26,6 +26,7 @@ def build_plan(payload: Mapping[str, Any]) -> dict[str, Any]:
         [w["temp_c"] for w in history],
         [w["rain_mm"] for w in future],
         forecast.ForecastConfig(horizon=len(future)),
+        payload.get("backtest_rain_issued"),
     )
     plan = farmers.plan_operations(
         [

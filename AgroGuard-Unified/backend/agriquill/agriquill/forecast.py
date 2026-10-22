@@ -357,6 +357,7 @@ def _backtest(
     rain: np.ndarray,
     temp: np.ndarray,
     cfg: ForecastConfig,
+    issued: np.ndarray | None = None,
 ) -> tuple[dict[str, float], dict[str, Any], int, int]:
     cut = len(rain) - cfg.horizon
     train = [t[:cut] for t in targets]
@@ -364,7 +365,8 @@ def _backtest(
     if not eligible:
         return {}, {}, 0, 0
     wb = _fit_water_balance(train, rain[:cut], cfg.recency_half_life_days)
-    future = rain[cut:]
+    # the rain known at the cut; observed rain is the optimistic fallback
+    future = issued if issued is not None else rain[cut:]
     predictors: dict[str, Callable[[int], np.ndarray]] = {
         PERSISTENCE: lambda i: np.full(cfg.horizon, train[i][-1]),
         DAMPED_TREND: lambda i: _damped(train[i], cfg.horizon),
@@ -441,6 +443,7 @@ def forecast(
     temp_history: Sequence[float],
     rain_future: Sequence[float],
     config: ForecastConfig | None = None,
+    rain_issued: Sequence[float] | None = None,
 ) -> dict[str, Any]:
     cfg = config or ForecastConfig()
     if not series:
@@ -450,6 +453,9 @@ def forecast(
     rain = _finite(rain_history, "rain_history")
     temp = _finite(temp_history, "temp_history")
     future = _finite(rain_future, "rain_future")
+    issued = _finite(rain_issued, "rain_issued") if rain_issued is not None else None
+    if issued is not None and len(issued) != cfg.horizon:
+        raise ValueError(f"rain_issued must have {cfg.horizon} values")
     if len(temp) != len(rain):
         raise ValueError("rain_history and temp_history must have equal length")
     if len(future) != cfg.horizon:
@@ -479,7 +485,12 @@ def forecast(
     if _TORCH_AVAILABLE:
         torch.set_num_threads(1)
     try:
-        scores, report, scored, windows = _backtest(targets, rain, temp, cfg)
+        scores, report, scored, windows = _backtest(targets, rain, temp, cfg, issued)
+        report["backtest_rain"] = (
+            "forecast issued at the cut"
+            if issued is not None
+            else "observed, optimistic: the backtest saw the rain that fell"
+        )
         chosen = min(scores, key=lambda k: scores[k]) if scores else WATER_BALANCE
         wb = _fit_water_balance(targets, rain, cfg.recency_half_life_days)
         hybrid = _train_hybrid(targets, rain, temp, wb, cfg)[0] if chosen == HYBRID else None
@@ -518,6 +529,8 @@ def forecast(
             "coverage_shown": report["band_coverage"][scored_as]["n"] >= MIN_COVERAGE_N,
             "interval_score": report["interval_score"],
             "quantile_heads": report["quantile_heads"],
+            "conformal": report.get("conformal"),
+            "backtest_rain": report["backtest_rain"],
             "band_method": "pinball quantile heads"
             if heads is not None
             else "MC dropout"

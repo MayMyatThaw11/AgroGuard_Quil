@@ -283,3 +283,51 @@ async def fetch_weather(lat: float, lon: float) -> dict[str, Any]:
         return parse_weather(r.json())
 
     return await _CACHE.get_or_fetch(key, s.weather_cache_ttl_s, _do)
+
+
+def issued_rain(
+    lat: float, lon: float, cut: dt.date, horizon: int, client: httpx.Client | None = None
+) -> dict[str, Any]:
+    """Daily rain as forecast on the cut day: lead k comes from precipitation_previous_day{k}."""
+    s = get_settings()
+    leads = [f"precipitation_previous_day{k}" for k in range(1, horizon + 1)]
+    end = cut + dt.timedelta(days=horizon)
+    params = {
+        "latitude": f"{lat:.2f}",
+        "longitude": f"{lon:.2f}",
+        "hourly": ",".join(leads),
+        "start_date": (cut + dt.timedelta(days=1)).isoformat(),
+        "end_date": end.isoformat(),
+        "timezone": "auto",
+    }
+    own = client or httpx.Client(timeout=s.http_timeout_s)
+    try:
+        response = own.get(s.open_meteo_previous_runs_url, params=params)
+        response.raise_for_status()
+        hourly = response.json()["hourly"]
+    except (httpx.HTTPError, ValueError, KeyError) as exc:
+        return {
+            "rain_mm": None,
+            "missing": [missing("rain_mm", f"previous runs unavailable: {type(exc).__name__}")],
+        }
+    finally:
+        if client is None:
+            own.close()
+    out: list[float] = []
+    for k in range(1, horizon + 1):
+        day = (cut + dt.timedelta(days=k)).isoformat()
+        values = [
+            v for t, v in zip(hourly["time"], hourly[leads[k - 1]], strict=False) if t[:10] == day
+        ]
+        if len(values) != 24 or any(v is None for v in values):
+            return {
+                "rain_mm": None,
+                "missing": [missing("rain_mm", f"no complete day-{k} forecast for {day}")],
+            }
+        out.append(round(sum(values), 2))
+    return {
+        "rain_mm": out,
+        "source": "Open-Meteo Previous Runs API",
+        "cut": cut.isoformat(),
+        "missing": [],
+    }

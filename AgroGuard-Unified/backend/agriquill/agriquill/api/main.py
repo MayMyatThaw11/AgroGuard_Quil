@@ -551,6 +551,7 @@ class OpsPlanReq(BaseModel):
     paddies: list[OpsPaddy] = Field(min_length=1, max_length=64)
     weather_history: list[OpsWeatherDay] = Field(min_length=7, max_length=400)
     weather_forecast: list[OpsWeatherDay] = Field(min_length=1, max_length=21)
+    backtest_rain_issued: list[float] | None = Field(default=None, max_length=21)
     assets: list[OpsAsset] = Field(default_factory=list)
     threshold_overrides: dict[str, float] = Field(default_factory=dict)
     lat: float | None = Field(default=None, ge=-90, le=90)
