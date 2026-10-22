@@ -68,6 +68,7 @@ from ..data import (
 from ..data.soil import fetch_soil
 from ..data.weather import fetch_weather, issued_rain
 from ..ledger import Ledger, get_ledger
+from ..store import RecordConflict
 
 
 def _ledger() -> Ledger:
@@ -1317,10 +1318,68 @@ class CertificateReq(BaseModel):
         return self
 
 
+MAX_RECORDS_PAGE = 500
+
+
+class CorrectReq(BaseModel):
+    changes: dict[str, Any] = Field(min_length=1)
+    reason: str = Field(min_length=1, max_length=200)
+    corrected_by: str = Field(min_length=1, max_length=80)
+
+
+def _record_call(fn: Any, *args: Any) -> Any:
+    try:
+        return fn(*args)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"not found: {exc.args[0]}") from exc
+    except RecordConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+def _checker(model: type[BaseModel], by_field: str, by: str) -> Any:
+    """Corrections pass the same rules as a new record."""
+
+    def check(row: dict[str, Any]) -> dict[str, Any]:
+        return model.model_validate({**row, by_field: by}).model_dump(
+            mode="json", exclude={by_field}
+        )
+
+    return check
+
+
+async def _correct(
+    caller: Caller, farm_id: str, rid: str, req: CorrectReq, fn: Any, model: type[BaseModel]
+) -> Any:
+    _named(caller, req.corrected_by)
+    _own(caller, farm_id)
+    by_field = next(f for f in ("added_by", "recorded_by") if f in model.model_fields)
+    check = _checker(model, by_field, req.corrected_by)
+    return await asyncio.to_thread(
+        _record_call, fn, farm_id, rid, req.changes, check, req.reason, req.corrected_by
+    )
+
+
+async def _void(caller: Caller, farm_id: str, rid: str, reason: str, by: str, fn: Any) -> Any:
+    _named(caller, by)
+    _own(caller, farm_id)
+    return await asyncio.to_thread(_record_call, fn, farm_id, rid, reason, by)
+
+
 @router.get("/farms/{farm_id}/certificates")
-async def farms_certificates(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+async def farms_certificates(
+    farm_id: str,
+    limit: int = Query(100, ge=1, le=MAX_RECORDS_PAGE),
+    offset: int = Query(0, ge=0),
+    include_voided: bool = False,
+    caller: Caller | None = _READER,
+) -> dict[str, Any]:
     _see(caller, farm_id)
-    return await asyncio.to_thread(certificates.calendar, farm_id)
+    out = await asyncio.to_thread(certificates.calendar, farm_id, None, include_voided)
+    rows = out["certificates"]
+    page = rows[offset : offset + limit]
+    return {**out, "certificates": page, "total": len(rows), "offset": offset, "limit": limit}
 
 
 @router.post("/farms/{farm_id}/certificates")
@@ -1330,7 +1389,25 @@ async def farms_add_certificate(
     _named(caller, req.added_by)
     _own(caller, farm_id)
     cert = req.model_dump(mode="json", exclude={"added_by"})
-    return await asyncio.to_thread(certificates.add, farm_id, cert, req.added_by)
+    return await asyncio.to_thread(_record_call, certificates.add, farm_id, cert, req.added_by)
+
+
+@router.patch("/farms/{farm_id}/certificates/{cert_id}")
+async def farms_correct_certificate(
+    farm_id: str, cert_id: str, req: CorrectReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    return await _correct(caller, farm_id, cert_id, req, certificates.correct, CertificateReq)
+
+
+@router.delete("/farms/{farm_id}/certificates/{cert_id}")
+async def farms_void_certificate(
+    farm_id: str,
+    cert_id: str,
+    reason: str = Query(min_length=1, max_length=200),
+    voided_by: str = Query(min_length=1, max_length=80),
+    caller: Caller = _AS_MANAGER,
+) -> dict[str, Any]:
+    return await _void(caller, farm_id, cert_id, reason, voided_by, certificates.void)
 
 
 class FumigationReq(BaseModel):
@@ -1344,9 +1421,18 @@ class FumigationReq(BaseModel):
 
 
 @router.get("/farms/{farm_id}/fumigations")
-async def farms_fumigations(farm_id: str, caller: Caller | None = _READER) -> list[dict[str, Any]]:
+async def farms_fumigations(
+    farm_id: str,
+    response: Response,
+    limit: int = Query(100, ge=1, le=MAX_RECORDS_PAGE),
+    offset: int = Query(0, ge=0),
+    include_voided: bool = False,
+    caller: Caller | None = _READER,
+) -> list[dict[str, Any]]:
     _see(caller, farm_id)
-    return await asyncio.to_thread(fumigation.history, farm_id)
+    rows = await asyncio.to_thread(fumigation.history, farm_id, include_voided)
+    response.headers["X-Total-Count"] = str(len(rows))
+    return rows[offset : offset + limit]
 
 
 @router.post("/farms/{farm_id}/fumigations")
@@ -1360,8 +1446,28 @@ async def farms_add_fumigation(
         return await asyncio.to_thread(fumigation.record, farm_id, event, req.recorded_by)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="no contract for this farm") from exc
+    except RecordConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.patch("/farms/{farm_id}/fumigations/{fumigation_id}")
+async def farms_correct_fumigation(
+    farm_id: str, fumigation_id: str, req: CorrectReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    return await _correct(caller, farm_id, fumigation_id, req, fumigation.correct, FumigationReq)
+
+
+@router.delete("/farms/{farm_id}/fumigations/{fumigation_id}")
+async def farms_void_fumigation(
+    farm_id: str,
+    fumigation_id: str,
+    reason: str = Query(min_length=1, max_length=200),
+    voided_by: str = Query(min_length=1, max_length=80),
+    caller: Caller = _AS_MANAGER,
+) -> dict[str, Any]:
+    return await _void(caller, farm_id, fumigation_id, reason, voided_by, fumigation.void)
 
 
 LotId = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,40}$")
@@ -1393,17 +1499,6 @@ class MillReq(BaseModel):
     recorded_by: str = Field(min_length=1, max_length=80)
 
 
-def _lot_call(fn: Any, *args: Any) -> dict[str, Any]:
-    try:
-        return fn(*args)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"not found: {exc.args[0]}") from exc
-    except lots.LotConflict as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
 @router.get("/contracts/{farm_id}/evidence-pack")
 async def contracts_evidence_pack(
     farm_id: str,
@@ -1431,9 +1526,18 @@ async def roadmap() -> dict[str, Any]:
 
 
 @router.get("/farms/{farm_id}/lots")
-async def farms_lots(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+async def farms_lots(
+    farm_id: str,
+    limit: int = Query(100, ge=1, le=MAX_RECORDS_PAGE),
+    offset: int = Query(0, ge=0),
+    include_voided: bool = False,
+    caller: Caller | None = _READER,
+) -> dict[str, Any]:
     _see(caller, farm_id)
-    return await asyncio.to_thread(lots.farm_lots, farm_id)
+    out = await asyncio.to_thread(lots.farm_lots, farm_id, include_voided)
+    rows = out["lots"]
+    page = rows[offset : offset + limit]
+    return {**out, "lots": page, "total": len(rows), "offset": offset, "limit": limit}
 
 
 @router.post("/farms/{farm_id}/lots")
@@ -1441,7 +1545,25 @@ async def farms_add_lot(farm_id: str, req: LotReq, caller: Caller = _AS_MANAGER)
     _named(caller, req.recorded_by)
     _own(caller, farm_id)
     body = req.model_dump(mode="json", exclude={"recorded_by"})
-    return await asyncio.to_thread(_lot_call, lots.record, farm_id, body, req.recorded_by)
+    return await asyncio.to_thread(_record_call, lots.record, farm_id, body, req.recorded_by)
+
+
+@router.patch("/farms/{farm_id}/lots/{lot_id}")
+async def farms_correct_lot(
+    farm_id: str, lot_id: str, req: CorrectReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    return await _correct(caller, farm_id, lot_id, req, lots.correct, LotReq)
+
+
+@router.delete("/farms/{farm_id}/lots/{lot_id}")
+async def farms_void_lot(
+    farm_id: str,
+    lot_id: str,
+    reason: str = Query(min_length=1, max_length=200),
+    voided_by: str = Query(min_length=1, max_length=80),
+    caller: Caller = _AS_MANAGER,
+) -> dict[str, Any]:
+    return await _void(caller, farm_id, lot_id, reason, voided_by, lots.void)
 
 
 @router.post("/farms/{farm_id}/lots/{lot_id}/moisture")
@@ -1452,7 +1574,7 @@ async def farms_lot_moisture(
     _own(caller, farm_id)
     body = req.model_dump(mode="json", exclude={"recorded_by"})
     return await asyncio.to_thread(
-        _lot_call, lots.add_moisture, farm_id, lot_id, body, req.recorded_by
+        _record_call, lots.add_moisture, farm_id, lot_id, body, req.recorded_by
     )
 
 
@@ -1463,7 +1585,9 @@ async def farms_lot_mill(
     _named(caller, req.recorded_by)
     _own(caller, farm_id)
     body = req.model_dump(mode="json", exclude={"recorded_by"})
-    return await asyncio.to_thread(_lot_call, lots.add_mill, farm_id, lot_id, body, req.recorded_by)
+    return await asyncio.to_thread(
+        _record_call, lots.add_mill, farm_id, lot_id, body, req.recorded_by
+    )
 
 
 @router.get("/contracts/{farm_id}/monitoring")
@@ -1543,6 +1667,17 @@ def _seasons(farm_id: str) -> dict[str, Any]:
 async def contracts_seasons(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
     _see(caller, farm_id)
     return await asyncio.to_thread(_live_call, _seasons, farm_id)
+
+
+@router.get("/contracts/{farm_id}/model-card")
+async def contracts_model_card(
+    farm_id: str, format: Literal["json", "csv"] = "json", caller: Caller | None = _READER
+) -> Any:
+    _see(caller, farm_id)
+    card = await asyncio.to_thread(_live_call, modelcard.build, farm_id)
+    if format == "csv":
+        return Response(modelcard.to_csv(card), media_type="text/csv")
+    return card
 
 
 @router.get("/contracts/{farm_id}/flows")
@@ -1669,17 +1804,6 @@ def error_body(status: int, detail: Any, request_id: str) -> dict[str, Any]:
         "request_id": request_id,
         "detail": detail,
     }
-@router.get("/contracts/{farm_id}/model-card")
-async def contracts_model_card(
-    farm_id: str, format: Literal["json", "csv"] = "json", caller: Caller | None = _READER
-) -> Any:
-    _see(caller, farm_id)
-    card = await asyncio.to_thread(_live_call, modelcard.build, farm_id)
-    if format == "csv":
-        return Response(modelcard.to_csv(card), media_type="text/csv")
-    return card
-
-
 
 
 def _install_error_contract(app: FastAPI) -> None:

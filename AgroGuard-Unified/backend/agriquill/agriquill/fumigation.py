@@ -1,13 +1,21 @@
 from __future__ import annotations
 
-import json
+from collections.abc import Callable
 from typing import Any
 
 from . import live, safety
 from .config import get_settings
 from .ledger import get_ledger
 from .onboard import _banned_match
-from .store import RecordCache, now_iso, sha256
+from .store import (
+    RecordCache,
+    correct_record,
+    editable,
+    live_row,
+    now_iso,
+    record_id,
+    void_record,
+)
 
 _STORE = RecordCache("contracts.sqlite")
 METHODS = ("synthetic_chemical", "controlled_atmosphere", "hermetic", "heat", "other")
@@ -48,12 +56,18 @@ def verdict(standard: str | None, product: str, active: str | None, method: str)
     }
 
 
-def record(farm_id: str, event: dict[str, Any], recorded_by: str) -> dict[str, Any]:
+EDITABLE = ("parcels", "active_ingredient", "method")
+
+
+def _parcels(farm_id: str) -> dict[str, dict[str, Any]]:
     loaded = live.load(farm_id)
     if loaded is None:
         raise KeyError(farm_id)
     spec = loaded[1]["contract"] or {}
-    known = {p["id"]: p for p in spec.get("parcels", [])}
+    return {p["id"]: p for p in spec.get("parcels", [])}
+
+
+def _checked(event: dict[str, Any], known: dict[str, dict[str, Any]]) -> dict[str, Any]:
     unknown = sorted(set(event["parcels"]) - set(known))
     if unknown:
         raise ValueError(f"unknown parcel {unknown[0]}")
@@ -62,17 +76,41 @@ def record(farm_id: str, event: dict[str, Any], recorded_by: str) -> dict[str, A
         pid: verdict(known[pid].get("standard"), product, active, method)
         for pid in event["parcels"]
     }
-    out = {
+    return {
         **event,
-        "farm_id": farm_id,
-        "recorded_by": recorded_by,
-        "recorded_at": now_iso(),
         "checks": checks,
         "blocks_organic": sorted(p for p, c in checks.items() if c["result"] == "blocked"),
     }
-    key = f"{farm_id}|{event['store']}|{event['applied_at']}|{event['product']}"
-    digest = sha256(json.dumps(out, sort_keys=True).encode("utf-8"))
-    _STORE.put("fumigation", key, out, f"agriquill:fumigation/{farm_id}", digest, None)
+
+
+def _key(farm_id: str, event: dict[str, Any]) -> str:
+    return f"{farm_id}|{event['store']}|{event['applied_at']}|{event['product']}"
+
+
+def _rid(event: dict[str, Any]) -> str:
+    return record_id(event["store"], event["applied_at"], event["product"])
+
+
+def _shown(row: dict[str, Any]) -> dict[str, Any]:
+    out = {**row, "id": _rid(row)}
+    if row.get("voided_at"):
+        out["blocks_organic"] = []
+    return out
+
+
+def record(farm_id: str, event: dict[str, Any], recorded_by: str) -> dict[str, Any]:
+    checked = _checked(event, _parcels(farm_id))
+    out = {**checked, "farm_id": farm_id, "recorded_by": recorded_by, "recorded_at": now_iso()}
+    rid = _rid(event)
+
+    def fresh(old: Any) -> dict[str, Any]:
+        if old is not None:
+            live_row(old, rid)
+        return out
+
+    _, digest = _STORE.update(
+        "fumigation", _key(farm_id, event), fresh, f"agriquill:fumigation/{farm_id}"
+    )
     get_ledger(get_settings().ledger_path).append(
         "fumigation_recorded",
         {
@@ -83,9 +121,44 @@ def record(farm_id: str, event: dict[str, Any], recorded_by: str) -> dict[str, A
             "sha256": digest,
         },
     )
-    return out
+    return _shown(out)
 
 
-def history(farm_id: str) -> list[dict[str, Any]]:
-    rows = [r for r in _STORE.items("fumigation") if r.get("farm_id") == farm_id]
+def history(farm_id: str, include_voided: bool = False) -> list[dict[str, Any]]:
+    """A voided treatment stays on record but blocks no plot."""
+    rows = [
+        _shown(r)
+        for r in _STORE.items("fumigation", f"{farm_id}|")
+        if r.get("farm_id") == farm_id and (include_voided or not r.get("voided_at"))
+    ]
     return sorted(rows, key=lambda r: r["applied_at"], reverse=True)
+
+
+def _find(farm_id: str, rid: str) -> dict[str, Any]:
+    found = next((r for r in history(farm_id, include_voided=True) if r["id"] == rid), None)
+    if found is None:
+        raise KeyError(rid)
+    return found
+
+
+def correct(
+    farm_id: str,
+    rid: str,
+    changes: dict[str, Any],
+    check: Callable[[dict[str, Any]], dict[str, Any]],
+    reason: str,
+    by: str,
+) -> dict[str, Any]:
+    editable(changes, EDITABLE)
+    key = _key(farm_id, _find(farm_id, rid))
+    known = _parcels(farm_id)
+
+    def fix(old: dict[str, Any]) -> dict[str, Any]:
+        return {**old, **_checked({**old, **check({**old, **changes})}, known)}
+
+    return _shown(correct_record(_STORE, "fumigation", key, farm_id, rid, fix, reason, by))
+
+
+def void(farm_id: str, rid: str, reason: str, by: str) -> dict[str, Any]:
+    key = _key(farm_id, _find(farm_id, rid))
+    return _shown(void_record(_STORE, "fumigation", key, farm_id, rid, reason, by))

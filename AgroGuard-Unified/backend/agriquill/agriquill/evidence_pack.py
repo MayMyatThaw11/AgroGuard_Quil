@@ -81,9 +81,15 @@ def build(
         },
         "conversion": parcel.get("conversion"),
         "inputs": inputs,
-        "certificates": certificates.calendar(farm_id)["certificates"],
-        "fumigations": [f for f in fumigation.history(farm_id) if parcel_id in f["parcels"]],
-        "lots": [lot for lot in lots.farm_lots_raw(farm_id) if parcel_id in lot["parcels"]],
+        "certificates": certificates.calendar(farm_id, include_voided=True)["certificates"],
+        "fumigations": [
+            f for f in fumigation.history(farm_id, include_voided=True) if parcel_id in f["parcels"]
+        ],
+        "lots": [
+            lot
+            for lot in lots.farm_lots_raw(farm_id, include_voided=True)
+            if parcel_id in lot["parcels"]
+        ],
         "gate_history": gates,
     }
     body = json.dumps(sections, sort_keys=True, default=str).encode("utf-8")

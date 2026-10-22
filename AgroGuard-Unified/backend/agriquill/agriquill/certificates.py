@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-import json
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 
 from .config import get_settings
 from .ledger import get_ledger
-from .store import RecordCache, now_iso, sha256
+from .store import (
+    RecordCache,
+    correct_record,
+    editable,
+    live_row,
+    now_iso,
+    record_id,
+    void_record,
+)
 
 _STORE = RecordCache("contracts.sqlite")
 
@@ -28,16 +36,78 @@ YEARLY_DEADLINES: dict[str, tuple[int, int, str]] = {
 }
 
 
+EDITABLE = ("issuer", "country", "issued", "expires")
+
+
+def _key(farm_id: str, cert: dict[str, Any]) -> str:
+    return f"{farm_id}|{cert['kind']}|{cert['number']}"
+
+
+def _shown(cert: dict[str, Any]) -> dict[str, Any]:
+    return {**cert, "id": record_id(cert["kind"], cert["number"])}
+
+
 def add(farm_id: str, cert: dict[str, Any], added_by: str) -> dict[str, Any]:
-    key = f"{farm_id}|{cert['kind']}|{cert['number']}"
     record = {**cert, "farm_id": farm_id, "added_by": added_by, "added_at": now_iso()}
-    digest = sha256(json.dumps(record, sort_keys=True, default=str).encode("utf-8"))
-    _STORE.put("certificate", key, record, f"agriquill:certificate/{farm_id}", digest, None)
+    rid = record_id(cert["kind"], cert["number"])
+
+    def fresh(old: Any) -> dict[str, Any]:
+        if old is not None:
+            live_row(old, rid)
+        return record
+
+    _, digest = _STORE.update(
+        "certificate", _key(farm_id, cert), fresh, f"agriquill:certificate/{farm_id}"
+    )
     get_ledger(get_settings().ledger_path).append(
         "certificate_recorded",
         {"farm_id": farm_id, "kind": cert["kind"], "expires": cert["expires"], "sha256": digest},
     )
-    return record
+    return _shown(record)
+
+
+def rows(farm_id: str, include_voided: bool = False) -> list[dict[str, Any]]:
+    found = _STORE.items("certificate", f"{farm_id}|")
+    return [
+        _shown(c)
+        for c in found
+        if c.get("farm_id") == farm_id and (include_voided or not c.get("voided_at"))
+    ]
+
+
+def _find(farm_id: str, rid: str) -> dict[str, Any]:
+    found = next((c for c in rows(farm_id, include_voided=True) if c["id"] == rid), None)
+    if found is None:
+        raise KeyError(rid)
+    return found
+
+
+def correct(
+    farm_id: str,
+    rid: str,
+    changes: dict[str, Any],
+    check: Callable[[dict[str, Any]], dict[str, Any]],
+    reason: str,
+    by: str,
+) -> dict[str, Any]:
+    editable(changes, EDITABLE)
+    key = _key(farm_id, _find(farm_id, rid))
+    row = correct_record(
+        _STORE,
+        "certificate",
+        key,
+        farm_id,
+        rid,
+        lambda old: {**old, **check({**old, **changes})},
+        reason,
+        by,
+    )
+    return _shown(row)
+
+
+def void(farm_id: str, rid: str, reason: str, by: str) -> dict[str, Any]:
+    key = _key(farm_id, _find(farm_id, rid))
+    return _shown(void_record(_STORE, "certificate", key, farm_id, rid, reason, by))
 
 
 def _due(cert: dict[str, Any], today: date) -> tuple[date, str]:
@@ -62,11 +132,12 @@ def alert_level(days_left: int) -> str | None:
     return None
 
 
-def calendar(farm_id: str, today: date | None = None) -> dict[str, Any]:
+def calendar(
+    farm_id: str, today: date | None = None, include_voided: bool = False
+) -> dict[str, Any]:
     today = today or date.today()
-    rows = [c for c in _STORE.items("certificate") if c.get("farm_id") == farm_id]
     out = []
-    for cert in rows:
+    for cert in rows(farm_id, include_voided):
         due, what = _due(cert, today)
         days_left = (due - today).days
         yearly = YEARLY_DEADLINES.get(cert["kind"])
@@ -77,7 +148,7 @@ def calendar(farm_id: str, today: date | None = None) -> dict[str, Any]:
                 "due": due.isoformat(),
                 "due_for": what,
                 "days_left": days_left,
-                "alert": alert_level(days_left),
+                "alert": None if cert.get("voided_at") else alert_level(days_left),
                 "deadline_status": yearly[2] if yearly and what == "renewal deadline" else None,
             }
         )
