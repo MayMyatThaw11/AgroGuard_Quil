@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AIChat from './components/AIChat.jsx'
 import CropSuggestion from './components/CropSuggestion.jsx'
 import Dashboard from './components/Dashboard.jsx'
+import ExportQuality from './components/ExportQuality.jsx'
 import HealthUpdates from './components/HealthUpdates.jsx'
 import IoTSimulation from './components/IoTSimulation.jsx'
 import NDVIAnalysis from './components/NDVIAnalysis.jsx'
@@ -25,6 +26,7 @@ function App() {
         <Route path="/crop-suggestion" element={<CropSuggestion />} />
         <Route path="/disease-detection" element={<DiseaseDetectionPage />} />
         <Route path="/water-management" element={<WaterManagement />} />
+        <Route path="/export-quality" element={<ExportQuality />} />
         <Route path="/ai-chat" element={<AIChat />} />
         <Route path="/council" element={<CouncilPage />} />
         <Route path="/health-updates" element={<HealthUpdates />} />

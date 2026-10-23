@@ -1,4 +1,4 @@
-import { CreditCard, Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen, Droplets, Scale } from 'lucide-react'
+import { CreditCard, Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen, Droplets, Scale, PackageCheck } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { useTheme } from '../contexts/ThemeContext.jsx'
@@ -12,6 +12,7 @@ const navItems = [
   { key: 'nav.suggestion', icon: Sprout, path: '/crop-suggestion' },
   { key: 'nav.disease', icon: ScanSearch, path: '/disease-detection' },
   { key: 'nav.water', icon: Droplets, path: '/water-management' },
+  { key: 'nav.exportQuality', icon: PackageCheck, path: '/export-quality' },
   { key: 'nav.chat', icon: Bot, path: '/ai-chat' },
   { key: 'nav.council', icon: Scale, path: '/council', badge: 'Beta' },
   { key: 'nav.iot', icon: RadioTower, path: '/iot-simulation' },

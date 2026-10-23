@@ -131,4 +131,117 @@ export async function evaluateWaterAdvisory(payload, signal) {
   return data
 }
 
+// POST /export/lots — records a new export lot for a field. No readiness or
+// standard logic lives client-side; the backend computes readiness/gaps
+// from the lot's actual recorded lab results and certificates.
+export async function createExportLot(payload, signal) {
+  const { data } = await axios.post(`${API_BASE_URL}/export/lots`, payload, { signal })
+  return data
+}
+
+// GET /export/lots — lists export lots, optionally filtered by fieldId.
+export async function getExportLots(fieldId, signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/lots`, { params: { fieldId }, signal })
+  return data
+}
+
+// GET /export/lots/{id} — one export lot with its lab results and certificates.
+export async function getExportLot(lotId, signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/lots/${lotId}`, { signal })
+  return data
+}
+
+// POST /export/lots/{id}/lab-results — records a lab result for a lot.
+export async function createExportLabResult(lotId, payload, signal) {
+  const { data } = await axios.post(`${API_BASE_URL}/export/lots/${lotId}/lab-results`, payload, { signal })
+  return data
+}
+
+// POST /export/lots/{id}/certificates — records a certificate for a lot.
+export async function createExportCertificate(lotId, payload, signal) {
+  const { data } = await axios.post(`${API_BASE_URL}/export/lots/${lotId}/certificates`, payload, { signal })
+  return data
+}
+
+// GET /export/lots/{id}/readiness — readiness computed from actual records;
+// never returns an APPROVED/CERTIFIED verdict.
+export async function getExportReadiness(lotId, signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/lots/${lotId}/readiness`, { signal })
+  return data
+}
+
+// GET /export/lots/{id}/evidence-pack — the CSV download URL; not fetched
+// via axios since this triggers a browser file download.
+export function exportEvidencePackUrl(lotId) {
+  return `${API_BASE_URL}/export/lots/${lotId}/evidence-pack`
+}
+
+// GET /export/lots/{id}/traceability — real field-level sensor/assessment
+// context for a lot; always shown as contextual, never lot-specific proof.
+export async function getExportTraceability(lotId, signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/lots/${lotId}/traceability`, { signal })
+  return data
+}
+
+// POST /export/lots/{id}/criteria — records a self-attested buyer-specification
+// quality criterion for a lot.
+export async function createExportQualityCriterion(lotId, payload, signal) {
+  const { data } = await axios.post(`${API_BASE_URL}/export/lots/${lotId}/criteria`, payload, { signal })
+  return data
+}
+
+// GET /export/lots/{id}/criteria — lists quality criteria recorded for a lot.
+export async function getExportQualityCriteria(lotId, signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/lots/${lotId}/criteria`, { signal })
+  return data
+}
+
+// GET /export/lots/{id}/quality-gaps — compares lab results against recorded
+// criteria; never a compliance or certification verdict.
+export async function getExportQualityGaps(lotId, signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/lots/${lotId}/quality-gaps`, { signal })
+  return data
+}
+
+// GET /export/fruits — the ten-fruit catalog reused read-only from Crop
+// Suggestion's existing dataset. Never used to change Crop Suggestion itself.
+export async function getFruitCatalog(signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/fruits`, { signal })
+  return data
+}
+
+// GET /export/eu/member-states — the 27 current EU Member States. Never
+// includes the UK, Switzerland or Norway.
+export async function getEuMemberStates(signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/eu/member-states`, { signal })
+  return data
+}
+
+// GET /export/eu/requirements — EU legal-criteria reference rows for one
+// fruit/destination. Reference knowledge only, never evidence about a lot.
+export async function getEuRequirements(fruitCode, memberState, signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/eu/requirements`, {
+    params: { fruit: fruitCode, memberState: memberState || undefined },
+    signal,
+  })
+  return data
+}
+
+// GET /export/lots/{id}/eu-readiness — per-criterion EU readiness for a
+// lot; never returns an approved/certified status, see EUReadinessResponse.
+export async function getEuReadiness(lotId, fruitCode, memberState, signal) {
+  const { data } = await axios.get(`${API_BASE_URL}/export/lots/${lotId}/eu-readiness`, {
+    params: { fruit: fruitCode, memberState: memberState || undefined },
+    signal,
+  })
+  return data
+}
+
+// POST /export/eu/criteria/import/validate — dry-run validation of candidate
+// EU criteria rows. Never writes the reference dataset or a database.
+export async function validateEuCriteriaImport(rows, signal) {
+  const { data } = await axios.post(`${API_BASE_URL}/export/eu/criteria/import/validate`, { rows }, { signal })
+  return data
+}
+
 export const WOKWI_DEVICE_ID = Number(import.meta.env.VITE_WOKWI_DEVICE_ID || 1)

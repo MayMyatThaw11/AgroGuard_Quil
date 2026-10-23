@@ -15,6 +15,8 @@ from app.api.v1.endpoints.demo import router as demo_router
 from app.api.v1.endpoints.devices import router as devices_router
 from app.api.v1.endpoints.disease import router as disease_router
 from app.api.v1.endpoints.disease_advice import router as disease_advice_router
+from app.api.v1.endpoints.export_quality import router as export_quality_router
+from app.api.v1.endpoints.eu_export_quality import router as eu_export_quality_router
 from app.api.v1.endpoints.fields import router as fields_router
 from app.api.v1.endpoints.growth import router as growth_router
 from app.api.v1.endpoints.health import router as health_router
@@ -47,6 +49,8 @@ api_router.include_router(demo_router)
 api_router.include_router(devices_router)
 api_router.include_router(disease_router)
 api_router.include_router(disease_advice_router)
+api_router.include_router(export_quality_router)
+api_router.include_router(eu_export_quality_router)
 api_router.include_router(fields_router)
 api_router.include_router(growth_router)
 api_router.include_router(health_router)

@@ -2,6 +2,12 @@ from app.db.models.alert import Alert
 from app.db.models.assessment import Assessment
 from app.db.models.crop_profile import CropProfile
 from app.db.models.crop_requirement import CropRequirement
+from app.db.models.export_lot import (
+    ExportCertificate,
+    ExportLabResult,
+    ExportLot,
+    ExportQualityCriterion,
+)
 from app.db.models.field import Field
 from app.db.models.field_context_snapshot import FieldContextSnapshot
 from app.db.models.growth_simulation import GrowthSimulation
@@ -22,6 +28,10 @@ __all__ = [
     "Assessment",
     "CropProfile",
     "CropRequirement",
+    "ExportCertificate",
+    "ExportLabResult",
+    "ExportLot",
+    "ExportQualityCriterion",
     "Field",
     "FieldContextSnapshot",
     "GrowthEvent",

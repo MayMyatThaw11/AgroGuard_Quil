@@ -460,12 +460,17 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .feature-section-head p { margin: .2rem 0 0; color: var(--text-muted); font-size: .85rem; }
 .feature-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; }
 .feature-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+/* A date input's placeholder + native calendar icon need a minimum width to
+   avoid overlapping/clipping each other -- this holds regardless of how
+   narrow the grid column around it gets squeezed (e.g. a 3-column grid in
+   a width-capped container). */
+.feature-grid-2 input[type="date"], .feature-grid-3 input[type="date"] { min-width: 9rem; }
 .feature-field-row { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; padding: .5rem 0; border-bottom: 1px solid var(--border); }
 .feature-field-row:last-child { border-bottom: 0; }
 .feature-field-label { color: var(--text-muted); font-size: .82rem; }
 .feature-field-value { display: flex; align-items: center; gap: .5rem; color: var(--text); font-weight: 700; }
 .feature-checklist { display: grid; gap: .5rem; }
-.feature-checklist-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .65rem; border: 1px solid var(--border); border-radius: .9rem; background: #fff; padding: .7rem .85rem; }
+.feature-checklist-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .65rem; border: 1px solid var(--border); border-radius: .9rem; background: var(--ag-card, #fff); padding: .7rem .85rem; }
 .feature-checklist-item .status-pill { flex: 0 0 auto; border-radius: 999px; padding: .18rem .6rem; font-size: .68rem; font-weight: 800; text-transform: uppercase; }
 .feature-checklist-item > div:not(.status-pill) { flex: 1 1 14rem; min-width: 0; }
 .feature-checklist-item .btn { font-size: .78rem; padding: .4rem .75rem; }
@@ -476,10 +481,33 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .status-pill.verified { background: rgba(23,170,81,.18); color: #137a38; }
 .status-pill.pending { background: rgba(215,122,17,.16); color: #9a5c0c; }
 .status-pill.missing { background: rgba(203,42,38,.12); color: #b3241f; }
+.status-pill.unverified { background: rgba(100,116,139,.16); color: #475569; }
+.status-pill.expired { background: rgba(203,42,38,.12); color: #b3241f; }
+.status-pill.not-applicable { background: rgba(100,116,139,.12); color: #64748b; }
 
 @media (max-width: 900px) {
   .feature-grid-2, .feature-grid-3 { grid-template-columns: 1fr; }
 }
+
+/* Export Quality (and reusable elsewhere): a save button centered
+   consistently across every form in the feature, instead of each one
+   sitting at whatever grid cell its own alignSelf happened to land in. */
+.form-actions { grid-column: 1 / -1; display: flex; justify-content: center; margin-top: .3rem; }
+.form-actions .btn { min-width: 14rem; }
+@media (max-width: 480px) {
+  .form-actions .btn { width: 100%; }
+}
+
+/* Export Quality's 4-step journey: each step heading gets enough size,
+   weight and a colored accent bar to read as "one clear process," not a
+   caption buried between forms. */
+.eu-step-heading { margin: 1.8rem 0 .9rem; padding-left: .75rem; border-left: 4px solid var(--primary); font-size: 1.15rem; font-weight: 800; color: var(--text); line-height: 1.3; }
+.eu-step-heading:first-child { margin-top: 0; }
+
+/* A form that must be immediately visible and discoverable, not tucked
+   behind a <details> toggle -- used for Step 3's "add evidence" panels. */
+.eu-evidence-panel { border: 1px solid var(--border); border-radius: 1rem; background: var(--ag-card-2, rgba(0,0,0,.02)); padding: 1rem 1.1rem; margin-top: .8rem; }
+.eu-evidence-panel > h4 { margin: 0 0 .8rem; font-size: .95rem; font-weight: 700; color: var(--text); }
 
 /* Water Management: a row of form-group(s) plus a trailing action button,
    their bottoms flush on desktop (e.g. From/To dates + Load Weather History).

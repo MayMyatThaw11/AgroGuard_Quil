@@ -266,6 +266,18 @@ body {
   box-shadow: none;
 }
 
+/* Export Quality (and anywhere else reusing .status-pill): the light-mode
+   text colors are tuned for white cards and read as low-contrast, murky
+   smudges against the dark .feature-checklist-item background above --
+   brighter, more saturated versions keep each status legible without
+   changing what each color means. */
+[data-theme="dark"] .status-pill.verified { background: rgba(143, 211, 160, .18); color: #8fd3a0; }
+[data-theme="dark"] .status-pill.pending { background: rgba(255, 196, 120, .16); color: #ffc478; }
+[data-theme="dark"] .status-pill.missing { background: rgba(255, 180, 176, .16); color: #ffb4b0; }
+[data-theme="dark"] .status-pill.unverified { background: rgba(169, 196, 177, .18); color: #c4d8ca; }
+[data-theme="dark"] .status-pill.expired { background: rgba(255, 180, 176, .16); color: #ffb4b0; }
+[data-theme="dark"] .status-pill.not-applicable { background: rgba(169, 196, 177, .14); color: #a9c4b1; }
+
 [data-theme="dark"] .iot-simulation {
   background: var(--ag-bg);
 }
