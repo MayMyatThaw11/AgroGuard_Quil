@@ -1,4 +1,5 @@
 import type { FeatureCollection } from 'geojson';
+import type { SeasonView } from '../seasonPlayback.ts';
 import type { LngLat, Map as MapLibreMap } from 'maplibre-gl';
 import type { FarmMap } from '../farmMapData.ts';
 import type { LayerFlags } from '../farmMapLayerKeys.ts';
@@ -171,6 +172,7 @@ export interface FarmMapEngine {
   setOwnFarms: (features: OwnFeatures) => void;
   setTrace: (features: FeatureCollection) => void;
   setSites: (features: FeatureCollection) => void;
+  setSeasonView: (view: SeasonView | null) => void;
   setView: (view: MapView) => void;
   setFilters: (filters: Filters) => void;
   setOffline: (offline: boolean) => void;

@@ -278,3 +278,8 @@ test('a parcel carries its fused water depth, and no depth stays null', () => {
   assert.equal(fc.polygons[0].properties.depth, 4.2);
   assert.equal(fc.polygons[1].properties.depth, null);
 });
+
+test('each parcel feature carries a stable key for feature state', () => {
+  const fc = contractFeatures('farm_a', spec([SQUARE]), {});
+  assert.equal(fc.polygons[0].properties.key, 'farm_a|P1');
+});

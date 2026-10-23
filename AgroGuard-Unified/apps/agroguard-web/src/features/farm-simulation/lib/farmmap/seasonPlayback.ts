@@ -1,5 +1,5 @@
 import type { ExpressionSpecification } from 'maplibre-gl';
-import type { SeasonReplay, SeasonVar } from '../api.ts';
+import type { SeasonReplay, SeasonRow, SeasonVar } from '../api.ts';
 import { MAP_COLOR, SEASON_TINT } from './farmMapTheme.ts';
 
 export type Speed = 1 | 4 | 16;
@@ -44,7 +44,45 @@ export function tintLevel(name: TintVar, value: SeasonVar['value'], bundMm: numb
   return Math.min(1, Math.max(0, n / full));
 }
 
-export function tintExpression(name: TintVar): ExpressionSpecification {
+export function tintExpression(name: TintVar, base: unknown = MAP_COLOR.ownUnknown): ExpressionSpecification {
   const [low, high] = SEASON_TINT[name];
-  return ['case', ['==', ['feature-state', 'tint'], null], MAP_COLOR.ownUnknown, ['interpolate', ['linear'], ['feature-state', 'tint'], 0, low, 1, high]] as ExpressionSpecification;
+  return ['case', ['==', ['feature-state', 'tint'], null], base, ['interpolate', ['linear'], ['feature-state', 'tint'], 0, low, 1, high]] as ExpressionSpecification;
+}
+
+export interface SeasonView {
+  key: string;
+  tint: TintVar;
+  level: number | null;
+  slab: number | null;
+}
+
+export function seasonViewFor(run: SeasonReplay, year: number, engine: string, day: number, tint: TintVar, key: string): SeasonView {
+  const bundMm = (run.years[year]?.plan.bund_height_cm ?? 0) * 10;
+  const ponded = varAt(run, year, 'own', day, 'ponded_mm').value;
+  return {
+    key,
+    tint,
+    level: tintLevel(tint, varAt(run, year, engine, day, tint).value, bundMm),
+    slab: typeof ponded === 'number' && bundMm > 0 ? Math.min(1, Math.max(0, ponded / bundMm)) : null,
+  };
+}
+
+export const ENGINE_LABEL: Record<string, string> = { own: 'AgriQill', aquacrop: 'AquaCrop-OSPy', wofost: 'WOFOST 7.3' };
+
+export function engineDays(run: SeasonReplay, year: number, engine: string): SeasonRow[] {
+  const result = run.years[year]?.engines[engine];
+  return result && 'days' in result ? result.days : [];
+}
+
+export function series(run: SeasonReplay, year: number, engine: string, name: string): (number | null)[] {
+  return engineDays(run, year, engine).map((row) => {
+    const value = row.vars[name]?.value;
+    if (typeof value === 'number') return value;
+    if (value && typeof value === 'object') return Object.values(value).reduce((a, b) => a + b, 0);
+    return null;
+  });
+}
+
+export function seasonLength(run: SeasonReplay, year: number): number {
+  return Math.max(0, engineDays(run, year, 'own').length - 1);
 }

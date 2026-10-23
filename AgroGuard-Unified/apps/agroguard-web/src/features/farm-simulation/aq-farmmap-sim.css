@@ -1,0 +1,257 @@
+.aq-sc {
+  margin: 0 0 var(--aq-space-4);
+}
+
+.aq-sc-line {
+  fill: none;
+  stroke-width: 1.6;
+}
+
+.aq-sc-line.is-a { stroke: var(--aq-water-600); }
+.aq-sc-line.is-b { stroke: var(--aq-leaf-600); stroke-dasharray: 5 3; }
+.aq-sc-line.is-c { stroke: var(--aq-grain-700); stroke-dasharray: 2 2; }
+.aq-sc-line.is-d { stroke: var(--aq-clay-600); }
+
+.aq-sc-cursor {
+  stroke: var(--aq-stone-800);
+  stroke-width: 1;
+  stroke-dasharray: 1 2;
+}
+
+.aq-sc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aq-space-2) var(--aq-space-4);
+  color: var(--aq-text-muted);
+  font-size: 11px;
+}
+
+.aq-sc-key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aq-space-1);
+}
+
+.aq-sc-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 0;
+  border-top: 2px solid var(--aq-stone-800);
+}
+
+.aq-sc-swatch.is-a { border-color: var(--aq-water-600); }
+.aq-sc-swatch.is-b { border-color: var(--aq-leaf-600); border-top-style: dashed; }
+.aq-sc-swatch.is-c { border-color: var(--aq-grain-700); border-top-style: dotted; }
+.aq-sc-swatch.is-d { border-color: var(--aq-clay-600); }
+.aq-sc-swatch.is-ref { border-color: var(--aq-clay-500); border-top-style: dotted; }
+
+.aq-fm-check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--aq-space-2);
+  min-height: 32px;
+  font-size: 13px;
+}
+
+.aq-fm-years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aq-space-1) var(--aq-space-4);
+  margin: 0 0 var(--aq-space-4);
+  padding: 0;
+  border: 0;
+}
+
+.aq-fm-event {
+  display: grid;
+  gap: var(--aq-space-2);
+  margin-bottom: var(--aq-space-3);
+  padding: var(--aq-space-3);
+  border: 1px solid var(--aq-border-subtle);
+  border-radius: var(--aq-radius-md);
+}
+
+.aq-fm-event-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--aq-space-2);
+  align-items: center;
+}
+
+.aq-fm-event-add {
+  display: flex;
+  gap: var(--aq-space-2);
+  align-items: center;
+  margin-bottom: var(--aq-space-4);
+}
+
+.aq-fm-note.is-error {
+  color: var(--aq-clay-700);
+}
+
+.aq-fm-sim {
+  position: absolute;
+  bottom: calc(var(--aq-status-h) + var(--aq-fm-gutter));
+  left: calc(var(--aq-fm-left-w) + 2 * var(--aq-fm-gutter));
+  right: calc(var(--aq-fm-right-w) + 2 * var(--aq-fm-gutter) + 56px);
+  z-index: var(--aq-z-banner);
+  display: grid;
+  gap: var(--aq-space-3);
+  padding: var(--aq-space-4) var(--aq-space-5);
+  border-radius: var(--aq-radius-lg);
+  background: var(--aq-surface-glass);
+  box-shadow: var(--aq-shadow-lg);
+  color: var(--aq-text-strong);
+}
+
+.aq-fm-sim-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aq-space-3);
+  align-items: center;
+}
+
+.aq-fm-sim-play {
+  background: var(--aq-leaf-600);
+  color: var(--aq-stone-0);
+}
+
+.aq-fm-sim-speed {
+  display: inline-flex;
+  gap: var(--aq-space-1);
+}
+
+.aq-fm-chip {
+  min-width: 32px;
+  min-height: 28px;
+  padding: 0 var(--aq-space-2);
+  border: 1px solid var(--aq-border-subtle);
+  border-radius: var(--aq-radius-pill);
+  background: var(--aq-surface-card);
+  color: var(--aq-stone-800);
+  font: 600 12px/1 var(--aq-font-sans);
+  cursor: pointer;
+}
+
+.aq-fm-chip.is-on {
+  border-color: var(--aq-leaf-600);
+  background: var(--aq-mint-200);
+}
+
+.aq-fm-sim-when {
+  display: grid;
+  min-width: 150px;
+  font-size: 12px;
+}
+
+.aq-fm-sim-when span {
+  color: var(--aq-text-muted);
+}
+
+.aq-fm-sim-select {
+  min-width: 0;
+  flex: 0 1 150px;
+}
+
+.aq-fm-sim-row {
+  flex-wrap: nowrap;
+}
+
+.aq-fm-sim-when {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+
+.aq-fm-sim-track {
+  position: relative;
+  height: 46px;
+}
+
+.aq-fm-sim-stages,
+.aq-fm-sim-windows,
+.aq-fm-sim-events,
+.aq-fm-sim-rain {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+}
+
+.aq-fm-sim-stages { top: 0; height: 8px; }
+.aq-fm-sim-stages i { position: absolute; top: 0; height: 100%; background: var(--aq-stone-200); }
+.aq-fm-sim-stages i.is-nursery { background: var(--aq-stone-300); }
+.aq-fm-sim-stages i.is-veg { background: var(--aq-leaf-200); }
+.aq-fm-sim-stages i.is-pps { background: var(--aq-mint-300); }
+.aq-fm-sim-stages i.is-pf { background: var(--aq-leaf-500); }
+.aq-fm-sim-stages i.is-gf { background: var(--aq-grain-300); }
+.aq-fm-sim-stages i.is-mat { background: var(--aq-grain-500); }
+
+.aq-fm-sim-windows { top: 10px; height: 6px; }
+.aq-fm-sim-windows i { position: absolute; top: 0; height: 100%; border-radius: 2px; background: var(--aq-grain-500); }
+.aq-fm-sim-windows i.is-phi_block,
+.aq-fm-sim-windows i.is-fish_toxic_spray { background: var(--aq-clay-600); }
+.aq-fm-sim-windows i.is-n_demand_pi { background: var(--aq-leaf-700); }
+
+.aq-fm-sim-rain { top: 18px; height: 16px; }
+.aq-fm-sim-rain i { position: absolute; bottom: 0; width: 2px; background: var(--aq-water-500); }
+
+.aq-fm-sim-events { top: 18px; height: 16px; }
+.aq-fm-sim-events i { position: absolute; top: 0; width: 0; height: 100%; border-left: 2px solid var(--aq-stone-800); }
+.aq-fm-sim-events i.is-fertiliser { border-left-color: var(--aq-leaf-700); }
+.aq-fm-sim-events i.is-spray { border-left-color: var(--aq-clay-600); }
+.aq-fm-sim-events i.is-irrigate { border-left-color: var(--aq-water-600); border-left-style: dotted; }
+
+.aq-fm-sim-scrub {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--aq-leaf-600);
+}
+
+.aq-fm-sim-readout {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--aq-space-2);
+  margin: 0;
+}
+
+.aq-fm-sim-readout dt {
+  color: var(--aq-text-muted);
+  font-size: 11px;
+}
+
+.aq-fm-sim-readout dd {
+  margin: 0;
+  font: 600 13px/1.2 var(--aq-font-sans);
+}
+
+.aq-fm-sim-note {
+  margin: 0;
+  color: var(--aq-text-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+  .aq-fm-sim { left: var(--aq-fm-gutter); right: calc(var(--aq-fm-right-w) + 2 * var(--aq-fm-gutter) + 56px); }
+}
+
+@media (max-width: 639px) {
+  .aq-fm-sim {
+    bottom: calc(var(--aq-status-h) + var(--aq-fm-gutter));
+    left: var(--aq-fm-gutter);
+    right: var(--aq-fm-gutter);
+    padding: var(--aq-space-3);
+  }
+
+  .aq-fm-sim-readout { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .aq-fm-sim-row { flex-wrap: wrap; }
+  .aq-fm-sim-select { min-width: 0; flex: 1 1 40%; }
+}
+
+@media (pointer: coarse) {
+  .aq-fm-chip,
+  .aq-fm-check-row { min-height: 44px; }
+  .aq-fm-chip { min-width: 44px; }
+}

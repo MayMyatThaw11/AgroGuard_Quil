@@ -39,7 +39,7 @@ export function reliefVisibility(terrain: boolean, flags: LayerFlags): Record<st
   return Object.fromEntries(Object.entries(RELIEF_LAYERS).map(([id, key]) => [id, terrain && (key === null || flags[key]) ? 'visible' : 'none']));
 }
 
-const relief = (id: string, source: string, filter: ExpressionSpecification, color: unknown, height: number, minzoom: number, base = 0, opacity = 0.92): LayerEntry['spec'] => ({
+const relief = (id: string, source: string, filter: ExpressionSpecification, color: unknown, height: number | ExpressionSpecification, minzoom: number, base = 0, opacity = 0.92): LayerEntry['spec'] => ({
   id, type: 'fill-extrusion', source, minzoom, filter, layout: { visibility: 'none' },
   paint: { 'fill-extrusion-color': color as ExpressionSpecification, 'fill-extrusion-height': height, 'fill-extrusion-base': base, 'fill-extrusion-opacity': opacity, 'fill-extrusion-vertical-gradient': true },
 });
@@ -121,12 +121,17 @@ function pinLayers(): LayerEntry[] {
   ];
 }
 
+export const OWN_FILL_COLOR = ex('match', getProp('status'), 'ok', STATUS_COLOR.ok, 'watch', STATUS_COLOR.watch, 'risk', STATUS_COLOR.risk, MAP_COLOR.ownUnknown);
+export const OWN_WATER_FILTER = ex('all', ex('==', ['geometry-type'], 'Polygon'), ex('>', ex('coalesce', getProp('depth'), -1), 0));
+// Display scale: the season slab grows from the field top to WATER_SLAB_M as ponded water reaches the bund.
+const ownWaterHeight = ex('case', ex('==', ex('feature-state', 'slab'), null), RELIEF_HEIGHT_M.own + WATER_SLAB_M, ex('+', RELIEF_HEIGHT_M.own, ex('*', WATER_SLAB_M, ex('max', 0.02, ex('to-number', ex('feature-state', 'slab'))))));
+
 function ownLayers(): LayerEntry[] {
-  const color = ex('match', getProp('status'), 'ok', STATUS_COLOR.ok, 'watch', STATUS_COLOR.watch, 'risk', STATUS_COLOR.risk, MAP_COLOR.ownUnknown);
+  const color = OWN_FILL_COLOR;
   return [
     { spec: { id: 'own-fill', type: 'fill', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), paint: { 'fill-color': color, 'fill-opacity': hoverOpacity(0.42) } } },
     { spec: relief('own-3d', 'aq-own', ex('==', ['geometry-type'], 'Polygon'), color, RELIEF_HEIGHT_M.own, 8) },
-    { spec: relief('own-water', 'aq-own', ex('all', ex('==', ['geometry-type'], 'Polygon'), ex('>', ex('coalesce', getProp('depth'), -1), 0)), MAP_COLOR.canalMain, RELIEF_HEIGHT_M.own + WATER_SLAB_M, 8, RELIEF_HEIGHT_M.own, 0.7) },
+    { spec: relief('own-water', 'aq-own', OWN_WATER_FILTER, MAP_COLOR.canalMain, ownWaterHeight, 8, RELIEF_HEIGHT_M.own, 0.7) },
     { spec: { id: 'own-line', type: 'line', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), layout: round, paint: { 'line-color': MAP_COLOR.ownLine, 'line-width': zoomInterp(8, 1.5, 16, 4) } } },
     { spec: { id: 'own-point', type: 'circle', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Point'), paint: { 'circle-radius': 9, 'circle-color': color, 'circle-stroke-color': MAP_COLOR.ownLine, 'circle-stroke-width': 3 } } },
     { spec: { id: 'own-label', type: 'symbol', source: 'aq-own', layout: { 'icon-image': 'aq-pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [3, 9, 3, 9], 'text-field': ex('concat', getProp('kind'), ' · ', getProp('name'), ' ', getProp('parcel')), 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true, 'symbol-placement': 'point', 'text-anchor': 'bottom', 'text-offset': [0, -2.2] }, paint: { 'text-color': MAP_COLOR.ink } } },

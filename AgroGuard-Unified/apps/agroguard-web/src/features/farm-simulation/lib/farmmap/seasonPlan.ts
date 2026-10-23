@@ -34,13 +34,13 @@ export interface SeasonDraft {
 }
 
 export type PlanErrorKey =
-  | 'farmMap.season.err.transplant'
-  | 'farmMap.season.err.duration'
-  | 'farmMap.season.err.bund'
-  | 'farmMap.season.err.bundBelowReflood'
-  | 'farmMap.season.err.awdThreshold'
-  | 'farmMap.season.err.eventOutside'
-  | 'farmMap.season.err.years';
+  | 'farmMap.sim.err.transplant'
+  | 'farmMap.sim.err.duration'
+  | 'farmMap.sim.err.bund'
+  | 'farmMap.sim.err.bundBelowReflood'
+  | 'farmMap.sim.err.awdThreshold'
+  | 'farmMap.sim.err.eventOutside'
+  | 'farmMap.sim.err.years';
 
 const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const at = (date: string) => Date.parse(`${date}T00:00:00Z`);
@@ -78,17 +78,17 @@ export function replayYears(today: Date, transplant: string, duration: number): 
 export function planErrors(d: SeasonDraft, today: Date): PlanErrorKey[] {
   const errors: PlanErrorKey[] = [];
   const start = at(d.transplant_date);
-  if (!d.transplant_date || Number.isNaN(start)) errors.push('farmMap.season.err.transplant');
-  if (d.duration_days === null || d.duration_days < 60 || d.duration_days > 200) errors.push('farmMap.season.err.duration');
-  if (d.bund_height_cm === null || d.bund_height_cm < 5 || d.bund_height_cm > 150) errors.push('farmMap.season.err.bund');
-  else if (d.reflood_cm !== null && d.bund_height_cm <= d.reflood_cm) errors.push('farmMap.season.err.bundBelowReflood');
-  if (d.regime === 'awd' && (d.awd_threshold_cm === null || d.awd_threshold_cm > 0 || d.awd_threshold_cm < -40)) errors.push('farmMap.season.err.awdThreshold');
+  if (!d.transplant_date || Number.isNaN(start)) errors.push('farmMap.sim.err.transplant');
+  if (d.duration_days === null || d.duration_days < 60 || d.duration_days > 200) errors.push('farmMap.sim.err.duration');
+  if (d.bund_height_cm === null || d.bund_height_cm < 5 || d.bund_height_cm > 150) errors.push('farmMap.sim.err.bund');
+  else if (d.reflood_cm !== null && d.bund_height_cm <= d.reflood_cm) errors.push('farmMap.sim.err.bundBelowReflood');
+  if (d.regime === 'awd' && (d.awd_threshold_cm === null || d.awd_threshold_cm > 0 || d.awd_threshold_cm < -40)) errors.push('farmMap.sim.err.awdThreshold');
   if (!Number.isNaN(start) && d.duration_days !== null) {
     const first = start - (d.seedbed_days ?? 0) * DAY_MS;
     const last = start + d.duration_days * DAY_MS;
-    if (d.events.some((e) => at(e.date) < first || at(e.date) >= last)) errors.push('farmMap.season.err.eventOutside');
+    if (d.events.some((e) => at(e.date) < first || at(e.date) >= last)) errors.push('farmMap.sim.err.eventOutside');
     const allowed = replayYears(today, d.transplant_date, d.duration_days);
-    if (!d.weather_years.length || d.weather_years.some((y) => !allowed.includes(y))) errors.push('farmMap.season.err.years');
+    if (!d.weather_years.length || d.weather_years.some((y) => !allowed.includes(y))) errors.push('farmMap.sim.err.years');
   }
   return errors;
 }

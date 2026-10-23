@@ -7,6 +7,7 @@ import { reasonText } from './personaInputs.ts';
 export type OwnStatus = FarmStatus | 'unknown';
 
 export interface OwnFeatureProps {
+  key: string;
   farm: string;
   parcel: string;
   name: string;
@@ -91,7 +92,7 @@ export function contractFeatures(farmId: string, spec: ContractSpec, statuses: R
     const ring: Position[] = parcel.boundary.map(([lat, lon]) => [lon, lat]);
     polygons.push({
       type: 'Feature',
-      properties: { farm: farmId, parcel: parcel.id, name, kind, status: statuses[parcel.id] ?? 'unknown', depth: depths[parcel.id] ?? null },
+      properties: { key: `${farmId}|${parcel.id}`, farm: farmId, parcel: parcel.id, name, kind, status: statuses[parcel.id] ?? 'unknown', depth: depths[parcel.id] ?? null },
       geometry: { type: 'Polygon', coordinates: [ring] },
     });
   }
@@ -100,7 +101,7 @@ export function contractFeatures(farmId: string, spec: ContractSpec, statuses: R
     polygons.length === 0 && location
       ? [{
           type: 'Feature',
-          properties: { farm: farmId, parcel: '', name, kind, status: statuses[''] ?? 'unknown', depth: null },
+          properties: { key: `${farmId}|`, farm: farmId, parcel: '', name, kind, status: statuses[''] ?? 'unknown', depth: null },
           geometry: { type: 'Point', coordinates: [location[1], location[0]] },
         }]
       : [];

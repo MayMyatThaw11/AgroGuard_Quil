@@ -40,6 +40,9 @@ import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { PoiDetail } from './PoiDetail.tsx';
 import { DeliversTo, SiteDetail, SitesUpload } from './SiteDetail.tsx';
 import { useSites } from './useSites.ts';
+import { SeasonTimeline } from './SeasonTimeline.tsx';
+import { seasonViewFor, type Playback, type TintVar } from '../../lib/farmmap/seasonPlayback.ts';
+import type { SeasonReplay } from '../../lib/api.ts';
 import { RoutePanel } from './RoutePanel.tsx';
 import { StatusStrip } from './StatusStrip.tsx';
 import { useFarmMapEngine } from './useFarmMapEngine.ts';
@@ -81,6 +84,8 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const selectionRef = useRef<Selection | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [spot, setSpot] = useState<Spot | null>(null);
+  const [season, setSeason] = useState<{ farmId: string; parcelId: string; run: SeasonReplay; year: number; engine: string; tint: TintVar } | null>(null);
+  const [playback, setPlayback] = useState<Playback>({ day: 0, playing: false, speed: 4, carry: 0 });
   const [layers, setLayers] = useState(() => loadLayers(browserStorage()));
   const [view, setView] = useState<MapView>('map');
   const [terrain, setTerrain] = useState(false);
@@ -124,6 +129,9 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
     return found ? farmCentroid(found.spec) : null;
   }, [ownFarms]);
   const millSites = useSites(engine);
+  useEffect(() => {
+    engine?.setSeasonView(season ? seasonViewFor(season.run, season.year, season.engine, playback.day, season.tint, `${season.farmId}|${season.parcelId}`) : null);
+  }, [engine, season, playback.day]);
   const siteCentre = useCallback((siteId: string) => {
     const found = millSites.sites.find((s) => s.id === siteId);
     return found ? { lat: found.centroid[0], lon: found.centroid[1] } : null;
@@ -317,6 +325,13 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                     const centre = farmCentroid(ownFarm.spec);
                     if (centre) engine?.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2200 });
                   }}
+                  onPlaySeason={(run, parcelId) => {
+                    setSeason({ farmId: ownFarm.id, parcelId, run, year: 0, engine: 'own', tint: 'ponded_mm' });
+                    if (isPhone()) setPanels((p) => ({ ...p, right: false }));
+                    const ring = ownFarm.spec.parcels.find((p) => p.id === parcelId)?.boundary;
+                    if (ring?.length) engine?.fly({ center: [ring.reduce((s, c) => s + c[1], 0) / ring.length, ring.reduce((s, c) => s + c[0], 0) / ring.length], zoom: 17, duration: 2000 });
+                    setPlayback({ day: 0, playing: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches, speed: 4, carry: 0 });
+                  }}
                   extra={<DeliversTo farmId={ownFarm.id} parcels={ownFarm.spec.parcels.map((p) => p.id)} sites={millSites.sites} onChanged={millSites.reload} />}
                 />
               ) : selection?.kind === 'own' ? (
@@ -390,6 +405,21 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       ) : null}
       {farm && !route ? (
         <FarmSelectionBar farm={farm} leftOpen={panels.left} rightOpen={panels.right} onOpenField={onOpenOps} onRoute={planner.open} onClear={() => pick(null)} />
+      ) : null}
+      {season ? (
+        <SeasonTimeline
+          run={season.run}
+          parcelId={season.parcelId}
+          year={season.year}
+          engine={season.engine}
+          tint={season.tint}
+          playback={playback}
+          onYear={(year) => setSeason((s) => (s ? { ...s, year } : s))}
+          onEngine={(name) => setSeason((s) => (s ? { ...s, engine: name } : s))}
+          onTint={(tint) => setSeason((s) => (s ? { ...s, tint } : s))}
+          onPlayback={setPlayback}
+          onClose={() => setSeason(null)}
+        />
       ) : null}
       {guide && route?.result ? <GuideHud guide={guide} steps={route.result.steps} mode={route.mode} onStop={planner.stopGuide} /> : null}
       {offline && !guide ? <OfflineBanner cached={stats.chunks.loaded} onReconnect={() => changeOffline(false)} /> : null}

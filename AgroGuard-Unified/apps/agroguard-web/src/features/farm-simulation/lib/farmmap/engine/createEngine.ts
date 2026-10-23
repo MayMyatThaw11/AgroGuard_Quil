@@ -4,7 +4,7 @@ import type { FeatureCollection } from 'geojson';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { basemapStyle } from '../basemapTheme.ts';
 import { basemapImage } from '../basemapImagesTheme.ts';
-import { OVERVIEW_ZOOM, PLAIN_SOURCES, buildDataLayers } from '../dataLayersTheme.ts';
+import { OVERVIEW_ZOOM, OWN_FILL_COLOR, OWN_WATER_FILTER, PLAIN_SOURCES, buildDataLayers } from '../dataLayersTheme.ts';
 import { DEFAULT_LAYERS } from '../farmMapLayerKeys.ts';
 import { getFarmMap } from '../farmMapData.ts';
 import { registerMapIcons } from '../iconTheme.ts';
@@ -16,6 +16,7 @@ import { bindEvents } from './interaction.ts';
 import { animateRouteFlow, clearRoute, planRoute, startGuide, stepGuide, stopGuide } from './routing.ts';
 import { setFilters, setLayers, setOffline, setView } from './viewModes.ts';
 import type { OwnFeatures } from '../ownFarms.ts';
+import { tintExpression, type SeasonView } from '../seasonPlayback.ts';
 import type { EngineCallbacks, EngineContext, EngineState, FarmMapEngine } from './engineTypes.ts';
 
 const BOOT_TIMEOUT_MS = 20000;
@@ -33,7 +34,7 @@ function initialState(): EngineState {
 
 function addDataLayers(ctx: EngineContext) {
   const { map } = ctx;
-  PLAIN_SOURCES.forEach((id) => map.addSource(id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } }));
+  PLAIN_SOURCES.forEach((id) => map.addSource(id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, ...(id === 'aq-own' ? { promoteId: 'key' } : {}) }));
   map.addSource(CLUSTER_SOURCE, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, cluster: true, clusterRadius: 44, clusterMaxZoom: 10 });
   buildDataLayers().forEach(({ spec, before }) => map.addLayer(spec, before));
 }
@@ -62,6 +63,15 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
   let own: OwnFeatures = { polygons: [], points: [] };
   let trace: FeatureCollection = { type: 'FeatureCollection', features: [] };
   let sites: FeatureCollection = { type: 'FeatureCollection', features: [] };
+  let season: SeasonView | null = null;
+  let seasonKey: string | null = null;
+  const paintSeason = () => {
+    if (seasonKey && seasonKey !== season?.key) map.removeFeatureState({ source: 'aq-own', id: seasonKey });
+    seasonKey = season?.key ?? null;
+    map.setPaintProperty('own-fill', 'fill-color', season ? tintExpression(season.tint, OWN_FILL_COLOR) : OWN_FILL_COLOR);
+    map.setFilter('own-water', season ? ['any', OWN_WATER_FILTER, ['all', ['==', ['geometry-type'], 'Polygon'], ['==', ['get', 'key'], season.key]]] : OWN_WATER_FILTER);
+    if (season) map.setFeatureState({ source: 'aq-own', id: season.key }, { tint: season.level, slab: season.slab });
+  };
   const paintOwn = () => {
     const source = map.getSource('aq-own') as GeoJSONSource | undefined;
     source?.setData({ type: 'FeatureCollection', features: [...own.polygons, ...own.points] });
@@ -96,6 +106,7 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     if (stopped) return;
     addDataLayers(ctx);
     paintOwn();
+    paintSeason();
     unbind = bindEvents(ctx, () => stream(ctx));
     ctx.state.ready = true;
     setLayers(ctx, ctx.state.layers);
@@ -124,6 +135,10 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     setSites: (features) => {
       sites = features;
       if (ctx.state.ready) paintOwn();
+    },
+    setSeasonView: (view) => {
+      season = view;
+      if (ctx.state.ready) paintSeason();
     },
     setView: (view) => setView(ctx, view),
     setFilters: (filters) => setFilters(ctx, filters),

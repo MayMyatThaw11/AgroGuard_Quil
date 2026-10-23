@@ -15,13 +15,13 @@ test('defaults come from the contract only and never fill the bund height', () =
 
 test('a bund lower than the reflood target is an error', () => {
   const d = { ...defaultDraft(parcel, TODAY), duration_days: 120, bund_height_cm: 5, reflood_cm: 8 };
-  assert.ok(planErrors(d, TODAY).includes('farmMap.season.err.bundBelowReflood'));
+  assert.ok(planErrors(d, TODAY).includes('farmMap.sim.err.bundBelowReflood'));
 });
 
 test('missing required fields are listed', () => {
   const errors = planErrors(defaultDraft(parcel, TODAY), TODAY);
-  assert.ok(errors.includes('farmMap.season.err.duration'));
-  assert.ok(errors.includes('farmMap.season.err.bund'));
+  assert.ok(errors.includes('farmMap.sim.err.duration'));
+  assert.ok(errors.includes('farmMap.sim.err.bund'));
 });
 
 test('an event outside the season is an error', () => {
@@ -31,7 +31,7 @@ test('an event outside the season is an error', () => {
     bund_height_cm: 30,
     events: [{ kind: 'irrigate' as const, date: '2027-03-01', mm: 50 }],
   };
-  assert.deepEqual(planErrors(d, TODAY), ['farmMap.season.err.eventOutside']);
+  assert.deepEqual(planErrors(d, TODAY), ['farmMap.sim.err.eventOutside']);
 });
 
 test('replay years are the last five whose season has ended in the archive', () => {
