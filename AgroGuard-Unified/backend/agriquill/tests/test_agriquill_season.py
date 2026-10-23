@@ -240,3 +240,11 @@ def test_grain_yield_and_status_are_labelled():
     assert out["status"] == "uncalibrated"
     assert v(out["days"][-1], "yield_kg_ha") > 0
     assert "ORYZA2000" in out["sources"]["phenology"]
+
+
+def test_canopy_does_not_fall_back_into_exponential_growth():
+    out = season.run(plan(seedbed_days=21, transplant_date=day(21)), inputs(n=200))
+    field = [r for r in out["days"] if r["das"] >= 0 and v(r, "dvs") < 0.9]
+    lais = [v(r, "lai") for r in field]
+    first = next(i for i, x in enumerate(lais) if x >= 1.0)
+    assert min(lais[first:]) >= 1.0, "LAI dropped back below 1 after the linear phase began"

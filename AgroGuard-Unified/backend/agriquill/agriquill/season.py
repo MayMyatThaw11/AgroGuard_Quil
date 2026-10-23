@@ -52,6 +52,7 @@ DRLVT = ((0.0, 0.0), (0.6, 0.0), (1.0, 0.015), (1.6, 0.025), (2.1, 0.05), (2.5, 
 NMAXLT = ((0.0, 0.053), (0.4, 0.053), (0.75, 0.040), (1.0, 0.028), (2.0, 0.022), (2.5, 0.015))
 NMINLT = ((0.0, 0.025), (1.0, 0.012), (2.1, 0.007), (2.5, 0.007))
 NMAXUP, RFNLV, FNLVI = 8.0, 0.004, 0.025
+TESTSET = 0.00001
 SPGF, WGRMX = 64900.0, 0.0000249
 FRPAR = 0.5
 RUE_G_MJ, K_PAR = 2.39, 0.37
@@ -182,6 +183,8 @@ def run(plan: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
     dvs = ts = tstr = tshckd = tshckl = 0.0
     lai_plant = LAPE
     lai = wlvg = wlvd = wst = wso = spikelets = 0.0
+    lai_exs = wlvg_exs = 0.0
+    blend, settled = 1.0, False
     anlv = anst = uptake_total = 0.0
     pool = float(soil_n) if soil_n is not None else None
     nf = 1.0
@@ -325,8 +328,17 @@ def run(plan: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
             if lai < 1.0 and dvs < 1.0:
                 if ts >= tstr + tshckl:
                     lai += lai * (RGRLMX - (1 - nf) * (RGRLMX - RGRLMN)) * hulv
+                lai_exs, wlvg_exs = lai, wlvg
             else:
-                lai = wlvg * sla(dvs)
+                # ORYZA2000 SUBLAI2: blend Eq. 3.42 into Eq. 3.40 until simulated SLA matches.
+                target = wlvg * sla(dvs)
+                if not settled and wlvg > 0 and abs(lai / wlvg - sla(dvs)) / sla(dvs) < TESTSET:
+                    settled = True
+                if settled:
+                    lai = target
+                else:
+                    lai = ((wlvg - wlvg_exs) * sla(dvs) + lai_exs + blend * target) / (blend + 1)
+                    blend += 1
             nmaxl, nminl = lint(NMAXLT, dvs), lint(NMINLT, dvs)
             anlv = max(0.0, anlv - dying * RFNLV)
             for e in ferts.get(today, []):
