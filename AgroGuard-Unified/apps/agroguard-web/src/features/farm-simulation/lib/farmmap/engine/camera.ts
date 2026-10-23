@@ -1,5 +1,6 @@
 import type { GeoJSONSource } from 'maplibre-gl';
 import { fieldsOf } from '../farmMapGeometry.ts';
+import { lightFor } from '../sun.ts';
 import type { Farm } from '../farmMapTypes.ts';
 import { clearSource } from './dataAssembly.ts';
 import type { EngineContext, FlyTarget } from './engineTypes.ts';
@@ -46,6 +47,8 @@ export function setTerrain(ctx: EngineContext, on: boolean) {
   ctx.state.terrain = on;
   if (!ctx.state.ready) return;
   ctx.map.setTerrain(on ? { source: 'dem3d', exaggeration: 1.35 } : null);
+  const centre = ctx.map.getCenter();
+  ctx.map.setLight(on ? lightFor(centre.lat, centre.lng, new Date()) : { anchor: 'viewport', position: [1.15, 210, 30], intensity: 0.5, color: '#ffffff' });
   applyRelief(ctx);
   if (on && ctx.map.getPitch() < 30) ctx.map.easeTo({ pitch: 50, duration: 800 });
 }

@@ -6,7 +6,9 @@ Owner request (23 Oct): take the farm map to a detailed 3D view that holds thous
 - **Built, Phases 1, 2 and part of 4:** with 3D terrain on (the T key), paddies, crop fields and your own parcels rise as `fill-extrusion` layers, and they follow the layer toggles. A water surface appears only on parcels with a Kalman depth above the soil. Extrusion heights are visual only.
 - **Change from the plan:** MapLibre's own `fill-extrusion` replaces the R3F custom layer for fields. It draws each tile in one batch on the GPU, sits on the terrain, and keeps the existing hover and click picking. A three.js layer is still the route for Blender models in Phase 3.
 - **Blocked:** Phase 3 needs the Blender add-on enabled and this session reloaded, so the Blender tools load.
-- **Not built:** the cross-section tool and measured phone frame times (Phase 4), and the time-of-day light and prior-art check (Phase 5).
+- **Built (Phase 5, light):** with 3D terrain on, the sun's position at the farm's coordinates and the viewer's clock lights the fields (NOAA solar formula, about 0.5 degree). At night a dim fixed light stays. It is illustrative lighting, not a shadow study.
+- **Not built:** the cross-section tool. A trench or bund section needs measured bund heights and trench depths, and the contracts hold neither; drawing one would mean inventing numbers. It waits for the design mode in the rice-shrimp plan, where the farmer enters those values.
+- **Not measured:** frame times on a phone (headless Chrome with a software renderer says nothing about real devices), and the prior-art check.
 
 ## What is already here
 - `three` 0.180, `@react-three/fiber` 9, `@react-three/drei` 10 and `maplibre-gl` 6.14 are installed. No new runtime dependency is needed for the core.
