@@ -3,6 +3,7 @@ import { fieldsOf } from '../farmMapGeometry.ts';
 import type { Farm } from '../farmMapTypes.ts';
 import { clearSource } from './dataAssembly.ts';
 import type { EngineContext, FlyTarget } from './engineTypes.ts';
+import { applyRelief } from './viewModes.ts';
 
 const PADDING = { left: 300, right: 380, top: 60, bottom: 90 };
 
@@ -37,7 +38,9 @@ export function establishing(ctx: EngineContext) {
 }
 
 export function setTerrain(ctx: EngineContext, on: boolean) {
+  ctx.state.terrain = on;
   if (!ctx.state.ready) return;
   ctx.map.setTerrain(on ? { source: 'dem3d', exaggeration: 1.35 } : null);
+  applyRelief(ctx);
   if (on && ctx.map.getPitch() < 30) ctx.map.easeTo({ pitch: 50, duration: 800 });
 }

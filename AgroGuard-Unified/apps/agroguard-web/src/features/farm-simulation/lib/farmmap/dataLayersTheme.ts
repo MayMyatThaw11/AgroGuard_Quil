@@ -1,7 +1,7 @@
-import type { LayerSpecification } from 'maplibre-gl';
+import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import { ex, getProp, zoomInterp } from './mapExpr.ts';
 import { BOUND_COLOR, MAP_COLOR, POI_COLOR, STATUS_COLOR } from './farmMapTheme.ts';
-import type { LayerKey } from './farmMapLayerKeys.ts';
+import type { LayerFlags, LayerKey } from './farmMapLayerKeys.ts';
 import type { PoiType } from './farmMapTypes.ts';
 
 export const OVERVIEW_ZOOM = 5.4;
@@ -28,6 +28,21 @@ export const LAYER_MAP: Record<LayerKey, string[]> = {
   machinery: ['poi-machine'],
   livestock: ['poi-livestock'],
 };
+
+// Visual relief only: no bund or crop height is measured here, so the extrusion is a fixed render height.
+export const RELIEF_HEIGHT_M = { paddy: 2, crop: 3, own: 4 } as const;
+export const RELIEF_LAYERS: Record<string, LayerKey | null> = { 'paddies-3d': 'paddies', 'crops-3d': 'crops', 'own-3d': null, 'own-water': null };
+// Water shows only where the Kalman filter has a depth above the soil; the slab thickness is visual.
+export const WATER_SLAB_M = 0.8;
+
+export function reliefVisibility(terrain: boolean, flags: LayerFlags): Record<string, 'visible' | 'none'> {
+  return Object.fromEntries(Object.entries(RELIEF_LAYERS).map(([id, key]) => [id, terrain && (key === null || flags[key]) ? 'visible' : 'none']));
+}
+
+const relief = (id: string, source: string, filter: ExpressionSpecification, color: unknown, height: number, minzoom: number, base = 0, opacity = 0.92): LayerEntry['spec'] => ({
+  id, type: 'fill-extrusion', source, minzoom, filter, layout: { visibility: 'none' },
+  paint: { 'fill-extrusion-color': color as ExpressionSpecification, 'fill-extrusion-height': height, 'fill-extrusion-base': base, 'fill-extrusion-opacity': opacity, 'fill-extrusion-vertical-gradient': true },
+});
 
 export const HOVER_LAYERS = ['farm-pins', 'clusters', 'regions', 'poi-market', 'poi-storage', 'poi-mill', 'poi-water', 'poi-station', 'poi-machine', 'poi-livestock', 'paddies', 'crops', 'own-fill', 'own-point'];
 
@@ -65,6 +80,8 @@ function groundLayers(): LayerEntry[] {
     risk('drought', 'drought', [0, 'rgba(0,0,0,0)', 0.2, 'rgba(240,197,106,.45)', 0.5, '#f0c56a', 0.75, '#d77a11', 1, '#bc6c2f']),
     { before: BEFORE, spec: { id: 'paddies', type: 'fill', source: 'aq-fields', minzoom: 10, filter: ex('==', getProp('rice'), 1), paint: { 'fill-color': getProp('color'), 'fill-opacity': hoverOpacity(0.9) } } },
     { before: BEFORE, spec: { id: 'crops', type: 'fill', source: 'aq-fields', minzoom: 10, filter: ex('==', getProp('rice'), 0), paint: { 'fill-color': getProp('color'), 'fill-opacity': hoverOpacity(0.88) } } },
+    { before: BEFORE, spec: relief('paddies-3d', 'aq-fields', ex('==', getProp('rice'), 1), getProp('color'), RELIEF_HEIGHT_M.paddy, 12) },
+    { before: BEFORE, spec: relief('crops-3d', 'aq-fields', ex('==', getProp('rice'), 0), getProp('color'), RELIEF_HEIGHT_M.crop, 12) },
     { before: BEFORE, spec: { id: 'field-edges', type: 'line', source: 'aq-fields', minzoom: 12.5, paint: { 'line-color': MAP_COLOR.edgeLine, 'line-width': zoomInterp(12.5, 0.4, 16, 1.6) } } },
     { spec: { id: 'bounds', type: 'line', source: 'aq-bounds', minzoom: 10.5, paint: { 'line-color': ex('match', getProp('status'), 'risk', STATUS_COLOR.risk, 'watch', STATUS_COLOR.watch, BOUND_COLOR), 'line-width': zoomInterp(10.5, 0.8, 16, 2.2), 'line-dasharray': [3, 2], 'line-opacity': 0.75 } } },
     { spec: { id: 'canals-main', type: 'line', source: 'aq-canals', minzoom: 9, filter: ex('==', getProp('kind'), 'main'), layout: round, paint: { 'line-color': MAP_COLOR.canalMain, 'line-width': zoomInterp(9, 1.2, 15, 4.5) } } },
@@ -108,6 +125,8 @@ function ownLayers(): LayerEntry[] {
   const color = ex('match', getProp('status'), 'ok', STATUS_COLOR.ok, 'watch', STATUS_COLOR.watch, 'risk', STATUS_COLOR.risk, MAP_COLOR.ownUnknown);
   return [
     { spec: { id: 'own-fill', type: 'fill', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), paint: { 'fill-color': color, 'fill-opacity': hoverOpacity(0.42) } } },
+    { spec: relief('own-3d', 'aq-own', ex('==', ['geometry-type'], 'Polygon'), color, RELIEF_HEIGHT_M.own, 8) },
+    { spec: relief('own-water', 'aq-own', ex('all', ex('==', ['geometry-type'], 'Polygon'), ex('>', ex('coalesce', getProp('depth'), -1), 0)), MAP_COLOR.canalMain, RELIEF_HEIGHT_M.own + WATER_SLAB_M, 8, RELIEF_HEIGHT_M.own, 0.7) },
     { spec: { id: 'own-line', type: 'line', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), layout: round, paint: { 'line-color': MAP_COLOR.ownLine, 'line-width': zoomInterp(8, 1.5, 16, 4) } } },
     { spec: { id: 'own-point', type: 'circle', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Point'), paint: { 'circle-radius': 9, 'circle-color': color, 'circle-stroke-color': MAP_COLOR.ownLine, 'circle-stroke-width': 3 } } },
     { spec: { id: 'own-label', type: 'symbol', source: 'aq-own', layout: { 'icon-image': 'aq-pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [3, 9, 3, 9], 'text-field': ex('concat', getProp('kind'), ' · ', getProp('name'), ' ', getProp('parcel')), 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true, 'symbol-placement': 'point', 'text-anchor': 'bottom', 'text-offset': [0, -2.2] }, paint: { 'text-color': MAP_COLOR.ink } } },

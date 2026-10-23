@@ -25,7 +25,7 @@ const CLUSTER_SOURCE = 'aq-farms';
 
 function initialState(): EngineState {
   return {
-    ready: false, offline: false, filters: { crops: null, status: null, organic: false }, layers: DEFAULT_LAYERS, view: 'map',
+    ready: false, offline: false, filters: { crops: null, status: null, organic: false }, layers: DEFAULT_LAYERS, terrain: false, view: 'map',
     cinematic: true, hoverId: null, needFog: true, fogAnim: false, queue: [], active: 0, lastStats: 0, route: null, guide: null,
     baseIds: [], savedPaint: {}, dirtyTimer: null, hatch: null, dashStep: 0, lastDash: 0, frame: 0,
   };

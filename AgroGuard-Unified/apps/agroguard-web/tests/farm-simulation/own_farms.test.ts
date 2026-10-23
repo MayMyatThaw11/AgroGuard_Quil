@@ -272,3 +272,9 @@ test('today says nothing urgent and names what it could not check', () => {
   assert.equal(todayLine({ risk: RISK, blocked: [], advisory: null, plan: null }).text, 'Nothing urgent today');
   assert.equal(todayLine({ risk: null, blocked: [], advisory: null, plan: null }).source, 'water advice · not loaded: flood risk');
 });
+
+test('a parcel carries its fused water depth, and no depth stays null', () => {
+  const fc = contractFeatures('my-farm', spec([SQUARE, SQUARE]), {}, false, { P1: 4.2 });
+  assert.equal(fc.polygons[0].properties.depth, 4.2);
+  assert.equal(fc.polygons[1].properties.depth, null);
+});

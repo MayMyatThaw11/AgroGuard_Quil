@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SAT_KEEP_LAYERS, basemapStyle } from '../../src/features/farm-simulation/lib/farmmap/basemapTheme.ts';
-import { HOVER_LAYERS, LAYER_MAP, PLAIN_SOURCES, buildDataLayers } from '../../src/features/farm-simulation/lib/farmmap/dataLayersTheme.ts';
+import { HOVER_LAYERS, LAYER_MAP, PLAIN_SOURCES, RELIEF_LAYERS, buildDataLayers, reliefVisibility } from '../../src/features/farm-simulation/lib/farmmap/dataLayersTheme.ts';
 import { DEFAULT_LAYERS, LAYER_GROUPS } from '../../src/features/farm-simulation/lib/farmmap/farmMapLayerKeys.ts';
 
 const style = basemapStyle();
@@ -58,4 +58,15 @@ test('Farm map style: your own farm draws above every seeded farm layer and is h
   assert.ok(HOVER_LAYERS.includes('own-fill') && HOVER_LAYERS.includes('own-point'));
   assert.ok(PLAIN_SOURCES.includes('aq-own'));
   dataLayers.filter((e) => ownIds.includes(e.spec.id)).forEach((e) => assert.equal(e.before, undefined));
+});
+
+test('Farm map style: 3D field relief starts hidden and follows the terrain switch and the layer toggles', () => {
+  Object.keys(RELIEF_LAYERS).forEach((id) => {
+    const spec = dataLayers.find((e) => e.spec.id === id)?.spec;
+    assert.equal(spec?.type, 'fill-extrusion', `${id} is not a fill-extrusion`);
+    assert.equal(spec && 'layout' in spec ? spec.layout?.visibility : undefined, 'none');
+  });
+  assert.deepEqual(reliefVisibility(false, DEFAULT_LAYERS), { 'paddies-3d': 'none', 'crops-3d': 'none', 'own-3d': 'none', 'own-water': 'none' });
+  assert.deepEqual(reliefVisibility(true, DEFAULT_LAYERS), { 'paddies-3d': 'visible', 'crops-3d': 'visible', 'own-3d': 'visible', 'own-water': 'visible' });
+  assert.deepEqual(reliefVisibility(true, { ...DEFAULT_LAYERS, paddies: false }), { 'paddies-3d': 'none', 'crops-3d': 'visible', 'own-3d': 'visible', 'own-water': 'visible' });
 });

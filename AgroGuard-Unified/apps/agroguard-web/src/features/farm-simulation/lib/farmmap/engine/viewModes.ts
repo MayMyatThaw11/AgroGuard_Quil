@@ -1,5 +1,5 @@
 import type { ExpressionSpecification } from 'maplibre-gl';
-import { LAYER_MAP } from '../dataLayersTheme.ts';
+import { LAYER_MAP, reliefVisibility } from '../dataLayersTheme.ts';
 import { SAT_KEEP_LAYERS } from '../basemapTheme.ts';
 import { ex, getProp } from '../mapExpr.ts';
 import { BOUND_COLOR, MAP_COLOR, STATUS_COLOR } from '../farmMapTheme.ts';
@@ -17,6 +17,14 @@ export function setLayers(ctx: EngineContext, flags: LayerFlags) {
     });
   });
   ctx.map.setPaintProperty('waterway', 'line-color', flags.water ? MAP_COLOR.waterwayOn : MAP_COLOR.waterwayOff);
+  applyRelief(ctx);
+}
+
+export function applyRelief(ctx: EngineContext) {
+  if (!ctx.state.ready) return;
+  Object.entries(reliefVisibility(ctx.state.terrain, ctx.state.layers)).forEach(([id, visibility]) => {
+    if (ctx.map.getLayer(id)) ctx.map.setLayoutProperty(id, 'visibility', visibility);
+  });
 }
 
 function restyleSymbol(ctx: EngineContext, id: string, satellite: boolean) {

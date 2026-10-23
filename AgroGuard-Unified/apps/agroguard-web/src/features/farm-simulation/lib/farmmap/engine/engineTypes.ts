@@ -122,6 +122,7 @@ export interface EngineState {
   offline: boolean;
   filters: Filters;
   layers: LayerFlags;
+  terrain: boolean;
   view: MapView;
   cinematic: boolean;
   hoverId: number | null;

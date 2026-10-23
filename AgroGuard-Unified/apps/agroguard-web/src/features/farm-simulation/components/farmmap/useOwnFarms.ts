@@ -97,7 +97,9 @@ function features(farms: OwnFarmLive[]): OwnFeatures {
       activeDevices: farm.field ? farm.field.activeDevices : null,
       now: new Date(farm.checkedAt),
     };
-    const one = contractFeatures(farm.id, farm.spec, parcelStatuses(farm.spec, base, paddyInputs(farm.monitoring)), farm.seed);
+    const paddies = paddyInputs(farm.monitoring);
+    const depths = Object.fromEntries(paddies.map((p) => [p.id, p.depthCm]));
+    const one = contractFeatures(farm.id, farm.spec, parcelStatuses(farm.spec, base, paddies), farm.seed, depths);
     out.polygons.push(...one.polygons);
     out.points.push(...one.points);
   }

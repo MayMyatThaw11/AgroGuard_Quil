@@ -12,6 +12,7 @@ export interface OwnFeatureProps {
   name: string;
   kind: string;
   status: OwnStatus;
+  depth: number | null;
 }
 
 export interface OwnFeatures {
@@ -81,7 +82,7 @@ function closed(ring: [number, number][] | null | undefined): ring is [number, n
   return a[0] === b[0] && a[1] === b[1];
 }
 
-export function contractFeatures(farmId: string, spec: ContractSpec, statuses: Record<string, OwnStatus>, seed = false): OwnFeatures {
+export function contractFeatures(farmId: string, spec: ContractSpec, statuses: Record<string, OwnStatus>, seed = false, depths: Record<string, number | null> = {}): OwnFeatures {
   const name = spec.farm.name ?? farmId;
   const kind = seed ? 'Demo farm' : 'Your farm';
   const polygons: PolygonFeature<OwnFeatureProps>[] = [];
@@ -90,7 +91,7 @@ export function contractFeatures(farmId: string, spec: ContractSpec, statuses: R
     const ring: Position[] = parcel.boundary.map(([lat, lon]) => [lon, lat]);
     polygons.push({
       type: 'Feature',
-      properties: { farm: farmId, parcel: parcel.id, name, kind, status: statuses[parcel.id] ?? 'unknown' },
+      properties: { farm: farmId, parcel: parcel.id, name, kind, status: statuses[parcel.id] ?? 'unknown', depth: depths[parcel.id] ?? null },
       geometry: { type: 'Polygon', coordinates: [ring] },
     });
   }
@@ -99,7 +100,7 @@ export function contractFeatures(farmId: string, spec: ContractSpec, statuses: R
     polygons.length === 0 && location
       ? [{
           type: 'Feature',
-          properties: { farm: farmId, parcel: '', name, kind, status: statuses[''] ?? 'unknown' },
+          properties: { farm: farmId, parcel: '', name, kind, status: statuses[''] ?? 'unknown', depth: null },
           geometry: { type: 'Point', coordinates: [location[1], location[0]] },
         }]
       : [];
