@@ -19,6 +19,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { API_BASE_URL } from '../api';
 import { saveCropConditions } from '../lib/cropConditions';
 import LocationMap from './LocationMap';
+import SimulateOnFarmLink from './SimulateOnFarmLink.jsx';
 
 function AdvisoryIcon({ severity }) {
   if (severity === 'warning' || severity === 'danger') {
@@ -555,6 +556,7 @@ export default function CropSuggestion() {
                 </p>
               </div>
             </div>
+            <SimulateOnFarmLink className="mb-3" />
             <button type="button" className="btn btn-primary" onClick={() => setSuggestion(null)}>Close</button>
           </section>
         </div>

@@ -32,6 +32,8 @@ import { deriveReplayMetrics, SEASON_DAYS } from './lib/metrics';
 import { buildRecordHash } from './lib/hash';
 import { useTheme } from './lib/useTheme';
 import { backendHealthy, getTerritoryProfile, runSim } from './lib/api';
+import { notifyParent, planToken, runBlock, type RunBlock } from './lib/quota';
+import { RunLocked } from './components/RunLocked';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -43,6 +45,8 @@ export const App: React.FC = () => {
   const [activeFile, setActiveFile] = useState<string>('field_01_paddy.agri');
   const [currentDay, setCurrentDay] = useState<number>(42);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
+  const [runPending, setRunPending] = useState<boolean>(false);
+  const [runBlockReason, setRunBlock] = useState<RunBlock>(null);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [workflowRunning, setWorkflowRunning] = useState<boolean>(false);
   const [isSplitView, setIsSplitView] = useState<boolean>(false);
@@ -83,6 +87,16 @@ export const App: React.FC = () => {
     let alive = true;
     backendHealthy().then((ok) => { if (alive) setConnection(ok ? 'online' : 'offline'); });
     return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin === window.location.origin && event.source === window.parent && event.data?.type === 'aq:plan-changed') {
+        setRunBlock(null);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
   }, []);
 
   const hasLintError = codeText.split('\n').some(line =>
@@ -188,16 +202,30 @@ export const App: React.FC = () => {
     setCodeText((prev) => prev.replaceAll('synthetic_urea', 'AzollaBioCompost'));
   };
 
-  const handleToggleSimulate = () => {
-    setIsSimulating((prev) => {
-      if (!prev) {
-        // Starting: record one real backend sim run (fire-and-forget, honest status).
-        runSim(importedParcel ? importedParcel.id : activePreset.id, SEASON_DAYS)
-          .then((job) => setDataFreshness(`sim ${job.task_id} ${job.status} · analytic fixture model, not AquaCrop`))
-          .catch(() => setDataFreshness('sim offline — replay only'));
+  const handleToggleSimulate = async () => {
+    if (isSimulating) {
+      setIsSimulating(false);
+      return;
+    }
+    if (runPending) return;
+    setRunPending(true);
+    try {
+      const job = await runSim(importedParcel ? importedParcel.id : activePreset.id, SEASON_DAYS);
+      setDataFreshness(`sim ${job.task_id} ${job.status} · analytic fixture model, not AquaCrop`);
+      setIsSimulating(true);
+      notifyParent('aq:run-complete');
+    } catch (err) {
+      const block = runBlock(err, planToken() !== '');
+      if (block) {
+        setRunBlock(block);
+        if (block === 'limit') notifyParent('aq:limit-reached');
+      } else {
+        setDataFreshness('sim offline — replay only');
+        setIsSimulating(true);
       }
-      return !prev;
-    });
+    } finally {
+      setRunPending(false);
+    }
   };
 
   // Stop is distinct from pause: pause preserves the replay position, stop
@@ -607,6 +635,14 @@ export const App: React.FC = () => {
           </button>
         )}
       </div>
+
+      {runBlockReason ? (
+        <RunLocked
+          reason={runBlockReason}
+          onUpgrade={() => notifyParent('aq:limit-reached')}
+          onClose={() => setRunBlock(null)}
+        />
+      ) : null}
 
       {/* 8. BOTTOM OUTPUT DRAWER (Tabs: Problems, Tests, Logs, Receipts, Terminal) */}
       <OutputDrawer

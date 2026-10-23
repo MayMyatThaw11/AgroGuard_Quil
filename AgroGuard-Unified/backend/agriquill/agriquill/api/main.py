@@ -33,6 +33,7 @@ from .. import (
     crops,
     cropvalue,
     dsl,
+    entitlements,
     evidence,
     evidence_pack,
     fleet,
@@ -132,8 +133,22 @@ def _same(given: str | None, expected: str) -> bool:
     return given is not None and hmac.compare_digest(given.encode(), expected.encode())
 
 
+def _agroguard_caller(authorization: str | None) -> Caller | None:
+    secret = get_settings().agroguard_jwt_secret
+    scheme, _, bearer = (authorization or "").partition(" ")
+    if secret is None or scheme.lower() != "bearer" or not bearer:
+        return None
+    try:
+        claims = entitlements.verify_claims(bearer.strip(), secret.get_secret_value())
+    except HTTPException:
+        return None
+    name = str(claims.get("name") or f"agroguard-user-{claims['sub']}")
+    return Caller(name, frozenset({"crew"}), frozenset())
+
+
 def _reader(
     token: str | None = Header(None, alias="X-AgriQuill-Write-Token"),
+    authorization: str | None = Header(None),
 ) -> Caller | None:
     settings = get_settings()
     try:
@@ -148,6 +163,9 @@ def _reader(
     shared = settings.write_token
     if shared is not None and _same(token, shared.get_secret_value()):
         return Caller(None, ROLES)
+    signed_in = _agroguard_caller(authorization)
+    if signed_in is not None:
+        return signed_in
     if shared is None and not users:
         if not settings.is_development:
             # Startup refuses this state; guard anyway so a runtime change can't open the API.
@@ -311,11 +329,24 @@ class SimReq(BaseModel):
     management_override: dict[str, Any] | None = None
 
 
+async def _farm_quota(
+    req: SimReq, authorization: str | None = Header(None)
+) -> entitlements.Reservation | None:
+    return await entitlements.consume_farm(authorization, req.parcel_id)
+
+
+_QUOTA = Depends(_farm_quota)
+
+
 @router.post("/sim/run", status_code=202, dependencies=WRITE)
-async def sim_run(req: SimReq) -> dict[str, Any]:
+async def sim_run(req: SimReq, quota: entitlements.Reservation | None = _QUOTA) -> dict[str, Any]:
     task_id = f"sim_task_{uuid.uuid4().hex[:12]}"
     started = time.perf_counter()
-    result = sim.simulate(parcel_id=req.parcel_id, days=req.simulation_days)
+    try:
+        result = sim.simulate(parcel_id=req.parcel_id, days=req.simulation_days)
+    except Exception:
+        await entitlements.release_farm(quota)
+        raise
     elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
     _JOBS[task_id] = {
         "task_id": task_id,

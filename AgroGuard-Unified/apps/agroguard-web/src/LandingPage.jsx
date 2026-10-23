@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { login } from './lib/session.js'
 
 const capabilities = [
   {
@@ -97,13 +98,31 @@ const impactHighlights = [
 function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
   const [message, setMessage] = useState('')
 
+  const [failed, setFailed] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const signIn = async (email) => {
+    setBusy(true)
+    setFailed(false)
+    setMessage('')
+    try {
+      await login(email)
+      onSuccess()
+    } catch (error) {
+      setFailed(true)
+      setMessage(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const submit = (event) => {
     event.preventDefault()
     if (mode === 'forgot') {
       setMessage('Password reset instructions have been sent to your email.')
       return
     }
-    onSuccess()
+    signIn(new FormData(event.currentTarget).get('email'))
   }
 
   const changeMode = (nextMode) => {
@@ -112,12 +131,12 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-myanglow-navy/45 p-4 backdrop-blur-md" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-myanglow-navy/45 p-4 backdrop-blur-md sm:items-center" onMouseDown={onClose}>
       <section
         role="dialog"
         aria-modal="true"
         aria-label="AgroGuard authentication"
-        className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/80 bg-white p-6 shadow-[0_30px_100px_rgba(20,26,22,0.3)] sm:p-8"
+        className="relative my-auto w-full max-w-md overflow-hidden rounded-[2rem] border border-white/80 bg-white p-5 shadow-[0_30px_100px_rgba(20,26,22,0.3)] sm:p-7"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-myanglow-lime/20 blur-2xl" />
@@ -144,7 +163,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
             </div>
           ) : null}
 
-          <form onSubmit={submit} className="mt-5 space-y-4">
+          <form onSubmit={submit} className="mt-4 space-y-3">
             {mode === 'signup' ? (
               <label className="block text-sm font-semibold text-myanglow-navy">
                 Full name
@@ -158,7 +177,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
               Email address
               <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
                 <Mail size={17} className="text-myanglow-medium" />
-                <input required type="email" autoComplete="email" placeholder="farmer@example.com" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
+                <input required name="email" type="email" autoComplete="email" placeholder="farmer@example.com" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
               </span>
             </label>
             {mode !== 'forgot' ? (
@@ -171,8 +190,20 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
               </label>
             ) : null}
 
-            {message ? <p className="rounded-xl bg-myanglow-sage/40 px-4 py-3 text-sm text-myanglow-forest">{message}</p> : null}
-            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500">
+            {message ? <p role={failed ? 'alert' : undefined} className={`rounded-xl px-4 py-3 text-sm ${failed ? 'border border-red-200 bg-red-50 font-semibold text-red-700' : 'bg-myanglow-sage/40 text-myanglow-forest'}`}>{message}</p> : null}
+            {mode !== 'forgot' ? (
+              <div className="rounded-xl border border-myanglow-sage px-4 py-3 text-xs text-slate-500">
+                <p className="font-semibold text-myanglow-navy">Demo accounts (any password)</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {['free@demo.com', 'pro@demo.com'].map((email) => (
+                    <button key={email} type="button" disabled={busy} onClick={() => signIn(email)} className="rounded-lg border border-myanglow-sage px-3 py-1.5 font-semibold text-myanglow-forest transition hover:bg-myanglow-sage/40 disabled:opacity-50">
+                      {email}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500">
               {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'} 
             </button>
           </form>

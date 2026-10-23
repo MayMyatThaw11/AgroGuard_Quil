@@ -11,6 +11,7 @@ import DiseaseDetectionPage from './pages/DiseaseDetectionPage.jsx'
 import FarmSimulationPage from './pages/FarmSimulationPage.jsx'
 import PhotoReviewPage from './pages/PhotoReviewPage.jsx'
 import CouncilPage from './pages/CouncilPage.jsx'
+import PricingPage from './pages/PricingPage.jsx'
 import LandingPage from './LandingPage.jsx'
 import './App.css'
 
@@ -30,6 +31,7 @@ function App() {
         <Route path="/photo-review" element={<PhotoReviewPage />} />
         <Route path="/iot-simulation" element={<IoTSimulation />} />
         <Route path="/farm-simulation" element={<FarmSimulationPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

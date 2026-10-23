@@ -1,6 +1,8 @@
-# Local services for the workspace. Only MongoDB for now (AgroGuard health
-# updates and their photos). Start it once with:
-#   docker compose up -d mongo
+# Local services for the workspace. Start what you need with:
+#   docker compose up -d mongo      (AgroGuard health updates and their photos)
+#   docker compose up -d postgres   (AgroGuard users, plans, sensors, water, alerts)
+# The PostgreSQL settings below match the default AGROGUARD_DATABASE_URL, so no .env is needed.
+# Both ports are bound to this machine only. The password is for local testing, not for deployment.
 services:
   mongo:
     image: mongo:8.0
@@ -11,5 +13,25 @@ services:
     volumes:
       - agroguard-mongo-data:/data/db
 
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: agroguard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agroguard
+    ports:
+      - "127.0.0.1:5432:5432"
+      - "[::1]:5432:5432"
+    volumes:
+      - agroguard-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agroguard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   agroguard-mongo-data:
+  agroguard-postgres-data:

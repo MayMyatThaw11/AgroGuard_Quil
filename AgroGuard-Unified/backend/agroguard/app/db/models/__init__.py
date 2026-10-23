@@ -9,9 +9,13 @@ from app.db.models.growth_simulation_event import GrowthEvent
 from app.db.models.health_update import HealthUpdate
 from app.db.models.ndvi import NDVIMeasurement
 from app.db.models.notification_delivery import Notification
+from app.db.models.payment import Payment
 from app.db.models.region import Region
 from app.db.models.sensor_device import SensorDevice
 from app.db.models.sensor_observation import SensorObservation
+from app.db.models.simulated_farm import SimulatedFarm
+from app.db.models.subscription import Subscription
+from app.db.models.user import User
 
 __all__ = [
     "Alert",
@@ -25,7 +29,11 @@ __all__ = [
     "HealthUpdate",
     "NDVIMeasurement",
     "Notification",
+    "Payment",
     "Region",
     "SensorDevice",
     "SensorObservation",
+    "SimulatedFarm",
+    "Subscription",
+    "User",
 ]

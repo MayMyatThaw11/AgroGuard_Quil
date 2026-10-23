@@ -1,7 +1,9 @@
-import { Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen, Droplets, Scale } from 'lucide-react'
+import { CreditCard, Moon, Sun, Home, LayoutDashboard, Radar, Sprout, ScanSearch, Bot, HeartPulse, Languages, RadioTower, Box, LogOut, PanelLeftClose, PanelLeftOpen, Droplets, Scale } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { useTheme } from '../contexts/ThemeContext.jsx'
+import { logout, useEntitlements } from '../lib/session.js'
+import PlanChip from './PlanChip.jsx'
 
 const navItems = [
   { key: 'nav.landing', icon: Home, path: '/' },
@@ -15,28 +17,21 @@ const navItems = [
   { key: 'nav.iot', icon: RadioTower, path: '/iot-simulation' },
   { key: 'nav.updates', icon: HeartPulse, path: '/health-updates' },
   { key: 'nav.farmSimulation', icon: Box, path: '/farm-simulation' },
+  { key: 'nav.pricing', icon: CreditCard, path: '/pricing' },
 ]
-
-// Farm Simulation remembers its own name + access code sign-in under these
-// keys (src/features/farm-simulation/lib/api.ts and session.ts), so signing
-// out of AgroGuard signs out of Farm Simulation too.
-const FARM_SIM_SESSION_KEYS = ['agriquill.accessCode', 'agriquill.reporter']
 
 function Sidebar({ mobileSidebarOpen, collapsed, onClose, onToggleCollapsed }) {
   const { language, setLanguage, t } = useLanguage()
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
+  const { entitlements } = useEntitlements()
   const themeLabel = t(theme === 'dark' ? 'theme.toLight' : 'theme.toDark')
   // Classes that only apply on desktop while the sidebar is an icon rail.
   const rail = (classes) => (collapsed ? classes : '')
   const toggleLabel = t(collapsed ? 'nav.showSidebar' : 'nav.hideSidebar')
 
   function signOut() {
-    try {
-      FARM_SIM_SESSION_KEYS.forEach((key) => localStorage.removeItem(key))
-    } catch {
-      // Storage blocked: there is nothing saved to clear.
-    }
+    logout()
     onClose()
     navigate('/')
   }
@@ -111,6 +106,11 @@ function Sidebar({ mobileSidebarOpen, collapsed, onClose, onToggleCollapsed }) {
       </nav>
 
       <div className={`shrink-0 border-t border-myanglow-sage/70 px-4 py-3 ${rail('lg:px-2')}`}>
+        {entitlements ? (
+          <div className={`mb-2 px-4 ${rail('lg:hidden')}`}>
+            <PlanChip entitlements={entitlements} />
+          </div>
+        ) : null}
         <button
           id="sign-out"
           type="button"

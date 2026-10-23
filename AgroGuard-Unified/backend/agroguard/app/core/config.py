@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     agriquill_bridge_token: SecretStr | None = None
     agriquill_bridge_reporter: str = "agroguard-bridge"
 
+    jwt_secret: SecretStr | None = None
+    jwt_ttl_minutes: int = 720
+    internal_service_key: SecretStr | None = None
+    free_farm_limit: int = 3
+    billing_mode: Literal["off", "mock"] = "off"
+    pro_period_days: int = 30
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -55,6 +62,11 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=False,
     )
+
+    @field_validator("jwt_secret", "internal_service_key", mode="before")
+    @classmethod
+    def _blank_secret_is_unset(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
 
     @field_validator("review_token", mode="before")
     @classmethod

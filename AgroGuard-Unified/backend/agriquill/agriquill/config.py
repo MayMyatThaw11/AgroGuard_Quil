@@ -20,6 +20,9 @@ BLANK_MEANS_UNSET = (
     "telemetry_webhook_token",
     "telemetry_ttn_token",
     "telemetry_chirpstack_token",
+    "agroguard_url",
+    "agroguard_jwt_secret",
+    "agroguard_service_key",
 )
 
 
@@ -70,6 +73,12 @@ class Settings(BaseSettings):
     # the source must never open a production server.
     builtin_user: SecretStr | None = SecretStr("Farm Manager:FARMSIM-2026:manager,crew:*")
     public_farms: str = "farm_ayeyarwady_demo"
+    # The AgroGuard API that counts each signed-in user's simulated farms. Unset means no quota
+    # (development only: production refuses to run simulations without it).
+    agroguard_url: str | None = None
+    agroguard_jwt_secret: SecretStr | None = None
+    agroguard_service_key: SecretStr | None = None
+    agroguard_timeout_s: float = 2.0
     nasa_power_endpoint: str = "https://power.larc.nasa.gov/api/temporal/daily/point"
     nasa_power_climatology_url: str = "https://power.larc.nasa.gov/api/temporal/climatology/point"
     chirps_base: str = "https://data.chc.ucsb.edu/products/CHIRPS-2.0"

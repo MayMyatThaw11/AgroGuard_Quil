@@ -283,6 +283,11 @@ typecheck` and `npm run test:farm-sim`.
   Myanmar the old regional pH table is the last resort (labelled as such).
   If NASA POWER is unreachable the lookup fails with a clear message rather
   than filling in made-up values. Needs internet access.
+- **PostgreSQL** (users, plans, sensors, water, alerts): `docker compose up -d postgres` from the
+  workspace root runs it on `127.0.0.1:5432` (user `postgres`, password `postgres`, database
+  `agroguard`, for local testing only), which is the default `AGROGUARD_DATABASE_URL`. Then run
+  `alembic upgrade head` from `backend/agroguard`. Use `127.0.0.1` rather than `localhost` in the URL if a
+  connection hangs. The tests that need a database run against it.
 - **MongoDB** (health updates only): `docker compose up -d mongo` from the
   workspace root runs it on `127.0.0.1:27017` (`AGROGUARD_MONGO_URL` /
   `AGROGUARD_MONGO_DATABASE` override). Each health update stores its photo

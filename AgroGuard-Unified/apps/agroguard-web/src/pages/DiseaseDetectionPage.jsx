@@ -24,6 +24,7 @@ import DiseaseVerdict from '../components/DiseaseVerdict.jsx'
 import PhotoQualityNotice from '../components/PhotoQualityNotice.jsx'
 import DiseaseAdvice from '../components/DiseaseAdvice.jsx'
 import SaveToHealthUpdates from '../components/SaveToHealthUpdates.jsx'
+import SimulateOnFarmLink from '../components/SimulateOnFarmLink.jsx'
 import { interpretDisease } from '../lib/diseaseVerdict.js'
 import { checkPhotoQuality } from '../lib/photoQuality.js'
 import { PLANT_GROUPS } from '../data/plantGroups.js'
@@ -825,6 +826,9 @@ function DiseaseDetectionPage() {
               saved={saved}
               onSaved={() => setSaved(true)}
             />
+          </div>
+          <div className="mt-3">
+            <SimulateOnFarmLink />
           </div>
           <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button type="button" onClick={() => setStep(4)} className={quietButton}>

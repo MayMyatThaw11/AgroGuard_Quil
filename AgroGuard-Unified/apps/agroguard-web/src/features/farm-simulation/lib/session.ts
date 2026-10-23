@@ -1,5 +1,6 @@
 import { accessCode, getAuthMe, setAccessCode } from './api.ts';
 import { ApiError } from './apiError.ts';
+import { TOKEN_KEY } from './quota.ts';
 
 export const REPORTER_KEY = 'agriquill.reporter';
 export const WRONG_OWNER = 'That name does not own this code';
@@ -73,6 +74,11 @@ export async function signIn(name: string, code: string): Promise<Session> {
 }
 
 export function signOut(): void {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* nothing saved to clear */
+  }
   setAccessCode('');
   storeReporter('');
   active = null;

@@ -10,6 +10,7 @@ import type { ActuationVerdict, CropCatalog, FarmCheck, LivePlan, OpsPlan, Propo
 import { ApiError, BusyError } from './apiError.ts';
 import type { ContractSpec } from './contractFarm.ts';
 import { parseRetryAfter } from './http.ts';
+import { planToken } from './quota.ts';
 import type { DailyWeather } from './signinField.ts';
 
 const BASE = (import.meta.env?.VITE_API_BASE ?? '').replace(/\/$/, '');
@@ -43,6 +44,7 @@ async function send(path: string, init?: RequestInit): Promise<Response> {
     headers: {
       'content-type': 'application/json',
       ...(code ? { 'x-agriquill-write-token': code } : {}),
+      ...(planToken() ? { authorization: `Bearer ${planToken()}` } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -55,7 +57,7 @@ async function send(path: string, init?: RequestInit): Promise<Response> {
       const raw = body.detail ?? body;
       explained = typeof body.detail === 'string';
       detail = typeof raw === 'string' ? raw : JSON.stringify(raw);
-      code = typeof body.code === 'string' ? body.code : null;
+      code = typeof body.code === 'string' ? body.code : typeof raw?.code === 'string' ? raw.code : null;
     } catch {
       /* ignore */
     }
