@@ -41,6 +41,7 @@ import { PoiDetail } from './PoiDetail.tsx';
 import { DeliversTo, SiteDetail, SitesUpload } from './SiteDetail.tsx';
 import { useSites } from './useSites.ts';
 import { SeasonTimeline } from './SeasonTimeline.tsx';
+import { FieldReplica } from '../fieldsim/FieldReplica.tsx';
 import { seasonViewFor, type Playback, type TintVar } from '../../lib/farmmap/seasonPlayback.ts';
 import type { SeasonReplay } from '../../lib/api.ts';
 import { RoutePanel } from './RoutePanel.tsx';
@@ -86,6 +87,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const [spot, setSpot] = useState<Spot | null>(null);
   const [season, setSeason] = useState<{ farmId: string; parcelId: string; run: SeasonReplay; year: number; engine: string; tint: TintVar } | null>(null);
   const [playback, setPlayback] = useState<Playback>({ day: 0, playing: false, speed: 4, carry: 0 });
+  const [replica, setReplica] = useState(false);
   const [layers, setLayers] = useState(() => loadLayers(browserStorage()));
   const [view, setView] = useState<MapView>('map');
   const [terrain, setTerrain] = useState(false);
@@ -418,7 +420,20 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
           onEngine={(name) => setSeason((s) => (s ? { ...s, engine: name } : s))}
           onTint={(tint) => setSeason((s) => (s ? { ...s, tint } : s))}
           onPlayback={setPlayback}
-          onClose={() => setSeason(null)}
+          onReplica={() => setReplica((r) => !r)}
+          onClose={() => {
+            setSeason(null);
+            setReplica(false);
+          }}
+        />
+      ) : null}
+      {season && replica ? (
+        <FieldReplica
+          run={season.run}
+          year={season.year}
+          day={playback.day}
+          boundary={ownFarms.find((f) => f.id === season.farmId)?.spec.parcels.find((p) => p.id === season.parcelId)?.boundary}
+          onClose={() => setReplica(false)}
         />
       ) : null}
       {guide && route?.result ? <GuideHud guide={guide} steps={route.result.steps} mode={route.mode} onStop={planner.stopGuide} /> : null}

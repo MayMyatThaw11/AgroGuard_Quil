@@ -62,6 +62,10 @@ function labelLayers(): LayerSpecification[] {
   ];
 }
 
+export const SAT_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+export const SAT_MAX_ZOOM = 19;
+export const SAT_ATTRIBUTION = 'Imagery © Esri, Maxar, Earthstar Geographics';
+
 export function basemapStyle(): StyleSpecification {
   const terrarium = ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'];
   const layers = [...baseLayers(), ...labelLayers()];
@@ -73,7 +77,7 @@ export function basemapStyle(): StyleSpecification {
     sources: {
       omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet', attribution: '© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors' },
       dem: { type: 'raster-dem', tiles: terrarium, encoding: 'terrarium', tileSize: 256, maxzoom: 14, attribution: 'Relief: AWS Terrain Tiles (SRTM, GMTED, ETOPO)' },
-      sat: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' },
+      sat: { type: 'raster', tiles: [SAT_TILES], tileSize: 256, maxzoom: SAT_MAX_ZOOM, attribution: SAT_ATTRIBUTION },
       dem3d: { type: 'raster-dem', tiles: terrarium, encoding: 'terrarium', tileSize: 256, maxzoom: 14 },
     },
     layers,

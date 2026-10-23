@@ -187,3 +187,21 @@ Every phase ends with:
 - A crash during a ledger append can leave a NUL-filled line in `data/agriquill_ledger.jsonl`. The ledger now skips such a line. If writes fail with a `utf-32-be` decode error, check that file first.
 - Site context answers take about 60 s cold (ERA5, DEM, soil and Overpass), then 6 h from the cache. While Overpass is down, coast and OSM distances are null with the reason.
 - `npm run typecheck` and `npm run test:farm-sim` are defined in `apps/agroguard-web`, not in the `AgroGuard-Unified` root.
+
+## Season simulator and 3D replica (2026-10-24)
+
+Built and pushed on `farm-simulation` (spec `docs/superpowers/specs/2026-10-23-single-field-season-design.md`, plan `docs/superpowers/plans/2026-10-23-single-field-season.md`):
+- Mill sites: `POST/GET /sites`, `PATCH /farms/{id}/parcels/{pid}/delivers-to`, mill layer and panel. Mill data lives only in the local record store.
+- Season engines: own model (ORYZA2000 IR72 phenology and partitioning, Kiniry 2001 RUE, FAO-56 water and Ks, ORYZA N demand, IPCC N losses, Cousens weeds, DT50 residue), AquaCrop-OSPy 3.1.0, PCSE WOFOST 7.3 water-limited (`Rice_HYV_IR8`). `POST /farms/{id}/parcels/{pid}/season-run`, cached 7 days.
+- Farm panel season section, timeline bar, map tint and water slab, charts; Blender-built models in `public/models/farmmap` (source `assets-src/farmmap/build_models.py`); 3D replica dialog.
+- Live check, PD-01 replayed on 2023 and 2024 weather (t DM/ha): own 1.98/1.99, WOFOST 4.23/4.36, AquaCrop 7.47/7.51. The own engine is below the FAOSTAT Myanmar national mean; uncalibrated.
+
+### Next session (about 5 hours, in order)
+1. Replica: the background renders black instead of the sky colour, and the satellite tiles do not appear (check the Esri tile CORS and the canvas texture). Plants are hard to see under 300 mm of water; scale them to the engine's stage height.
+2. Replica screenshots at 375 px and in Burmese; measure frame time in a headed browser and record it here ("this laptop only").
+3. Plan Task 12: final whole-branch review with a fresh reviewer, a fix pass for Critical and Important findings, then this handoff.
+4. Investor entry paths (new request): paste a Google Maps link (parse `@lat,lon` and `q=lat,lon`), Google Earth KML/KMZ (exists), typed lat/lon (exists in search), a phone photo's location tag (read the EXIF GPS in the browser), and tracing (exists). Each path then goes through onboarding and a season run. Then audit the whole investor flow with the reverse-engineer-anything skill and fix what it finds.
+5. Own engine: compare its yield with FAOSTAT national yields over several years and report the error. Do not tune without a held-out check.
+6. Native-speaker review of the new `farmMap.site`, `farmMap.sim` and `farmMap.replica` strings in my, vi, th, fil, id, km.
+7. TO VERIFY items still open: ORYZA IR72 rates for local varieties; the Kiniry RUE for tropical rice; the SOC-to-OM factor 1.724; WOFOST CRAIRC, K0 and CO2; the 35 °C heat line; blast thresholds.
+8. Blender MCP: reload the VS Code window so the Blender tools load, if interactive modelling is wanted. The models are currently built headless by script.

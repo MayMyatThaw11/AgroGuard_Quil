@@ -2,6 +2,7 @@ import React from 'react';
 
 interface Props {
   children: React.ReactNode;
+  fallback?: (reset: () => void) => React.ReactNode;
 }
 
 interface State {
@@ -33,6 +34,7 @@ export class CanvasErrorBoundary extends React.Component<Props, State> {
   };
 
   render() {
+    if (this.state.error && this.props.fallback) return this.props.fallback(this.reset);
     if (this.state.error) {
       return (
         <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#0a0e0c] text-center text-slate-300">
