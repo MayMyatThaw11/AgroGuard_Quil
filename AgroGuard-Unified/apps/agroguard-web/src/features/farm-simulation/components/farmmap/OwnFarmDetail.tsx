@@ -17,6 +17,7 @@ import { FlowView } from './FlowView.tsx';
 import { SeasonStrip } from './SeasonStrip.tsx';
 import { PersonaPlan } from './PersonaPlan.tsx';
 import { RecordsSection } from './RecordsSection.tsx';
+import { FieldNotesSection } from './FieldNotesSection.tsx';
 import { TechniqueFit } from '../site/TechniqueFit.tsx';
 import { rememberHarvest, type OwnFarmLive } from './useOwnFarms.ts';
 
@@ -260,6 +261,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
       )}
 
       <RecordsSection key={farm.id} farmId={farm.id} spec={farm.spec} />
+      <FieldNotesSection key={`notes-${farm.id}`} farmId={farm.id} />
 
       {centre ? (
         <DetailSection>

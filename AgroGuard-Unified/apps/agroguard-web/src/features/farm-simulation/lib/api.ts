@@ -900,6 +900,50 @@ export async function addFumigation(farmId: string, body: FumigationInput) {
   return request<Fumigation>(recordsPath(farmId, 'fumigations'), post(body));
 }
 
+export type VaultNoteKind = 'scouting_notes' | 'verification_checks';
+export const VAULT_NOTE_LIMIT = 4096;
+
+export interface VaultNote {
+  farm_id: string;
+  by: string;
+  at: string;
+  kind: VaultNoteKind;
+  text: string;
+  path: string;
+}
+
+export interface VaultCouncil {
+  farm_id: string;
+  by: string;
+  at: string;
+  field_id: string | null;
+  stage: string | null;
+  verdicts: Record<string, string | null>;
+  intercepts: string[];
+  untraced_numbers: number;
+  path: string;
+}
+
+export interface FarmVault {
+  farm_id: string;
+  path: string;
+  markdown: string;
+  farm: { updated_at: string; missing: Record<string, string> };
+  notes: VaultNote[];
+  checks: VaultNote[];
+  councils: VaultCouncil[];
+}
+
+const vaultPath = (farmId: string, tail = '') => `/api/v1/agriquill/farms/${encodeURIComponent(farmId)}/vault${tail}`;
+
+export async function getVault(farmId: string, signal?: AbortSignal) {
+  return request<FarmVault>(vaultPath(farmId), { signal });
+}
+
+export async function addVaultNote(farmId: string, body: { text: string; kind: VaultNoteKind; added_by: string }) {
+  return request<{ path: string; sha256: string; ledger_hash: string }>(vaultPath(farmId, '/notes'), post(body));
+}
+
 export async function getLots(farmId: string, options: RecordListOptions = {}, signal?: AbortSignal) {
   return request<LotList>(recordsPath(farmId, 'lots') + listQuery(options), { signal });
 }
