@@ -1,4 +1,4 @@
-import type { FarmMonitoring, FarmRisk, HarvestReference, PersonaPlans } from '../api.ts';
+import type { Certificate, FarmMonitoring, FarmRisk, Fumigation, FumigationVerdict, HarvestReference, Lot, PersonaPlans } from '../api.ts';
 import type { ContractSpec } from '../contractFarm.ts';
 import type { FarmStatus, PointFeature, PolygonFeature, Position } from './farmMapTypes.ts';
 import { reasonText } from './personaInputs.ts';
@@ -309,6 +309,13 @@ export interface FarmsRollup {
   areaUnknown: number;
   harvest: { lowT: number; highT: number; farms: number } | null;
   alerts: number;
+  certificatesDue: { due: number; expired: number; farms: number } | null;
+  lotsInStore: { lots: number; kg: number; farms: number } | null;
+}
+
+export interface FarmRecords {
+  certificates: Pick<Certificate, 'alert' | 'voided_at'>[];
+  lots: Pick<Lot, 'mass_kg' | 'mill' | 'voided_at'>[];
 }
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -318,7 +325,7 @@ function farmArea(spec: ContractSpec): number | null {
   return known ? spec.parcels.reduce((s, p) => s + (p.area_ha ?? 0), 0) : null;
 }
 
-export function farmsRollup(farms: readonly RollupFarm[], harvests: ReadonlyMap<string, HarvestReference>): FarmsRollup {
+export function farmsRollup(farms: readonly RollupFarm[], harvests: ReadonlyMap<string, HarvestReference>, records: ReadonlyMap<string, FarmRecords> = new Map()): FarmsRollup {
   let areaHa = 0;
   let areaUnknown = 0;
   let lowT = 0;
@@ -335,6 +342,9 @@ export function farmsRollup(farms: readonly RollupFarm[], harvests: ReadonlyMap<
       priced += 1;
     }
   }
+  const known = farms.map((f) => records.get(f.id)).filter((r): r is FarmRecords => r !== undefined);
+  const certs = known.flatMap((r) => r.certificates.filter((c) => !c.voided_at));
+  const stored = known.flatMap((r) => r.lots.filter((l) => !l.voided_at && !l.mill));
   return {
     farms: farms.length,
     demo: farms.filter((f) => f.seed).length,
@@ -342,6 +352,10 @@ export function farmsRollup(farms: readonly RollupFarm[], harvests: ReadonlyMap<
     areaUnknown,
     harvest: priced > 0 ? { lowT: round2(lowT), highT: round2(highT), farms: priced } : null,
     alerts: farms.filter((f) => f.status === 'risk').length,
+    certificatesDue: known.length
+      ? { due: certs.filter((c) => c.alert === 'due' || c.alert === 'urgent').length, expired: certs.filter((c) => c.alert === 'expired').length, farms: known.length }
+      : null,
+    lotsInStore: known.length ? { lots: stored.length, kg: round2(stored.reduce((s, l) => s + l.mass_kg, 0)), farms: known.length } : null,
   };
 }
 
@@ -386,4 +400,27 @@ export function todayLine({ risk, blocked, advisory, plan }: TodayInputs): Today
     text: 'Nothing urgent today',
     source: unchecked.length ? `water advice · not loaded: ${unchecked.join(', ')}` : 'flood risk, blocked jobs and water advice, none flagged',
   };
+}
+
+export type Tone = 'accent' | 'neutral' | 'warning' | 'alert';
+const VERDICT_ORDER: FumigationVerdict['result'][] = ['blocked', 'conditional', 'unchecked', 'no_standard', 'no_listed_item'];
+
+export function verdictBadge(v: FumigationVerdict): { tone: Tone; word: string; detail: string } {
+  switch (v.result) {
+    case 'blocked':
+      return { tone: 'alert', word: 'Blocked', detail: `${v.item} is not allowed under ${v.standard} · ${v.clause ?? 'clause not recorded'} · ${v.code}` };
+    case 'conditional':
+      return { tone: 'warning', word: 'Conditional', detail: `${v.condition} · ${v.clause}` };
+    case 'unchecked':
+      return { tone: 'neutral', word: 'Unchecked', detail: v.reason };
+    case 'no_listed_item':
+      return { tone: 'accent', word: 'No listed item', detail: `nothing on the ${v.standard} list matched` };
+    default:
+      return { tone: 'neutral', word: 'No standard', detail: 'the plot has no organic standard in its contract' };
+  }
+}
+
+export function worstVerdict(f: Pick<Fumigation, 'checks'>): FumigationVerdict | null {
+  const all = Object.values(f.checks);
+  return all.sort((a, b) => VERDICT_ORDER.indexOf(a.result) - VERDICT_ORDER.indexOf(b.result))[0] ?? null;
 }

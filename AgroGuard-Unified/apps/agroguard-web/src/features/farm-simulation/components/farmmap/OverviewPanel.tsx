@@ -9,7 +9,7 @@ import { AqSectionLabel, AqStatTile } from '../aq/aqLayout.tsx';
 import { AqBadge } from '../aq/aqPrimitives.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
 import { shareStyle, tintStyle } from './tint.ts';
-import { loadedHarvests } from './useOwnFarms.ts';
+import { loadedHarvests, loadedRecords } from './useOwnFarms.ts';
 
 interface OverviewPanelProps {
   farms: readonly Farm[];
@@ -28,7 +28,7 @@ const SAMPLE = <AqBadge>Sample data</AqBadge>;
 const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 1 });
 
 export const FarmsRollup: React.FC<{ farms: readonly RollupFarm[] }> = ({ farms }) => {
-  const r = farmsRollup(farms, loadedHarvests);
+  const r = farmsRollup(farms, loadedHarvests, loadedRecords);
   if (r.farms === 0) return null;
   return (
     <>
@@ -46,8 +46,8 @@ export const FarmsRollup: React.FC<{ farms: readonly RollupFarm[] }> = ({ farms 
           v={r.harvest ? `${fmt(r.harvest.lowT)}–${fmt(r.harvest.highT)} t` : 'not loaded'}
           sub={r.harvest ? `FAOSTAT 5-year range, ${r.harvest.farms} of ${r.farms} farms · open a farm to add its reference` : 'opens with each farm; open a farm to load its FAOSTAT reference'}
         />
-        <KV k="Certificates due in 60 days" v="not loaded" sub="certificate dates are not in the farm map yet" />
-        <KV k="Lots in store" v="not loaded" sub="stored lots are not in the farm map yet" />
+        <KV k="Certificates due in 60 days" v={r.certificatesDue ? String(r.certificatesDue.due) : 'not loaded'} sub={r.certificatesDue ? `${r.certificatesDue.expired} expired · ${r.certificatesDue.farms} of ${r.farms} farms loaded` : 'open a farm to load its certificate dates'} />
+        <KV k="Lots in store" v={r.lotsInStore ? `${r.lotsInStore.lots} · ${fmt(r.lotsInStore.kg)} kg` : 'not loaded'} sub={r.lotsInStore ? `${r.lotsInStore.farms} of ${r.farms} farms loaded` : 'open a farm to load its stored lots'} />
       </More>
     </>
   );

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fieldStatus, type FieldStatus } from '../../lib/agroguard.ts';
-import { getContract, getMonitoring, listContracts, type FarmMonitoring, type HarvestReference } from '../../lib/api.ts';
+import { getCertificates, getContract, getLots, getMonitoring, listContracts, type CertificateCalendar, type FarmMonitoring, type HarvestReference, type LotList } from '../../lib/api.ts';
 import type { ContractSpec } from '../../lib/contractFarm.ts';
 import type { FarmMapEngine } from '../../lib/farmmap/engine/engineTypes.ts';
 import {
@@ -10,6 +10,7 @@ import {
   parcelStatuses,
   replicaStatus,
   setLinkedField,
+  type FarmRecords,
   type OwnFeatures,
   type OwnStatus,
 } from '../../lib/farmmap/ownFarms.ts';
@@ -22,6 +23,20 @@ export const loadedHarvests: ReadonlyMap<string, HarvestReference> = harvests;
 
 export function rememberHarvest(farmId: string, ref: HarvestReference): void {
   harvests.set(farmId, ref);
+}
+
+const records = new Map<string, FarmRecords>();
+
+export const loadedRecords: ReadonlyMap<string, FarmRecords> = records;
+
+export function rememberRecords(farmId: string, certs: CertificateCalendar, lots: LotList): void {
+  if (certs.total > certs.certificates.length || lots.total > lots.lots.length) records.delete(farmId);
+  else records.set(farmId, { certificates: certs.certificates, lots: lots.lots });
+}
+
+async function loadRecords(farmId: string): Promise<void> {
+  const [certs, lots] = await Promise.all([getCertificates(farmId, { limit: 500 }), getLots(farmId, { limit: 500 })]);
+  rememberRecords(farmId, certs, lots);
 }
 
 export interface OwnFarmLive {
@@ -45,6 +60,7 @@ async function loadFarm(id: string, seed: boolean): Promise<OwnFarmLive | null> 
   const contract = await getContract(id);
   if (!contract.contract) return null;
   const spec = contract.contract;
+  if (!records.has(id)) loadRecords(id).catch(() => undefined);
   const storage = browserStorage();
   const fieldId = storage ? linkedField(storage, id) : null;
   const [monitoring, field] = await Promise.allSettled([

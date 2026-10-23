@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
-import { getHarvestReference, getRadar, getRisk, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type HarvestReference, type MonitoringPaddy, type PersonaPlans, type RiverCell } from '../../lib/api.ts';
+import { getHarvestReference, getRadar, getRisk, getRoadmap, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type HarvestReference, type MonitoringPaddy, type PersonaPlans, type RiverCell, type Roadmap } from '../../lib/api.ts';
 import { failedText } from '../../lib/apiError.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
 import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, nationalHarvest, pawSanHarvest, readAgroguardLocal, todayLine, type OwnStatus, type TodayLine } from '../../lib/farmmap/ownFarms.ts';
@@ -14,6 +14,8 @@ import { DetailSection, KV, More, UpdatedLine } from './detailParts.tsx';
 import { FlowView } from './FlowView.tsx';
 import { SeasonStrip } from './SeasonStrip.tsx';
 import { PersonaPlan } from './PersonaPlan.tsx';
+import { RecordsSection } from './RecordsSection.tsx';
+import { TechniqueFit } from '../site/TechniqueFit.tsx';
 import { rememberHarvest, type OwnFarmLive } from './useOwnFarms.ts';
 
 const MIN_TRUST_CHECKS = 10;
@@ -93,6 +95,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const [radar, setRadar] = useState<FarmRadar | 'error' | null>(null);
   const [risk, setRisk] = useState<FarmRisk | 'error' | null>(null);
   const [yieldRef, setYieldRef] = useState<HarvestReference | null>(null);
+  const [roadmap, setRoadmap] = useState<Roadmap | string | null>(null);
   const centre = useMemo(() => farmCentroid(farm.spec), [farm.spec]);
   const local = useMemo(() => {
     const storage = browserStorage();
@@ -122,6 +125,14 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
       alive = false;
     };
   }, [farm.id]);
+
+  useEffect(() => {
+    let alive = true;
+    getRoadmap().then((r) => alive && setRoadmap(r), (err: unknown) => alive && setRoadmap(failedText(err, 'The list of unbuilt features is unavailable')));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -245,6 +256,14 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
         </DetailSection>
       )}
 
+      <RecordsSection key={farm.id} farmId={farm.id} spec={farm.spec} />
+
+      {centre ? (
+        <DetailSection>
+          <TechniqueFit key={`site-${farm.id}`} lat={centre.lat} lon={centre.lon} farmId={farm.id} shown={3} />
+        </DetailSection>
+      ) : null}
+
       <SeasonStrip farmId={farm.id} />
 
       <FlowView farmId={farm.id} spec={farm.spec} />
@@ -345,6 +364,11 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
               </div>
             );
           }) : null}
+          <More label="Not available yet">
+            {roadmap === null ? <p className="aq-fm-note">Loading</p> : typeof roadmap === 'string' ? <p className="aq-fm-note">{roadmap}</p> : roadmap.blocked.map((b) => (
+              <p key={b.item} className="aq-fm-note">{b.title} ({b.item}): needs {b.needs}</p>
+            ))}
+          </More>
           <UpdatedLine>Contract {farm.sha256.slice(0, 12)}</UpdatedLine>
           <AqButton variant="ghost" onClick={onFocus}>Fly to boundary</AqButton>
         </More>

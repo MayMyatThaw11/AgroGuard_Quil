@@ -33,6 +33,10 @@ export function setAccessCode(code: string): void {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  return (await send(path, init)).json() as Promise<T>;
+}
+
+async function send(path: string, init?: RequestInit): Promise<Response> {
   const code = accessCode();
   const res = await fetch(`${BASE}${path}`, {
     ...init,
@@ -62,7 +66,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (busy) throw new BusyError(res.status, retryAfter ?? null, code, requestId);
     throw new ApiError(detail, res.status, code, requestId);
   }
-  return (await res.json()) as T;
+  return res;
 }
 
 export async function backendHealthy(): Promise<boolean> {
@@ -709,4 +713,241 @@ export async function getFleetFields(limit = 100, safeDepthCm?: number) {
   const query = new URLSearchParams({ limit: String(limit) });
   if (safeDepthCm !== undefined) query.set('awd_safe_depth_cm', String(safeDepthCm));
   return request<FleetFieldsResponse>(`/api/v1/agriquill/fleet/fields?${query.toString()}`);
+}
+
+export interface RecordStamps {
+  voided_at?: string | null;
+  void_reason?: string | null;
+  voided_by?: string | null;
+  corrected_at?: string | null;
+  corrected_by?: string | null;
+  correction_reason?: string | null;
+}
+
+export interface RecordListOptions {
+  limit?: number;
+  offset?: number;
+  includeVoided?: boolean;
+}
+
+export const CERTIFICATE_KINDS = {
+  organic: 'Organic certificate',
+  gap: 'Good Agricultural Practice (ASEAN GAP or a national scheme)',
+  export_licence: 'Export licence',
+  exporter_registration: 'Exporter registration',
+  china_exporter_registration: 'China GACC exporter registration',
+  phytosanitary: 'Phytosanitary registration',
+  water_test: 'Irrigation water test report',
+  soil_test: 'Soil test report',
+  other: 'Other document',
+} as const;
+
+export type CertificateKind = keyof typeof CERTIFICATE_KINDS;
+export type CertificateAlert = 'expired' | 'urgent' | 'due';
+
+export interface CertificateInput {
+  kind: CertificateKind;
+  number: string;
+  issuer: string;
+  country: string;
+  issued: string;
+  expires: string;
+  added_by: string;
+}
+
+export interface Certificate extends CertificateInput, RecordStamps {
+  id: string;
+  farm_id: string;
+  added_at: string;
+  label: string;
+  due: string;
+  due_for: 'expiry' | 'renewal deadline';
+  days_left: number;
+  alert: CertificateAlert | null;
+  deadline_status: string | null;
+}
+
+export interface CertificateCalendar {
+  farm_id: string;
+  today: string;
+  alert_days: number[];
+  certificates: Certificate[];
+  alerts: Certificate[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type FumigationMethod = 'synthetic_chemical' | 'controlled_atmosphere' | 'hermetic' | 'heat' | 'other';
+
+export type FumigationVerdict =
+  | { result: 'blocked'; standard: string; code: string; item: string; clause: string | null }
+  | { result: 'conditional'; standard: string; clause: string; condition: string }
+  | { result: 'unchecked'; standard: string; reason: string }
+  | { result: 'no_listed_item'; standard: string }
+  | { result: 'no_standard'; standard: null };
+
+export interface FumigationInput {
+  store: string;
+  parcels: string[];
+  product: string;
+  active_ingredient: string | null;
+  method: FumigationMethod;
+  applied_at: string;
+  recorded_by: string;
+}
+
+export interface Fumigation extends FumigationInput, RecordStamps {
+  id: string;
+  farm_id: string;
+  recorded_at: string;
+  checks: Record<string, FumigationVerdict>;
+  blocks_organic: string[];
+}
+
+export interface LotInput {
+  id: string;
+  parcels: string[];
+  harvested_on: string;
+  mass_kg: number;
+  certifier: string | null;
+  recorded_by: string;
+}
+
+export type LotStorage = 'hermetic' | 'sack' | 'bin' | 'silo' | 'other';
+
+export interface MoistureInput {
+  measured_at: string;
+  moisture_pct: number;
+  drying_method?: 'sun' | 'flatbed' | 'recirculating' | 'none' | 'other';
+  storage?: LotStorage | null;
+  recorded_by: string;
+}
+
+export interface MillInput {
+  broken_pct: number;
+  grade?: string | null;
+  moisture_pct?: number | null;
+  buyer_max_broken_pct?: number | null;
+  buyer_max_moisture_pct?: number | null;
+  recorded_by: string;
+}
+
+export interface Lot extends LotInput, RecordStamps {
+  farm_id: string;
+  recorded_at: string;
+  moisture: (Omit<MoistureInput, 'recorded_by'> & { by: string })[];
+  mill: (Omit<MillInput, 'recorded_by'> & { by: string }) | null;
+  estimate: { kg: number | null; reason?: string; basis?: string[]; tolerance: number; limit_kg: number | null };
+  flags: string[];
+  moisture_now: number | null;
+}
+
+export interface LotList {
+  farm_id: string;
+  lots: Lot[];
+  drying_order: { lot: string; moisture_pct: number; rain_mm_48h: number | null }[];
+  store_max_moisture_pct: number;
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type RecordKind = 'certificates' | 'fumigations' | 'lots';
+
+export interface RecordRow {
+  certificates: Certificate;
+  fumigations: Fumigation;
+  lots: Lot;
+}
+
+export interface RecordChanges {
+  certificates: Partial<Pick<CertificateInput, 'issuer' | 'country' | 'issued' | 'expires'>>;
+  fumigations: Partial<Pick<FumigationInput, 'parcels' | 'active_ingredient' | 'method'>>;
+  lots: Partial<Pick<LotInput, 'parcels' | 'harvested_on' | 'mass_kg' | 'certifier'>>;
+}
+
+function recordsPath(farmId: string, kind: RecordKind, id?: string, tail = ''): string {
+  return `/api/v1/agriquill/farms/${encodeURIComponent(farmId)}/${kind}${id === undefined ? '' : `/${encodeURIComponent(id)}`}${tail}`;
+}
+
+function listQuery({ limit, offset, includeVoided }: RecordListOptions): string {
+  const query = new URLSearchParams();
+  if (limit !== undefined) query.set('limit', String(limit));
+  if (offset !== undefined) query.set('offset', String(offset));
+  if (includeVoided) query.set('include_voided', 'true');
+  const text = query.toString();
+  return text ? `?${text}` : '';
+}
+
+const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
+
+export async function getCertificates(farmId: string, options: RecordListOptions = {}, signal?: AbortSignal) {
+  return request<CertificateCalendar>(recordsPath(farmId, 'certificates') + listQuery(options), { signal });
+}
+
+export async function addCertificate(farmId: string, body: CertificateInput) {
+  return request<Certificate>(recordsPath(farmId, 'certificates'), post(body));
+}
+
+export async function getFumigations(farmId: string, options: RecordListOptions = {}, signal?: AbortSignal) {
+  return request<Fumigation[]>(recordsPath(farmId, 'fumigations') + listQuery(options), { signal });
+}
+
+export async function addFumigation(farmId: string, body: FumigationInput) {
+  return request<Fumigation>(recordsPath(farmId, 'fumigations'), post(body));
+}
+
+export async function getLots(farmId: string, options: RecordListOptions = {}, signal?: AbortSignal) {
+  return request<LotList>(recordsPath(farmId, 'lots') + listQuery(options), { signal });
+}
+
+export async function addLot(farmId: string, body: LotInput) {
+  return request<Lot>(recordsPath(farmId, 'lots'), post(body));
+}
+
+export async function addLotMoisture(farmId: string, lotId: string, body: MoistureInput) {
+  return request<Lot>(recordsPath(farmId, 'lots', lotId, '/moisture'), post(body));
+}
+
+export async function addLotMill(farmId: string, lotId: string, body: MillInput) {
+  return request<Lot>(recordsPath(farmId, 'lots', lotId, '/mill'), post(body));
+}
+
+export async function correctRecord<K extends RecordKind>(farmId: string, kind: K, id: string, changes: RecordChanges[K], reason: string, correctedBy: string) {
+  return request<RecordRow[K]>(recordsPath(farmId, kind, id), {
+    method: 'PATCH',
+    body: JSON.stringify({ changes, reason, corrected_by: correctedBy }),
+  });
+}
+
+export async function voidRecord<K extends RecordKind>(farmId: string, kind: K, id: string, reason: string, voidedBy: string) {
+  const query = new URLSearchParams({ reason, voided_by: voidedBy });
+  return request<RecordRow[K]>(`${recordsPath(farmId, kind, id)}?${query.toString()}`, { method: 'DELETE' });
+}
+
+export interface RoadmapItem {
+  item: string;
+  status: 'unavailable';
+  reason: string;
+  title: string;
+  kind: 'licence' | 'value' | 'photos' | 'dependency';
+  needs: string;
+}
+
+export interface Roadmap {
+  blocked: RoadmapItem[];
+  harnesses: { item: string; title: string; fields: string[]; status: string }[];
+}
+
+export async function getRoadmap() {
+  return request<Roadmap>('/api/v1/agriquill/roadmap');
+}
+
+export async function downloadEvidencePack(farmId: string, parcel: string, start: string | null, end: string | null, format: 'csv' | 'html'): Promise<Blob> {
+  const query = new URLSearchParams({ parcel, format });
+  if (start) query.set('start', start);
+  if (end) query.set('end', end);
+  const res = await send(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/evidence-pack?${query.toString()}`);
+  return res.blob();
 }
