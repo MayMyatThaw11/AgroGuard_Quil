@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
@@ -13,6 +14,10 @@ from .store import RecordCache, sha256
 
 Engine = Callable[[Mapping[str, Any], Mapping[str, Any]], dict[str, Any]]
 ENGINES: dict[str, Engine] = {"own": season.run}
+if importlib.util.find_spec("aquacrop") is not None:
+    from . import season_aquacrop
+
+    ENGINES["aquacrop"] = season_aquacrop.run
 # shortcut: fixed timeout per engine, tune after the first measured timings
 ENGINE_TIMEOUT_S = 60
 CACHE_TTL_S = 7 * 86400
