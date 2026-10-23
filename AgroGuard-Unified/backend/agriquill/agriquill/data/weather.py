@@ -231,6 +231,103 @@ def fetch_archive_hourly(
     )
 
 
+ARCHIVE_DAILY_PROVIDER = "Open-Meteo historical weather API (daily, ERA5 reanalysis)"
+ARCHIVE_DAILY = {
+    "tmax_c": "temperature_2m_max",
+    "tmin_c": "temperature_2m_min",
+    "rain_mm": "precipitation_sum",
+    "srad_mj_m2": "shortwave_radiation_sum",
+    "et0_mm": "et0_fao_evapotranspiration",
+    "wind_ms": "wind_speed_10m_mean",
+    "rh_min_pct": "relative_humidity_2m_min",
+    "rh_max_pct": "relative_humidity_2m_max",
+}
+ARCHIVE_DAILY_UNITS = {
+    "temperature_2m_max": "°C",
+    "precipitation_sum": "mm",
+    "shortwave_radiation_sum": "MJ/m²",
+    "wind_speed_10m_mean": "m/s",
+}
+
+
+def parse_archive_daily(raw: dict[str, Any]) -> dict[str, Any]:
+    units = raw.get("daily_units", {})
+    for name, unit in ARCHIVE_DAILY_UNITS.items():
+        if units.get(name) != unit:
+            raise ValueError(f"{name} unit {units.get(name)!r}, expected {unit!r}")
+    daily = raw["daily"]
+    days, gaps = [], []
+    for i, stamp in enumerate(daily["time"]):
+        values = {key: daily[name][i] for key, name in ARCHIVE_DAILY.items()}
+        empty = next((ARCHIVE_DAILY[k] for k, v in values.items() if v is None), None)
+        if empty:
+            gaps.append(missing("weather_day", f"{stamp}: {empty} null"))
+            continue
+        days.append({"date": stamp, **{k: float(v) for k, v in values.items()}})
+    return {
+        "days": days,
+        "gaps": gaps,
+        "elevation_m": raw.get("elevation"),
+        "utc_offset_seconds": raw.get("utc_offset_seconds", 0),
+    }
+
+
+def fetch_archive_daily(
+    lat: float, lon: float, start: dt.date, end: dt.date, client: httpx.Client | None = None
+) -> dict[str, Any]:
+    s = get_settings()
+    lat2, lon2 = round(lat, 2), round(lon, 2)
+    params = {
+        "latitude": str(lat2),
+        "longitude": str(lon2),
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "daily": ",".join(ARCHIVE_DAILY.values()),
+        "wind_speed_unit": "ms",
+        "timezone": "auto",
+    }
+    key = f"{lat2}:{lon2}:{start}:{end}"
+    url = str(httpx.URL(ARCHIVE_ENDPOINT, params=params))
+    cached = _RECORDS.get("openmeteo_archive_daily", key)
+    if cached and not cached["stale"]:
+        parsed = cached["payload"]
+        meta = {
+            "sha256": cached["sha256"],
+            "retrieved_at": cached["retrieved_at"],
+            "url": cached["url"],
+        }
+    else:
+        try:
+            own = client or httpx.Client(
+                timeout=s.http_timeout_s, transport=obs.TimedTransport("open-meteo-archive")
+            )
+            try:
+                response = own.get(ARCHIVE_ENDPOINT, params=params)
+                response.raise_for_status()
+            finally:
+                if client is None:
+                    own.close()
+            parsed = parse_archive_daily(response.json())
+        except (httpx.HTTPError, ValueError, KeyError) as exc:
+            reason = f"Open-Meteo archive unavailable: {type(exc).__name__}"
+            return {"days": [], "missing": [missing("weather", reason)], "source": None}
+        digest = sha256(response.content)
+        _RECORDS.put("openmeteo_archive_daily", key, parsed, url, digest, s.weather_cache_ttl_s)
+        log_fetch("openmeteo_archive_daily", key, digest)
+        meta = {"sha256": digest, "retrieved_at": now_iso(), "url": url}
+    return {
+        "provider": ARCHIVE_DAILY_PROVIDER,
+        "provenance": "RETRIEVED",
+        "days": parsed["days"],
+        "elevation_m": parsed["elevation_m"],
+        "missing": parsed["gaps"],
+        "licence": "Open-Meteo free API is non-commercial; commercial use needs a subscription",
+        "source": source_ref(
+            ARCHIVE_DAILY_PROVIDER, meta["url"], meta["retrieved_at"], meta["sha256"]
+        ),
+    }
+
+
 def _hourly_envelope(
     parsed: dict[str, Any],
     url: str,
