@@ -21,6 +21,15 @@
   --aq-z-boot: 90;
 }
 
+.aq-root.aq-farmmap {
+  --aq-focus-ring: var(--aq-accent-ink);
+}
+
+.aq-farmmap :where(button, a[href], [role="switch"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--aq-focus-ring);
+  outline-offset: 2px;
+}
+
 @media (pointer: coarse) {
   .aq-root.aq-farmmap {
     --aq-control-h: 44px;
@@ -34,6 +43,8 @@
   .aq-root.aq-farmmap .aq-reopen,
   .aq-root.aq-farmmap .aq-seg,
   .aq-root.aq-farmmap .aq-fm-controls .aq-icon-btn,
+  .aq-root.aq-farmmap .aq-fm-top-tools .aq-btn,
+  .aq-root.aq-farmmap .aq-fm-toast .aq-icon-btn,
   .aq-root.aq-farmmap .aq-switch,
   .aq-root.aq-farmmap .aq-fm-check,
   .aq-root.aq-farmmap .aq-fm-near,

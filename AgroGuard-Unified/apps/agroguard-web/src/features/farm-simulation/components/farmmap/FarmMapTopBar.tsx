@@ -35,17 +35,19 @@ export const FarmMapTopBar: React.FC<FarmMapTopBarProps> = ({ view, farms, canRo
     </div>
     <div className="aq-fm-top-actions">
       <AqTabs value={view} items={VIEWS} label="Map style" onChange={onView} />
-      <AqButton variant="secondary" onClick={onRoute} disabled={!canRoute}>
-        <Route size={14} aria-hidden="true" />
-        Route
-      </AqButton>
-      <AqIconButton label="Keyboard shortcuts (?)" onClick={onKeys}>
-        <Keyboard size={15} aria-hidden="true" />
-      </AqIconButton>
-      <AqButton variant="ghost" onClick={onOpenFleet}>
-        <LayoutGrid size={14} aria-hidden="true" />
-        All fields
-      </AqButton>
+      <div className="aq-fm-top-tools">
+        <AqButton variant="secondary" onClick={onRoute} disabled={!canRoute}>
+          <Route size={14} aria-hidden="true" />
+          <span className="aq-fm-top-label">Route</span>
+        </AqButton>
+        <AqIconButton label="Keyboard shortcuts (?)" onClick={onKeys}>
+          <Keyboard size={15} aria-hidden="true" />
+        </AqIconButton>
+        <AqButton variant="ghost" onClick={onOpenFleet}>
+          <LayoutGrid size={14} aria-hidden="true" />
+          <span className="aq-fm-top-label">All fields</span>
+        </AqButton>
+      </div>
     </div>
   </header>
 );

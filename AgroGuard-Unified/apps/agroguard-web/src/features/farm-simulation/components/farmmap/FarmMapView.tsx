@@ -226,7 +226,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
 
   return (
-    <div ref={rootRef} className={`aq-root aq-farmmap${tracing ? ' is-tracing' : ''}`}>
+    <div ref={rootRef} className={`aq-root aq-farmmap${tracing ? ' is-tracing' : ''}${panels.right ? ' has-details' : ''}`}>
       <div className="aq-fm-stage">
         <div ref={mapRef} className="aq-fm-map" />
         <canvas ref={fogRef} className="aq-fm-fog" aria-hidden="true" />

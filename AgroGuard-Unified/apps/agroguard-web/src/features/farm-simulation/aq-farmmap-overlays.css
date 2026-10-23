@@ -79,21 +79,24 @@
 
 .aq-fm-toasts {
   position: absolute;
-  bottom: 40px;
+  bottom: calc(var(--aq-status-h) + var(--aq-space-6));
   left: 50%;
   z-index: var(--aq-z-toast);
   display: flex;
   flex-direction: column;
   gap: var(--aq-space-4);
   align-items: center;
+  width: min(460px, calc(100% - 2 * var(--aq-fm-gutter)));
   transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .aq-fm-toast {
   display: flex;
   align-items: center;
   gap: var(--aq-space-5);
-  max-width: min(460px, calc(100vw - 32px));
+  max-width: 100%;
+  pointer-events: auto;
   padding: var(--aq-space-5) var(--aq-space-4) var(--aq-space-5) var(--aq-space-6);
   border: 1px solid var(--aq-border-subtle);
   border-left: 3px solid var(--aq-water-500);
@@ -108,6 +111,19 @@
 
 .aq-fm-toast.is-warning {
   border-left-color: var(--aq-grain-500);
+}
+
+.aq-fm-toast-icon {
+  flex: none;
+  color: var(--aq-water-600);
+}
+
+.aq-fm-toast.is-success .aq-fm-toast-icon {
+  color: var(--aq-accent-ink);
+}
+
+.aq-fm-toast.is-warning .aq-fm-toast-icon {
+  color: var(--aq-grain-700);
 }
 
 .aq-fm-toast-copy {

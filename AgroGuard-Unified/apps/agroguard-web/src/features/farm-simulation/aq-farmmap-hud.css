@@ -37,6 +37,7 @@
 
 .aq-fm-controls {
   position: absolute;
+  right: var(--aq-fm-controls-right, 56px);
   bottom: 44px;
   z-index: var(--aq-z-hud);
   display: flex;
@@ -102,6 +103,26 @@
   color: var(--aq-text-muted);
   font: var(--aq-type-caption);
   white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+  .aq-fm-controls {
+    right: var(--aq-fm-gutter);
+    bottom: calc(var(--aq-status-h) + var(--aq-fm-gutter));
+  }
+
+  .aq-farmmap.has-details .aq-fm-controls {
+    display: none;
+  }
+
+  .aq-fm-status {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .aq-fm-status > * {
+    flex: none;
+  }
 }
 
 .aq-fm-status b {

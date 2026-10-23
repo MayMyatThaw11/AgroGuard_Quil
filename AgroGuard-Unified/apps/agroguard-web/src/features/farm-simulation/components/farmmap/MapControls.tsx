@@ -17,7 +17,7 @@ interface MapControlsProps {
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({ engine, bearing, pitch, terrain, cinematic, rightOffset, onTerrain, onCinematic, onLocate, onCheckLand }) => (
-  <div className="aq-fm-controls" style={{ right: rightOffset }}>
+  <div className="aq-fm-controls" style={{ '--aq-fm-controls-right': `${rightOffset}px` } as React.CSSProperties}>
     <div className="aq-fm-zoom">
       <AqIconButton label="Zoom in (+)" onClick={() => engine.map().zoomIn({ duration: 400 })}><Plus size={15} aria-hidden="true" /></AqIconButton>
       <AqIconButton label="Zoom out (−)" onClick={() => engine.map().zoomOut({ duration: 400 })}><Minus size={15} aria-hidden="true" /></AqIconButton>
