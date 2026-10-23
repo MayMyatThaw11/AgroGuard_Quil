@@ -261,3 +261,12 @@
     grid-template-columns: 1fr;
   }
 }
+
+.aq-input-wrap.is-multiline {
+  height: auto;
+  padding: var(--aq-space-4) var(--aq-space-5);
+}
+
+.aq-input-wrap.is-multiline .aq-input {
+  resize: vertical;
+}

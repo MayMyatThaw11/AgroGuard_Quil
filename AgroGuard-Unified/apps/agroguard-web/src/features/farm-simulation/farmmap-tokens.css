@@ -23,6 +23,8 @@
 
 .aq-root.aq-farmmap {
   --aq-focus-ring: var(--aq-accent-ink);
+  --aq-text-muted: var(--aq-stone-600);
+  --aq-text-faint: var(--aq-stone-600);
 }
 
 .aq-farmmap :where(button, a[href], [role="switch"], [tabindex]:not([tabindex="-1"])):focus-visible {

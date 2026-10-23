@@ -112,7 +112,7 @@ export const FieldNotesSection: React.FC<{ farmId: string }> = ({ farmId }) => {
             </label>
             <label className="aq-fm-trace-field">
               <span className="aq-fm-kv-key">{t('farmMap.vault.text')}</span>
-              <span className="aq-input-wrap">
+              <span className="aq-input-wrap is-multiline">
                 <textarea className="aq-input" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
               </span>
             </label>
