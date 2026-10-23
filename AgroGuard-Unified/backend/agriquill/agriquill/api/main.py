@@ -27,6 +27,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .. import (
     agronomy,
+    cache,
     certificates,
     contract,
     crops,
@@ -43,6 +44,7 @@ from .. import (
     lots,
     ml,
     modelcard,
+    obs,
     onboard,
     ops,
     pending,
@@ -226,6 +228,7 @@ _AS_CREW = Depends(_crew)
 _AS_MANAGER = Depends(_manager)
 WRITE = [_CALLER]
 MANAGER = [_AS_MANAGER]
+_BREAKERS = (gfw_forest._BREAKER, gfw_marine._BREAKER, gleam._BREAKER)
 _JOBS: dict[str, dict[str, Any]] = {}
 _TWIN_TASKS = twin.TaskStore()
 _TASKS_BODY = Body(...)
@@ -256,12 +259,20 @@ async def auth_me(caller: Caller = _CALLER) -> dict[str, Any]:
 
 @router.get("/data/health")
 async def data_health() -> dict[str, Any]:
-    breakers = {
-        "gfw_forest": gfw_forest._BREAKER,
-        "global_fishing_watch": gfw_marine._BREAKER,
-        "gleam": gleam._BREAKER,
+    return {breaker.name: breaker.state() for breaker in _BREAKERS}
+
+
+@router.get("/metrics", dependencies=MANAGER)
+async def metrics() -> dict[str, Any]:
+    stats = getattr(cache, "stats", None)
+    return {
+        "uptime_s": obs.uptime_s(),
+        "routes": obs.routes(),
+        "outside_calls": obs.outside(),
+        "breakers": {breaker.name: breaker.snapshot() for breaker in _BREAKERS},
+        "cache": stats() if callable(stats) else None,
+        "cache_reason": None if callable(stats) else "cache stats not available",
     }
-    return {name: breaker.state() for name, breaker in breakers.items()}
 
 
 @router.get("/territory-profile")
@@ -1814,9 +1825,22 @@ def _install_error_contract(app: FastAPI) -> None:
     async def request_id(request: Request, call_next: Any) -> Response:
         given = request.headers.get("x-request-id", "")
         request.state.request_id = given if _REQUEST_ID.match(given) else uuid.uuid4().hex
-        response: Response = await call_next(request)
-        response.headers["X-Request-ID"] = request.state.request_id
-        return response
+        started, status = time.perf_counter(), 500
+        try:
+            response: Response = await call_next(request)
+            status = response.status_code
+            response.headers["X-Request-ID"] = request.state.request_id
+            return response
+        finally:
+            route = request.scope.get("route")
+            obs.record_request(
+                request.method,
+                getattr(route, "path", obs.UNMATCHED),
+                status,
+                (time.perf_counter() - started) * 1000,
+                request.state.request_id,
+                request.scope.get("path_params", {}).get("farm_id"),
+            )
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:

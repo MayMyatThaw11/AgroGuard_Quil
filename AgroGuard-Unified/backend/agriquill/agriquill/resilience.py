@@ -8,6 +8,8 @@ from typing import TypeVar
 
 import httpx
 
+from . import obs
+
 T = TypeVar("T")
 
 BASE_S = 0.5
@@ -44,7 +46,8 @@ def retry(
 
 
 class Breaker:
-    def __init__(self, threshold: int = 5, cooldown_s: float = 60.0) -> None:
+    def __init__(self, threshold: int = 5, cooldown_s: float = 60.0, name: str = "outside") -> None:
+        self.name = name
         self.threshold = threshold
         self.cooldown_s = cooldown_s
         self._failures = 0
@@ -81,6 +84,21 @@ class Breaker:
                 }
             return {"state": "closed", "failures": self._failures, "retry_in_s": 0.0}
 
+    def snapshot(self) -> dict[str, object]:
+        with self._lock:
+            opened, failures = self._opened_at, self._failures
+            now = time.monotonic()
+        if opened is not None:
+            state = "open" if now - opened < self.cooldown_s else "half-open"
+        else:
+            state = "half-open" if failures >= self.threshold else "closed"
+        return {
+            "state": state,
+            "failures": failures,
+            "threshold": self.threshold,
+            "opened_at": None if opened is None else round(time.time() - (now - opened), 3),
+        }
+
     def reset(self) -> None:
         with self._lock:
             self._failures = 0
@@ -93,4 +111,11 @@ def guarded(
     attempts: int = 3,
     is_transient: Callable[[Exception], bool] = transient,
 ) -> T:
-    return breaker.call(lambda: retry(fn, attempts, is_transient), counts=is_transient)
+    started = time.perf_counter()
+    try:
+        result = breaker.call(lambda: retry(fn, attempts, is_transient), counts=is_transient)
+    except Exception as exc:
+        obs.record_outside(breaker.name, (time.perf_counter() - started) * 1000, exc)
+        raise
+    obs.record_outside(breaker.name, (time.perf_counter() - started) * 1000)
+    return result

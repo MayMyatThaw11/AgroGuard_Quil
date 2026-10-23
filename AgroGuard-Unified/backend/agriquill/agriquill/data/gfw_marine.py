@@ -28,7 +28,7 @@ SCOPE = (
 )
 _CACHE = RecordCache()
 _CLIENT: list[httpx.Client] = []
-_BREAKER = Breaker(threshold=5, cooldown_s=60.0)
+_BREAKER = Breaker(threshold=5, cooldown_s=60.0, name="global_fishing_watch")
 
 
 class MarineError(Exception):

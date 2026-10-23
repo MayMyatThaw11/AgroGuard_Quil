@@ -48,10 +48,10 @@ VARIANT_A = "v4.3a"
 FIRST_B_YEAR = 2003
 LISTING_TTL_S = 6 * 3600.0
 _CACHE = RecordCache()
-_HOT = TTLCache()
+_HOT = TTLCache("gleam_hot")
 MAX_CONNECTIONS = 3
 _SLOTS = threading.BoundedSemaphore(MAX_CONNECTIONS)
-_BREAKER = Breaker(threshold=3, cooldown_s=60.0)
+_BREAKER = Breaker(threshold=3, cooldown_s=60.0, name="gleam")
 
 
 class GleamError(Exception):

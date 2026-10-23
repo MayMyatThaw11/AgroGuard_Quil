@@ -33,9 +33,9 @@ SCOPE = (
     "compliance file. This is not a compliance certificate."
 )
 _CACHE = RecordCache()
-_HOT = TTLCache()
+_HOT = TTLCache("gfw_forest_hot")
 _CLIENT: list[httpx.Client] = []
-_BREAKER = Breaker(threshold=5, cooldown_s=60.0)
+_BREAKER = Breaker(threshold=5, cooldown_s=60.0, name="gfw_forest")
 
 
 class GfwError(Exception):
