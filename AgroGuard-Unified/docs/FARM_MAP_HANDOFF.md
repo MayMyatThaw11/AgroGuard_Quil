@@ -90,15 +90,45 @@ Scope set by the owner during this block: ASEAN-wide, small to large farms.
   - 95 % accuracy everywhere: reported honestly instead. Accuracy is only measured where a category output and real labels exist; regressions get error and coverage.
   - Root and stem uptake: not built yet. FAO-56 Ch. 8 Ks is next; no sap-flow model without a sensor.
 
+## Done on 22 and 23 Oct, fifth block
+- **FAO-56 Ks** (e359721): crop water use drops when the root zone dries. Ks is null with "soil water limits unknown" when a site has no θFC and θWP, and transpiration is then labelled an upper bound.
+- **Forecast choice** (68ba762, 7a88e7e): the hybrid is chosen only on 30 or more held-out pairs.
+- **Scale and invariants** (e555b13): CP-SAT at 64 paddies, 500-plot contracts and flows, 400-day filters, 1,000 seeded cases per invariant.
+- **Model card** (c3ea0fd) and the **provenance check** (4bdf383), which runs in the gate.
+- **Records** (cf7095d): paging, correct (PATCH) and void (DELETE) with a reason and a ledger entry; voided rows stay for the evidence pack.
+- **Load harness** (cb91a3e): `scripts/load_farm_map.py`; 20 farms in the gate.
+- **Polish** (8fa5f96, a169c9b, 8386eb6): 44 px controls on touch screens, busy and failed states with the request id, the Today card, the Your farms roll-up, and Sample data badges.
+- **Speed** (c9871be): merged fetches for one key, named caches with `cache.stats()`, prefix reads, one lock connection per ledger.
+  - Load run, 200 farms, 500 plots, 50 at once, 4,601 requests: p50/p95/p99 went from 1078/5597/32969 ms to 805/1496/1886 ms. Contract writes p99 went from 39,762 to 1,655 ms. No errors and no lost writes before or after.
+- **Torn ledger** (c9871be): the session crash left a NUL-filled last line in the dev ledger, and every record write then failed with a `utf-32-be` decode error. The ledger now skips such a line. The dev file was repaired, and the torn copy is kept in the scratchpad.
+- **Provenance** (ac679d9): the 7 unsourced numbers now carry a cited basis or source (`lateness_h`, `priced_total`, `inflation_pct`, `duration_h`, `floor_cm`, `target_cm`, evidence pack `area_ha`). Defaults keep their TO VERIFY label.
+- **Monitoring** (e67ec10): one JSON line per request on `agriquill.access` (INFO), and a manager-only `GET /metrics` with per-route counts, 4xx/5xx and p50/p95/p99, outside calls, breaker states and cache stats. Run uvicorn with `--log-level info` to see the access lines. Overhead is about 1 %.
+- **Site context** (4b890f5): `GET /contracts/{id}/site-context`, with the same route under `/farms/{id}`.
+  - Samples every boundary corner plus the mean point.
+  - Searches the coast within 50 km.
+  - Nearest Holocene volcano from a packed Smithsonian GVP list (201 rows, sha256 in the pack). The demo farm is 467 km from Popa.
+  - Heat days are ERA5 days at or above 35 °C in each rice flowering window, 2016–2025.
+  - TO VERIFY: the 35 °C air-temperature cut (Jagadish et al. 2007 measured 33.7 °C at the panicle), flowering = planted + season − 30 ± 7 days, and ERA5's 25 km cell standing in for a field.
+  - Shown on your own farms under "What fits this land".
+- **Records panels** (b9eadd6): next deadline, lots in store with the moisture flag, and last fumigation verdict first. Forms, edit and void, the evidence pack and "Not available yet" sit behind disclosures. The roll-up counts certificates and lots once they are loaded.
+- **Phones and accessibility** (5589c3b): at 375 px the top bar takes two rows and every control stays on screen. Toasts have an icon and a hidden tone label. The focus ring is 5.43:1, up from 1.46:1.
+- **Network jobs, not done:**
+  - The regions snapshot rebuild came back worse: 4 regions lost rain, weather and evaporation through the torn-ledger decode error, and crop calendar data halved. It was reverted, and the committed snapshot stands.
+  - The OSM retry was not done. Overpass answered 406 and 504 and timed out on every mirror on 23 Oct.
+
 ## Next block, in this order
-1. **Owner decision:** `disease_advice_unreviewed_sprays` defaults to true while no review is on file.
-2. **FAO-56 Ch. 8 water stress (Ks):** find and fetch the chapter page (x0490e0d to 0h return 404; 0b and 0c worked) and reduce crop uptake when the root zone dries.
-3. **Model card** (`GET /contracts/{id}/model-card`): forecast backtest with issued rain on real contract weather, yield backtest, decisions, shadow promotion status, B-ML-1 null.
-4. **Heavy use (plan Part 5):** prefix reads for records, atomic lot updates, correct and void records, the in-process load harness (20 farms in the gate), large-farm and seeded invariant tests.
-5. **Records panels:** lots, certificates, fumigations, evidence pack download, roadmap list.
-6. **Polish:** the Today card, translation of the farm map into all 7 locales, 44 px on touch screens, a real "Your farms" roll-up with the sample overview badged.
-7. **Site context endpoint** (ring facts, 50 km coast search, GVP volcanoes, heat days) and SDG indicator mapping.
-8. **Network jobs:** regions snapshot rebuild, live OSM retry.
+1. **Rice-fish and rice-shrimp refuge design.** Today the farm map only warns and advises: AWD with fish needs a refuge trench of about 10 % of the area (`twinPlans.ts`), fish need a trench or pond of about 30 cm (`fieldOptions.ts`), and a contract with AWD drying must declare `min_water` or a refuge trench (`contract.py`). There is no trench geometry, no depth or area sizing against heat, rainy-season flood or winter cold, and no margin model. It needs design mode (plan P1: trench and barrier entities, area budget), a cited temperature and salinity tolerance table per species, and farmer-entered costs and prices. No number should be added without a source.
+2. **Translation review:** the farm map is in all 7 locales (done on 23 Oct). Every non-English string needs native review. Country and region names come from the data and stay in English.
+3. **Owner decision:** `disease_advice_unreviewed_sprays` defaults to true while no review is on file.
+4. **Rebuild the regions snapshot.** Retried on 23 Oct with the ledger repaired: it ran over 20 minutes and came out worse (220 nulls against 165, some evaporation blocks missing, and `test_snapshot_keeps_calendar_gaps_explicit` failed). Reverted. Needs a quieter network and per-source retries before another try.
+5. **OSM retry** for outline suggestions and the 50 km coast search, once Overpass recovers.
+6. **Backend follow-ups from the records work:**
+   - Write the ledger entry before or with the record, so a ledger failure cannot leave a record without one.
+   - Map `UnicodeDecodeError` to 500, not 422.
+   - Add `POST /farms/{id}/fumigations/check`, so a blocked treatment is refused before it is saved.
+7. **SDG indicator mapping** (plan step 26) and the hybrid physics checks (step 27).
+8. **Phones:** a bottom-sheet details panel, because the panel still covers the whole map. The close button floats over content when the panel scrolls.
+9. **Timing:** time the sources that call httpx directly (CHIRPS, weather, Sentinel, soil) in `/metrics`, and name the `sitecontext` cache.
 
 ## Older ordered list (before this block)
 1. Phase A+ last item: OSM outline suggestion, hidden in the demo.
@@ -154,3 +184,6 @@ Every phase ends with:
 - The Open-Meteo free tier limits requests per minute. A cold flood read for two farms in one minute can return 429. After that the 30-day history cache absorbs it.
 - The high-risk flood alert is unit-tested, but has not yet been seen live, because the current forecast is low.
 - Never stage the workspace-root `doc_*.env`. It holds live secrets.
+- A crash during a ledger append can leave a NUL-filled line in `data/agriquill_ledger.jsonl`. The ledger now skips such a line. If writes fail with a `utf-32-be` decode error, check that file first.
+- Site context answers take about 60 s cold (ERA5, DEM, soil and Overpass), then 6 h from the cache. While Overpass is down, coast and OSM distances are null with the reason.
+- `npm run typecheck` and `npm run test:farm-sim` are defined in `apps/agroguard-web`, not in the `AgroGuard-Unified` root.
