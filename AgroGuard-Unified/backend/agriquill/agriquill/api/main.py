@@ -51,6 +51,7 @@ from .. import (
     pending,
     personas,
     safety,
+    season_run,
     seasons,
     sim,
     sitecontext,
@@ -1809,6 +1810,106 @@ def _seasons(farm_id: str) -> dict[str, Any]:
 async def contracts_seasons(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
     _see(caller, farm_id)
     return await asyncio.to_thread(_live_call, _seasons, farm_id)
+
+
+class SeasonWater(BaseModel):
+    regime: Literal["continuous", "awd"] = "continuous"
+    awd_threshold_cm: float | None = Field(default=None, ge=-40, le=0)
+    reflood_cm: float | None = Field(default=None, ge=0, le=30)
+
+
+class SeasonTrench(BaseModel):
+    depth_cm: float = Field(ge=10, le=200)
+    width_cm: float = Field(ge=20, le=500)
+    share_pct: float = Field(ge=1, le=30)
+
+
+class IrrigateEvent(BaseModel):
+    kind: Literal["irrigate"]
+    date: date
+    mm: float = Field(gt=0, le=300)
+
+
+class FertiliserEvent(BaseModel):
+    kind: Literal["fertiliser"]
+    date: date
+    product: str = Field(min_length=1, max_length=80)
+    rate_kg_ha: float = Field(gt=0, le=1000)
+    n_pct: float = Field(ge=0, le=100)
+
+
+class SprayEvent(BaseModel):
+    kind: Literal["spray"]
+    date: date
+    product: str = Field(min_length=1, max_length=80)
+    rate_g_ai_ha: float = Field(gt=0, le=10000)
+    dt50_days: float = Field(gt=0, le=1000)
+    phi_days: int | None = Field(default=None, ge=0, le=365)
+    fish_toxic: bool = False
+
+
+class WeedEvent(BaseModel):
+    kind: Literal["weed"]
+    date: date
+    method: Literal["hand", "mechanical", "herbicide", "other"] = "hand"
+    removed_pct: float = Field(ge=0, le=100)
+
+
+class WeedEmergenceEvent(BaseModel):
+    kind: Literal["weed_emergence"]
+    date: date
+    density_m2: float = Field(ge=0, le=5000)
+    cousens_i: float | None = Field(default=None, ge=0, le=100)
+    cousens_a: float | None = Field(default=None, gt=0, le=100)
+
+
+SeasonEvent = IrrigateEvent | FertiliserEvent | SprayEvent | WeedEvent | WeedEmergenceEvent
+
+
+class SeasonPlanReq(BaseModel):
+    model_config = {"extra": "forbid"}
+    transplant_date: date
+    duration_days: int = Field(ge=60, le=200)
+    seedbed_days: int = Field(default=0, ge=0, le=60)
+    hills_per_m2: float | None = Field(default=None, gt=0, le=100)
+    plants_per_hill: float | None = Field(default=None, gt=0, le=20)
+    water: SeasonWater = Field(default_factory=SeasonWater)
+    bund_height_cm: float = Field(ge=5, le=150)
+    trench: SeasonTrench | None = None
+    fish: bool = False
+    percolation_mm_day: float | None = Field(default=None, ge=0, le=50)
+    soil_n_kg_ha: float | None = Field(default=None, ge=0, le=500)
+    events: list[SeasonEvent] = Field(default_factory=list, max_length=200)
+    weather_years: list[int] = Field(min_length=1, max_length=5)
+
+    @model_validator(mode="after")
+    def _consistent(self) -> SeasonPlanReq:
+        reflood = self.water.reflood_cm
+        if reflood is not None and self.bund_height_cm <= reflood:
+            raise ValueError("bund_height_cm must exceed reflood_cm")
+        first = self.transplant_date - timedelta(days=self.seedbed_days)
+        last = self.transplant_date + timedelta(days=self.duration_days)
+        for e in self.events:
+            if not first <= e.date < last:
+                raise ValueError(f"{e.kind} on {e.date} is outside the season {first} to {last}")
+        newest = datetime.now(UTC).date() - timedelta(days=6)
+        for year in self.weather_years:
+            try:
+                end = last.replace(year=last.year + year - self.transplant_date.year)
+            except ValueError:
+                end = last.replace(year=last.year + year - self.transplant_date.year, day=28)
+            if year < 1990 or end > newest:
+                raise ValueError(f"weather year {year}: the replay must end before {newest}")
+        return self
+
+
+@router.post("/farms/{farm_id}/parcels/{parcel_id}/season-run")
+async def parcel_season_run(
+    farm_id: str, parcel_id: str, req: SeasonPlanReq, caller: Caller | None = _READER
+) -> dict[str, Any]:
+    _see(caller, farm_id)
+    plan = req.model_dump(mode="json")
+    return await asyncio.to_thread(_record_call, season_run.run, farm_id, parcel_id, plan)
 
 
 @router.get("/contracts/{farm_id}/site-context")
