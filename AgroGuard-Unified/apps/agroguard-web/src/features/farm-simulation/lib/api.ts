@@ -1024,3 +1024,104 @@ export async function linkParcelSite(farmId: string, parcelId: string, siteId: s
     body: JSON.stringify({ site_id: siteId, linked_by: linkedBy }),
   });
 }
+
+export type SeasonEvent =
+  | { kind: 'irrigate'; date: string; mm: number }
+  | { kind: 'fertiliser'; date: string; product: string; rate_kg_ha: number; n_pct: number }
+  | { kind: 'spray'; date: string; product: string; rate_g_ai_ha: number; dt50_days: number; phi_days: number | null; fish_toxic: boolean }
+  | { kind: 'weed'; date: string; method: 'hand' | 'mechanical' | 'herbicide' | 'other'; removed_pct: number }
+  | { kind: 'weed_emergence'; date: string; density_m2: number; cousens_i: number | null; cousens_a: number | null };
+
+export interface SeasonTrench {
+  depth_cm: number;
+  width_cm: number;
+  share_pct: number;
+}
+
+export interface SeasonPlan {
+  transplant_date: string;
+  duration_days: number;
+  seedbed_days: number;
+  hills_per_m2: number | null;
+  plants_per_hill: number | null;
+  water: { regime: 'continuous' | 'awd'; awd_threshold_cm: number | null; reflood_cm: number | null };
+  bund_height_cm: number;
+  trench: SeasonTrench | null;
+  fish: boolean;
+  percolation_mm_day: number | null;
+  soil_n_kg_ha: number | null;
+  events: SeasonEvent[];
+  weather_years: number[];
+}
+
+export interface SeasonVar {
+  value: number | boolean | Record<string, number> | null;
+  unit?: string;
+  reason?: string;
+  bound?: string;
+  status?: string;
+}
+
+export interface SeasonRow {
+  date: string;
+  das: number;
+  stage: string | null;
+  vars: Record<string, SeasonVar>;
+  balance?: { in_mm: number; out_mm: number; storage_mm: number } | null;
+}
+
+export interface SeasonWindow {
+  kind: 'n_demand_pi' | 'flowering_heat' | 'phi_block' | 'fish_toxic_spray' | 'harvest';
+  start: string | null;
+  end: string | null;
+  detail: string;
+  days?: string[];
+}
+
+export interface EngineRun {
+  engine: string;
+  status: string;
+  days: SeasonRow[];
+  windows: SeasonWindow[];
+  summary: { yield_kg_ha: SeasonVar; maturity_date: string | null; planned_harvest: string; heat_days?: number; maturity_note?: string | null };
+  method: Record<string, unknown>;
+  sources: Record<string, string>;
+}
+
+export interface EngineFailure {
+  status: 'failed';
+  reason: string;
+}
+
+export interface CompareCell {
+  min: number | null;
+  max: number | null;
+  engines: Record<string, unknown>;
+}
+
+export interface SeasonYear {
+  year: number;
+  lat: number | null;
+  lon: number | null;
+  location_basis: string | null;
+  inputs_source: { weather: { provider: string; url: string; retrieved_at: string; sha256: string } | null; soil: string | null; hydraulics: string | null };
+  missing: { field: string; reason: string }[];
+  plan: SeasonPlan;
+  engines: Record<string, EngineRun | EngineFailure>;
+  compare: { days: { date: string; vars: Record<string, CompareCell> }[]; summary: { yield_kg_ha: { min: number | null; max: number | null; by_engine: Record<string, number | null>; unit: string } } };
+}
+
+export interface SeasonReplay {
+  farm_id: string;
+  parcel_id: string;
+  plan_sha256: string;
+  years: SeasonYear[];
+  spread: Record<string, { yield_kg_ha: { min: number; max: number; years: Record<string, number>; unit: string } }>;
+  status: string;
+  comparison: string;
+  cached: boolean;
+}
+
+export async function runSeason(farmId: string, parcelId: string, plan: SeasonPlan, signal?: AbortSignal) {
+  return request<SeasonReplay>(`/api/v1/agriquill/farms/${encodeURIComponent(farmId)}/parcels/${encodeURIComponent(parcelId)}/season-run`, { ...post(plan), signal });
+}

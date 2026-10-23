@@ -101,3 +101,11 @@ export const MAP_COLOR = {
 };
 
 export const miniPending = (phase: number): string => `rgba(255,255,255,${0.5 + 0.3 * Math.sin(phase)})`;
+
+export const SEASON_TINT = {
+  ponded_mm: [MAP_COLOR.soilLabel, MAP_COLOR.canalMain],
+  canopy_cover: [MAP_COLOR.land, MAP_COLOR.leaf],
+  n_factor: [MAP_COLOR.clay, MAP_COLOR.leaf],
+  weed_loss_pct: [MAP_COLOR.land, MAP_COLOR.clay],
+  residue: [MAP_COLOR.land, MAP_COLOR.clayDeep],
+} as const;
