@@ -18,6 +18,10 @@ if importlib.util.find_spec("aquacrop") is not None:
     from . import season_aquacrop
 
     ENGINES["aquacrop"] = season_aquacrop.run
+if importlib.util.find_spec("pcse") is not None:
+    from . import season_wofost
+
+    ENGINES["wofost"] = season_wofost.run
 # shortcut: fixed timeout per engine, tune after the first measured timings
 ENGINE_TIMEOUT_S = 60
 CACHE_TTL_S = 7 * 86400
