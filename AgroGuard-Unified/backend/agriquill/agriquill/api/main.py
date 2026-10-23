@@ -54,6 +54,7 @@ from .. import (
     seasons,
     sim,
     sitecontext,
+    sites,
     telemetry,
     twin,
     vault,
@@ -1655,6 +1656,38 @@ async def farms_add_lot(farm_id: str, req: LotReq, caller: Caller = _AS_MANAGER)
     _own(caller, farm_id)
     body = req.model_dump(mode="json", exclude={"recorded_by"})
     return await asyncio.to_thread(_record_call, lots.record, farm_id, body, req.recorded_by)
+
+
+class SitesReq(BaseModel):
+    collection: dict[str, Any]
+    uploaded_by: str = Field(min_length=1, max_length=80)
+
+
+class ParcelLinkReq(BaseModel):
+    site_id: str | None = Field(default=None, max_length=80)
+    linked_by: str = Field(min_length=1, max_length=80)
+
+
+@router.get("/sites")
+async def sites_list(caller: Caller | None = _READER) -> dict[str, Any]:
+    return {"sites": await asyncio.to_thread(sites.listing)}
+
+
+@router.post("/sites")
+async def sites_upload(req: SitesReq, caller: Caller = _AS_MANAGER) -> dict[str, Any]:
+    _named(caller, req.uploaded_by)
+    return await asyncio.to_thread(_record_call, sites.upload, req.collection, req.uploaded_by)
+
+
+@router.patch("/farms/{farm_id}/parcels/{parcel_id}/delivers-to")
+async def parcel_delivers_to(
+    farm_id: str, parcel_id: str, req: ParcelLinkReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    _named(caller, req.linked_by)
+    _own(caller, farm_id)
+    return await asyncio.to_thread(
+        _record_call, sites.link, farm_id, parcel_id, req.site_id, req.linked_by
+    )
 
 
 @router.patch("/farms/{farm_id}/lots/{lot_id}")
