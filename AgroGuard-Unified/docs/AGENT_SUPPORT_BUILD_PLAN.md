@@ -2,6 +2,10 @@
 
 Source: `agentsupport.md` (owner, 23 Oct). Owner decision on 23 Oct: build all 5 phases. torch, onnxruntime and google-cloud-bigquery are approved. BigQuery needs a GCP project from the owner.
 
+## Status on 23 Oct
+- Phases 1 to 4 are built: the vault, dawn sync, council records and the Field notes panel.
+- Phase 5 stopped by the owner (farm map work only): `plant_disease_detection/app/ml/evaluation.py` (held-out accuracy, balanced accuracy, per-class recall and precision, confusion matrix) is written and tested, but not yet called from `train_pytorch_groups.py`. The gatekeeper rejection rate and all BigQuery work are not started.
+
 ## What already exists
 | Spec pillar | Already in the code | Gap |
 | --- | --- | --- |
