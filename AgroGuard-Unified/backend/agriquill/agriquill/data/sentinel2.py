@@ -36,7 +36,7 @@ _A = 6378137.0
 _F = 1 / 298.257223563
 _K0 = 0.9996
 _CACHE = RecordCache()
-_HOT = TTLCache()
+_HOT = TTLCache("sentinel2_hot")
 HEADER_TTL_S = 3600.0
 
 

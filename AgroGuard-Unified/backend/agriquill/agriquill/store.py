@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from . import ledger as _ledger
 from .config import get_settings
 from .ledger import get_ledger
 
@@ -75,6 +76,7 @@ def close_all() -> None:
         for conn, _ in _CONNS.values():
             conn.close()
         _CONNS.clear()
+    _ledger.close_all()
 
 
 class RecordCache:

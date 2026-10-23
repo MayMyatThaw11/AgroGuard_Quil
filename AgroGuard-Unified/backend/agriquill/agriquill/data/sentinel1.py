@@ -36,7 +36,7 @@ ASSUMPTIONS = {
     ),
 }
 _CACHE = RecordCache()
-_HOT = TTLCache()
+_HOT = TTLCache("sentinel1_hot")
 
 
 def scene_db(win: np.ndarray, mask: np.ndarray) -> dict[str, Any]:

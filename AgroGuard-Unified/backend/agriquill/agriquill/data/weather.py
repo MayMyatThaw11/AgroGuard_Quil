@@ -5,11 +5,11 @@ from typing import Any
 
 import httpx
 
-from ..cache import TTLCache
+from ..cache import TTLCache, through
 from ..config import get_settings
 from ..store import RecordCache, log_fetch, missing, now_iso, sha256, source_ref
 
-_CACHE = TTLCache()
+_CACHE = TTLCache("openmeteo_daily")
 FORECAST_DAYS = 14
 
 _WIND_TO_MS = {
@@ -134,35 +134,47 @@ def fetch_hourly(
     }
     key = f"{lat2}:{lon2}:{past_days}:{forecast_days}"
     url = str(httpx.URL(s.openmeteo_endpoint, params=params))
-    cached = _RECORDS.get("openmeteo_hourly", key)
-    if cached and not cached["stale"]:
-        return _hourly_envelope(cached["payload"], cached["url"], cached["retrieved_at"], cached)
-    try:
-        own = client or httpx.Client(timeout=s.http_timeout_s)
+
+    def fresh() -> dict[str, Any] | None:
+        cached = _RECORDS.get("openmeteo_hourly", key)
+        if cached and not cached["stale"]:
+            return _hourly_envelope(
+                cached["payload"], cached["url"], cached["retrieved_at"], cached
+            )
+        return None
+
+    def fetch() -> dict[str, Any]:
+        cached = _RECORDS.get("openmeteo_hourly", key)
         try:
-            response = own.get(s.openmeteo_endpoint, params=params)
-            response.raise_for_status()
-        finally:
-            if client is None:
-                own.close()
-        parsed = parse_hourly(response.json())
-    except (httpx.HTTPError, ValueError, KeyError) as exc:
-        reason = f"Open-Meteo unavailable: {type(exc).__name__}"
-        if cached:
-            out = _hourly_envelope(cached["payload"], cached["url"], cached["retrieved_at"], cached)
-            out["stale_reason"] = reason
-            return out
-        return {
-            "provider": HOURLY_PROVIDER,
-            "hourly": None,
-            "missing": [missing("hourly", reason)],
-            "source": None,
-        }
-    digest = sha256(response.content)
-    _RECORDS.put("openmeteo_hourly", key, parsed, url, digest, s.weather_cache_ttl_s)
-    log_fetch("openmeteo_hourly", key, digest)
-    meta = {"sha256": digest, "stale": False}
-    return _hourly_envelope(parsed, url, now_iso(), meta)
+            own = client or httpx.Client(timeout=s.http_timeout_s)
+            try:
+                response = own.get(s.openmeteo_endpoint, params=params)
+                response.raise_for_status()
+            finally:
+                if client is None:
+                    own.close()
+            parsed = parse_hourly(response.json())
+        except (httpx.HTTPError, ValueError, KeyError) as exc:
+            reason = f"Open-Meteo unavailable: {type(exc).__name__}"
+            if cached:
+                out = _hourly_envelope(
+                    cached["payload"], cached["url"], cached["retrieved_at"], cached
+                )
+                out["stale_reason"] = reason
+                return out
+            return {
+                "provider": HOURLY_PROVIDER,
+                "hourly": None,
+                "missing": [missing("hourly", reason)],
+                "source": None,
+            }
+        digest = sha256(response.content)
+        _RECORDS.put("openmeteo_hourly", key, parsed, url, digest, s.weather_cache_ttl_s)
+        log_fetch("openmeteo_hourly", key, digest)
+        meta = {"sha256": digest, "stale": False}
+        return _hourly_envelope(parsed, url, now_iso(), meta)
+
+    return through("openmeteo_hourly", key, fresh, fetch)
 
 
 ARCHIVE_ENDPOINT = "https://archive-api.open-meteo.com/v1/archive"

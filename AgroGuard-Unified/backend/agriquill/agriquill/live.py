@@ -242,15 +242,30 @@ def declared_devices(spec: dict[str, Any]) -> set[str]:
     return {device for s in sensors for device in s.values()}
 
 
+# shortcut: one entry per contract text ever seen, never evicted; add an LRU if texts churn
+_DEVICES: dict[str, frozenset[str]] = {}
+
+
+def _devices_of(text: str) -> frozenset[str]:
+    key = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    found = _DEVICES.get(key)
+    if found is None:
+        spec = contract.verify(text)["contract"]
+        herds = {herd_device(h["id"]) for h in (spec or {}).get("herds", [])}
+        found = frozenset(declared_devices(spec) | herds) if spec else frozenset()
+        _DEVICES[key] = found
+    return found
+
+
 def device_owners() -> dict[str, set[str]]:
+    """Devices per farm from the stored contract texts; each text is parsed once per process."""
+    texts = {r["farm_id"]: r["text"] for r in _STORE.items("contract")}
+    for farm_id, path in SEEDS.items():
+        if farm_id not in texts and path.is_file():
+            texts[farm_id] = path.read_text(encoding="utf-8")
     owners: dict[str, set[str]] = {}
-    for farm_id in sorted(set(SEEDS) | set(contract_farms())):
-        loaded = load(farm_id)
-        spec = loaded[1]["contract"] if loaded else None
-        if spec is None:
-            continue
-        herds = {herd_device(h["id"]) for h in spec.get("herds", [])}
-        for device in declared_devices(spec) | herds:
+    for farm_id, text in sorted(texts.items()):
+        for device in _devices_of(text):
             owners.setdefault(device, set()).add(farm_id)
     return owners
 

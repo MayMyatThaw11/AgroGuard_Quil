@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from ..cache import through
 from ..config import get_settings
 from ..store import RecordCache, log_fetch, missing, sha256, source_ref
 
@@ -175,24 +176,35 @@ def _cached(
 ) -> list[dict[str, Any]]:
     """Fresh copy when due; on a failed refresh the last good copy is served and marked stale."""
     url = get_settings().open_meteo_flood_url
-    hit = _CACHE.get("glofas", key)
-    if hit is not None and not hit["stale"]:
-        return list(hit["payload"])
-    try:
-        response = http.get(url, params=params)
-        response.raise_for_status()
-        data = _many(response.json())
-    except (httpx.HTTPError, ValueError) as exc:
-        if hit is None:
-            raise
-        out["missing"].append(
-            missing("river_discharge", f"{_why(exc)}; showing data from {hit['retrieved_at']}")
-        )
-        return list(hit["payload"])
-    digest = sha256(repr([c["daily"]["river_discharge"][-3:] for c in data]).encode())
-    _CACHE.put("glofas", key, data, url, digest, ttl_s)
-    log_fetch("glofas", key, digest)
-    return data
+
+    Rows = tuple[list[dict[str, Any]], dict[str, str] | None]
+
+    def fresh() -> Rows | None:
+        hit = _CACHE.get("glofas", key)
+        return (list(hit["payload"]), None) if hit is not None and not hit["stale"] else None
+
+    def fetch() -> Rows:
+        hit = _CACHE.get("glofas", key)
+        try:
+            response = http.get(url, params=params)
+            response.raise_for_status()
+            data = _many(response.json())
+        except (httpx.HTTPError, ValueError) as exc:
+            if hit is None:
+                raise
+            note = missing(
+                "river_discharge", f"{_why(exc)}; showing data from {hit['retrieved_at']}"
+            )
+            return list(hit["payload"]), note
+        digest = sha256(repr([c["daily"]["river_discharge"][-3:] for c in data]).encode())
+        _CACHE.put("glofas", key, data, url, digest, ttl_s)
+        log_fetch("glofas", key, digest)
+        return data, None
+
+    data, note = through("glofas", key, fresh, fetch)
+    if note is not None:
+        out["missing"].append(note)
+    return list(data)
 
 
 def site_risk(

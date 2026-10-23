@@ -180,7 +180,7 @@ def test_contract_verify_handles_500_plots():
 
 
 class Inputs:
-    def items(self, kind):
+    def items(self, kind, prefix=None):
         return [
             {
                 "farm_id": "farm_scale",

@@ -8,7 +8,7 @@ from ..cache import TTLCache
 from ..config import get_settings
 
 SOIL_DEPTHS = ["0-5cm", "5-15cm", "15-30cm", "30-60cm", "60-100cm", "100-200cm"]
-_CACHE = TTLCache()
+_CACHE = TTLCache("soilgrids")
 
 _UNIT_FACTOR: dict[str, float] = {
     "g/kg": 0.1,

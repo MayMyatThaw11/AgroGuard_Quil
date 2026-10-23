@@ -56,11 +56,13 @@ class Ledger:
     """Append-only SHA-256 chain. Any edit to a past entry changes every
     subsequent hash, so tampering is detectable. Entries from v2 on also hash
     their timestamp. Appends hold a SQLite lock beside the file, so several
-    processes (API, MCP server, CLI) extend one chain instead of forking it."""
+    processes (API, MCP server, CLI) extend one chain instead of forking it.
+    One lock connection is opened per ledger and used only under the thread lock."""
 
     def __init__(self, path: str | Path | None = None) -> None:
         self._lock = threading.Lock()
         self._path = Path(path) if path else None
+        self._lock_conn: sqlite3.Connection | None = None
         self._entries: list[LedgerEntry] = []
         self._offset = 0
         self._sync()
@@ -73,7 +75,7 @@ class Ledger:
             for line in fh:
                 if not line.endswith(b"\n"):
                     break
-                if line.strip():
+                if line.strip(b"\x00 \t\r\n"):  # a crash can leave a NUL-filled line
                     self._entries.append(LedgerEntry(**json.loads(line)))
                 self._offset += len(line)
 
@@ -82,14 +84,23 @@ class Ledger:
         if not self._path:
             yield
             return
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(f"{self._path}.lock", timeout=30)
+        if self._lock_conn is None:
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            self._lock_conn = sqlite3.connect(
+                f"{self._path}.lock", timeout=30, check_same_thread=False
+            )
+        conn = self._lock_conn
+        conn.execute("BEGIN IMMEDIATE")
         try:
-            conn.execute("BEGIN IMMEDIATE")
             yield
         finally:
             conn.rollback()
-            conn.close()
+
+    def close(self) -> None:
+        with self._lock:
+            if self._lock_conn is not None:
+                self._lock_conn.close()
+                self._lock_conn = None
 
     def head_hash(self) -> str:
         with self._lock:
@@ -147,3 +158,10 @@ def get_ledger(path: str | Path) -> Ledger:
             ledger = Ledger(key)
             _INSTANCES[key] = ledger
         return ledger
+
+
+def close_all() -> None:
+    with _REGISTRY_LOCK:
+        ledgers = list(_INSTANCES.values())
+    for ledger in ledgers:
+        ledger.close()

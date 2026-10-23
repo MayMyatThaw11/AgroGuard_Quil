@@ -18,6 +18,17 @@ def test_two_writers_on_one_file_extend_one_chain(tmp_path: Path):
     assert api.head_hash() == mcp.head_hash() == fresh.head_hash()
 
 
+def test_a_nul_filled_line_left_by_a_crash_is_skipped(tmp_path: Path):
+    path = tmp_path / "ledger.jsonl"
+    Ledger(path).append("a", {"n": 1})
+    with path.open("ab") as fh:
+        fh.write(b"\x00" * 64 + b"\n")
+    ledger = Ledger(path)
+    ledger.append("b", {"n": 2})
+    assert [e["seq"] for e in Ledger(path).entries()] == [0, 1]
+    assert ledger.verify()
+
+
 def test_editing_a_timestamp_breaks_the_chain(tmp_path: Path):
     path = tmp_path / "ledger.jsonl"
     ledger = Ledger(path)
