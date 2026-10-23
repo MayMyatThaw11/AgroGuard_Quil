@@ -23,6 +23,7 @@ import CameraCapture from '../components/CameraCapture.jsx'
 import DiseaseVerdict from '../components/DiseaseVerdict.jsx'
 import PhotoQualityNotice from '../components/PhotoQualityNotice.jsx'
 import DiseaseAdvice from '../components/DiseaseAdvice.jsx'
+import SaveToHealthUpdates from '../components/SaveToHealthUpdates.jsx'
 import { interpretDisease } from '../lib/diseaseVerdict.js'
 import { checkPhotoQuality } from '../lib/photoQuality.js'
 import { PLANT_GROUPS } from '../data/plantGroups.js'
@@ -72,6 +73,8 @@ function DiseaseDetectionPage() {
   const [groupSupport, setGroupSupport] = useState(null)
   // The five steps: 1 plant, 2 photo, 3 checking, 4 result, 5 what to do.
   const [step, setStep] = useState(1)
+  // Whether this check was already added to Health Updates.
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -350,6 +353,7 @@ function DiseaseDetectionPage() {
     setQualityIssue(null)
     setAnalysisResult(null)
     if (inputRef.current) inputRef.current.value = ''
+    setSaved(false)
     setStep(2)
     if (fromCamera) setIsCameraOpen(true)
   }
@@ -369,6 +373,7 @@ function DiseaseDetectionPage() {
     setValidationError('')
     setIsAnalyzing(false)
     setAnalysisResult(null)
+    setSaved(false)
     setStep(1)
 
     if (inputRef.current) {
@@ -782,6 +787,17 @@ function DiseaseDetectionPage() {
             )}
           </div>
 
+          <div className="mt-5">
+            <SaveToHealthUpdates
+              file={selectedFile}
+              result={analysisResult}
+              verdict={verdict}
+              groupId={selectedGroup}
+              saved={saved}
+              onSaved={() => setSaved(true)}
+            />
+          </div>
+
           <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button type="button" onClick={handleRetake} className={quietButton}>
               {t('wizard.retake')}
@@ -799,6 +815,17 @@ function DiseaseDetectionPage() {
       {step === 5 && analysisResult ? (
         <SectionCard title={t('wizard.action')}>
           <DiseaseAdvice rawClassName={analysisResult.rawClassName} />
+
+          <div className="mt-5">
+            <SaveToHealthUpdates
+              file={selectedFile}
+              result={analysisResult}
+              verdict={verdict}
+              groupId={selectedGroup}
+              saved={saved}
+              onSaved={() => setSaved(true)}
+            />
+          </div>
           <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button type="button" onClick={() => setStep(4)} className={quietButton}>
               {t('wizard.back')}
