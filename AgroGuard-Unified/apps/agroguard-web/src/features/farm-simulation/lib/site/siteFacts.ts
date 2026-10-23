@@ -10,8 +10,16 @@ export type FactId =
   | 'elevationM' | 'slopePct' | 'finePct'
   | 'coastKm' | 'waterKm' | 'riverKm' | 'forestKm' | 'townKm' | 'protectedKm';
 
+export type ServerFactId = 'volcanoKm' | 'heatDays';
+
+export interface Spread {
+  min: number;
+  max: number;
+  n: number;
+}
+
 export interface Datum {
-  id: FactId;
+  id: FactId | ServerFactId;
   label: string;
   value: number | null;
   unit: string;
@@ -23,12 +31,14 @@ export interface Datum {
   retrievedAt?: number;
   beyondKm?: number;
   reason?: string;
+  spread?: Spread;
+  source?: { provider: string; url: string; retrieved_at: string; sha256: string } | null;
 }
 
 export interface SiteFacts {
   lat: number;
   lon: number;
-  facts: Record<FactId, Datum>;
+  facts: Record<FactId, Datum> & Partial<Record<ServerFactId, Datum>>;
   pinIn: string[];
   retrievedAt: number;
 }
@@ -188,6 +198,7 @@ export interface SiteDeps {
   fetcher: (url: string, init?: { method: string; body: string; headers: Record<string, string> }) => Promise<JsonResponse>;
   storage: StorageLike | null;
   now: () => number;
+  siteContext?: (farmId: string) => Promise<JsonResponse>;
 }
 
 const ARCHIVE = 'https://archive-api.open-meteo.com/v1/archive';
@@ -238,15 +249,29 @@ export function createSiteService(deps: SiteDeps) {
   const message = (e: unknown) => classifyFetchFailure(e).detail;
   const pending = new Map<string, Promise<SiteFacts>>();
 
-  function facts(lat: number, lon: number): Promise<SiteFacts> {
+  function facts(lat: number, lon: number, farmId?: string): Promise<SiteFacts> {
     const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
-    const cached = read()[key];
-    if (cached && deps.now() - cached.retrievedAt < CACHE_TTL_MS) return Promise.resolve(cached);
-    const running = pending.get(key);
+    const ask = farmId && deps.siteContext ? deps.siteContext : null;
+    const slot = ask ? `farm:${farmId}` : key;
+    const running = pending.get(slot);
     if (running) return running;
-    const job = load(lat, lon, key).finally(() => pending.delete(key));
-    pending.set(key, job);
+    const local = () => {
+      const cached = read()[key];
+      return cached && deps.now() - cached.retrievedAt < CACHE_TTL_MS ? Promise.resolve(cached) : load(lat, lon, key);
+    };
+    const job = (ask && farmId ? fromServer(ask, farmId).catch(local) : local()).finally(() => pending.delete(slot));
+    pending.set(slot, job);
     return job;
+  }
+
+  async function fromServer(ask: (farmId: string) => Promise<JsonResponse>, farmId: string): Promise<SiteFacts> {
+    const res = await ask(farmId);
+    if (!res.ok) throw new HttpStatusError(res.status, `HTTP ${res.status}`);
+    const body = (await res.json()) as Partial<SiteFacts>;
+    if (typeof body.lat !== 'number' || typeof body.lon !== 'number' || !body.facts?.rainMm || !Array.isArray(body.pinIn)) {
+      throw new Error('site context response has an unexpected shape');
+    }
+    return body as SiteFacts;
   }
 
   async function load(lat: number, lon: number, key: string): Promise<SiteFacts> {

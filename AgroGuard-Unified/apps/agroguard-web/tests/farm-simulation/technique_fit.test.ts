@@ -161,3 +161,27 @@ test('Site service shares one request per spot and does not cache a partial answ
   await service.facts(16.7, 95.6);
   assert.equal(urls.length, 10);
 });
+
+test('Site service uses the server site context and falls back to the browser reads when it fails', async () => {
+  const urls: string[] = [];
+  const server = site(wetHot, flat, snapshot(river));
+  let serverUp = true;
+  const service = createSiteService({
+    fetcher: async (url) => {
+      urls.push(url);
+      return { ok: false, status: 503, json: async () => ({}) };
+    },
+    storage: null,
+    now: () => AT,
+    siteContext: async () => (serverUp ? { ok: true, status: 200, json: async () => server } : { ok: false, status: 502, json: async () => ({}) }),
+  });
+  const fromServer = await service.facts(16.7, 95.6, 'farm_a');
+  assert.equal(fromServer.facts.rainMm.value, server.facts.rainMm.value);
+  assert.equal(urls.length, 0);
+  serverUp = false;
+  const fallback = await service.facts(16.7, 95.6, 'farm_a');
+  assert.equal(urls.length, 5);
+  assert.match(fallback.facts.rainMm.reason ?? '', /HTTP 503/);
+  await service.facts(16.7, 95.6);
+  assert.equal(urls.length, 10);
+});

@@ -10,6 +10,7 @@ import { AqSectionLabel } from '../aq/aqLayout.tsx';
 interface TechniqueFitProps {
   lat: number;
   lon: number;
+  farmId?: string;
   shown?: number;
 }
 
@@ -72,8 +73,8 @@ const Group: React.FC<{ title: string; items: readonly FitResult[]; site: SiteFa
     </details>
   ) : null;
 
-export const TechniqueFit: React.FC<TechniqueFitProps> = ({ lat, lon, shown = 5 }) => {
-  const { loading, site, groups: all, character, error } = useSiteFit(lat, lon);
+export const TechniqueFit: React.FC<TechniqueFitProps> = ({ lat, lon, farmId, shown = 5 }) => {
+  const { loading, site, groups: all, character, error } = useSiteFit(lat, lon, farmId);
   const groups = all && {
     fits: all.fits.filter(inScope),
     conditional: all.conditional.filter(inScope),

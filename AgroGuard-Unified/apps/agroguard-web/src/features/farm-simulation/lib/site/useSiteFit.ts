@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { accessCode } from '../api.ts';
 import { createSiteService, type SiteFacts } from './siteFacts.ts';
 import { evaluateSite, groupResults, siteCharacter, type FitGroups, type SiteCharacter } from './techniqueFit.ts';
 
@@ -11,11 +12,20 @@ function browserStorage() {
 }
 
 const REQUEST_TIMEOUT_MS = 20000;
+const SERVER_TIMEOUT_MS = 90000;
+const API = (import.meta.env?.VITE_API_BASE ?? '').replace(/\/$/, '');
 
 const service = createSiteService({
   fetcher: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
   storage: browserStorage(),
   now: () => Date.now(),
+  siteContext: (farmId) => {
+    const code = accessCode();
+    return fetch(`${API}/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/site-context`, {
+      headers: code ? { 'x-agriquill-write-token': code } : {},
+      signal: AbortSignal.timeout(SERVER_TIMEOUT_MS),
+    });
+  },
 });
 
 export interface SiteFitState {
@@ -26,7 +36,7 @@ export interface SiteFitState {
   error: string | null;
 }
 
-export function useSiteFit(lat: number, lon: number): SiteFitState {
+export function useSiteFit(lat: number, lon: number, farmId?: string): SiteFitState {
   const [site, setSite] = useState<SiteFacts | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +47,7 @@ export function useSiteFit(lat: number, lon: number): SiteFitState {
     setError(null);
     setSite(null);
     service
-      .facts(lat, lon)
+      .facts(lat, lon, farmId)
       .then((facts) => {
         if (live) setSite(facts);
       })
@@ -50,7 +60,7 @@ export function useSiteFit(lat: number, lon: number): SiteFitState {
     return () => {
       live = false;
     };
-  }, [lat, lon]);
+  }, [lat, lon, farmId]);
 
   return useMemo(
     () => ({ loading, site, error, groups: site ? groupResults(evaluateSite(site)) : null, character: site ? siteCharacter(site) : [] }),

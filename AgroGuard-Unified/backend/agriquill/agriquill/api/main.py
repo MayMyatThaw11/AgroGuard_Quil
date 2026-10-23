@@ -52,6 +52,7 @@ from .. import (
     safety,
     seasons,
     sim,
+    sitecontext,
     telemetry,
     twin,
 )
@@ -1678,6 +1679,13 @@ def _seasons(farm_id: str) -> dict[str, Any]:
 async def contracts_seasons(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
     _see(caller, farm_id)
     return await asyncio.to_thread(_live_call, _seasons, farm_id)
+
+
+@router.get("/contracts/{farm_id}/site-context")
+@router.get("/farms/{farm_id}/site-context")
+async def contracts_site_context(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(_live_call, sitecontext.build, farm_id)
 
 
 @router.get("/contracts/{farm_id}/model-card")

@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 
-from . import knowledge
+from . import knowledge, sitecontext
 from .config import get_settings
 from .data import ecocrop, fao_pack, farm_sites, regions
 from .ledger import get_ledger
@@ -61,6 +61,10 @@ JOBS: dict[str, tuple[str, Callable[[], dict[str, Any]]]] = {
         regions.build,
     ),
     "ecocrop_sync": ("Refresh the FAO EcoCrop requirements for the ASEAN crop set.", _ecocrop_sync),
+    "gvp_volcano_sync": (
+        "Fetch the Smithsonian GVP Holocene volcano list and pack the ASEAN box plus a margin.",
+        sitecontext.sync_volcanoes,
+    ),
     "knowledge_index": (
         "Rebuild the docs and vault search index when files changed.",
         knowledge.build,
