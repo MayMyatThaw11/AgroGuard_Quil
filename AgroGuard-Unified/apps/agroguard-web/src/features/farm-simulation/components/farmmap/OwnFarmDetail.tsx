@@ -87,7 +87,7 @@ function chartSummary(p: MonitoringPaddy): string {
   return tr('farmMap.own.chart', { id: p.id, first: cm(band.p50[0]), last: cm(band.p50[last]), days: last + 1, low: cm(band.p10[last]), high: cm(band.p90[last]), floor: AWD_SAFE_DEPTH_CM });
 }
 
-export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: number | null) => void; onFocus: () => void }> = ({ farm, onLink, onFocus }) => {
+export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: number | null) => void; onFocus: () => void; extra?: React.ReactNode }> = ({ farm, onLink, onFocus, extra }) => {
   const t = useT();
   const [summary, setSummary] = useState<FarmSummary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState<string | null>(null);
@@ -260,6 +260,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
         </DetailSection>
       )}
 
+      {extra}
       <RecordsSection key={farm.id} farmId={farm.id} spec={farm.spec} />
       <FieldNotesSection key={`notes-${farm.id}`} farmId={farm.id} />
 

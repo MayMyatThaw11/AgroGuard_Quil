@@ -9,9 +9,10 @@ interface PickArgs {
   onSelection: (selection: Selection | null) => void;
   onDismissRoute: () => void;
   ownCentre: (farmId: string) => { lat: number; lon: number } | null;
+  siteCentre: (siteId: string) => { lat: number; lon: number } | null;
 }
 
-export function useFarmMapPick({ engine, selectionRef, onSelection, onDismissRoute, ownCentre }: PickArgs) {
+export function useFarmMapPick({ engine, selectionRef, onSelection, onDismissRoute, ownCentre, siteCentre }: PickArgs) {
   return useCallback(
     (target: PickTarget | null, fromMap = false) => {
       if (!engine) return;
@@ -46,12 +47,18 @@ export function useFarmMapPick({ engine, selectionRef, onSelection, onDismissRou
         engine.select(null);
         const centre = ownCentre(target.farm);
         if (centre && !fromMap) engine.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2600 });
+      } else if (target.kind === 'mill') {
+        onDismissRoute();
+        onSelection({ kind: 'mill', id: target.id });
+        engine.select(null);
+        const centre = siteCentre(target.id);
+        if (centre && !fromMap) engine.fly({ center: [centre.lon, centre.lat], zoom: 16, duration: 2600 });
       } else if (target.kind === 'coord') {
         engine.fly({ center: [target.lon, target.lat], zoom: 12, duration: 2800 });
       } else {
         engine.fly({ center: [target.country.lon, target.country.lat], zoom: 6.4, duration: 2800 });
       }
     },
-    [engine, selectionRef, onSelection, onDismissRoute, ownCentre],
+    [engine, selectionRef, onSelection, onDismissRoute, ownCentre, siteCentre],
   );
 }

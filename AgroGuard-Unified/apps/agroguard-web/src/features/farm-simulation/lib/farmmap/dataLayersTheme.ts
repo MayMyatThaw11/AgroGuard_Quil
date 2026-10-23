@@ -6,7 +6,7 @@ import type { PoiType } from './farmMapTypes.ts';
 
 export const OVERVIEW_ZOOM = 5.4;
 
-export const PLAIN_SOURCES = ['aq-soil', 'aq-fields', 'aq-bounds', 'aq-canals', 'aq-risk', 'aq-wx', 'aq-temps', 'aq-pois', 'aq-regions', 'aq-route', 'aq-route-pts', 'aq-veh', 'aq-sel', 'aq-own', 'aq-trace'];
+export const PLAIN_SOURCES = ['aq-soil', 'aq-fields', 'aq-bounds', 'aq-canals', 'aq-risk', 'aq-wx', 'aq-temps', 'aq-pois', 'aq-regions', 'aq-route', 'aq-route-pts', 'aq-veh', 'aq-sel', 'aq-own', 'aq-trace', 'aq-sites'];
 
 export interface LayerEntry {
   spec: LayerSpecification;
@@ -24,7 +24,7 @@ export const LAYER_MAP: Record<LayerKey, string[]> = {
   flood: ['flood'],
   drought: ['drought'],
   markets: ['poi-market'],
-  storage: ['poi-storage', 'poi-mill'],
+  storage: ['poi-storage', 'poi-mill', 'mill-fill', 'mill-line', 'mill-point'],
   machinery: ['poi-machine'],
   livestock: ['poi-livestock'],
 };
@@ -44,7 +44,7 @@ const relief = (id: string, source: string, filter: ExpressionSpecification, col
   paint: { 'fill-extrusion-color': color as ExpressionSpecification, 'fill-extrusion-height': height, 'fill-extrusion-base': base, 'fill-extrusion-opacity': opacity, 'fill-extrusion-vertical-gradient': true },
 });
 
-export const HOVER_LAYERS = ['farm-pins', 'clusters', 'regions', 'poi-market', 'poi-storage', 'poi-mill', 'poi-water', 'poi-station', 'poi-machine', 'poi-livestock', 'paddies', 'crops', 'own-fill', 'own-point'];
+export const HOVER_LAYERS = ['farm-pins', 'clusters', 'regions', 'poi-market', 'poi-storage', 'poi-mill', 'poi-water', 'poi-station', 'poi-machine', 'poi-livestock', 'paddies', 'crops', 'own-fill', 'own-point', 'mill-fill', 'mill-point'];
 
 const BEFORE = 'road-minor-case';
 const radius = zoomInterp(5, 18, 9, 40, 12, 70);
@@ -133,6 +133,15 @@ function ownLayers(): LayerEntry[] {
   ];
 }
 
+function millLayers(): LayerEntry[] {
+  const polygon = ex('==', ['geometry-type'], 'Polygon');
+  return [
+    { spec: { id: 'mill-fill', type: 'fill', source: 'aq-sites', filter: polygon, paint: { 'fill-color': POI_COLOR.mill, 'fill-opacity': hoverOpacity(0.28) } } },
+    { spec: { id: 'mill-line', type: 'line', source: 'aq-sites', filter: polygon, layout: round, paint: { 'line-color': POI_COLOR.mill, 'line-width': zoomInterp(8, 1.2, 16, 3), 'line-dasharray': [2, 1.2] } } },
+    { spec: { id: 'mill-point', type: 'symbol', source: 'aq-sites', filter: ex('==', ['geometry-type'], 'Point'), layout: { 'icon-image': 'poi-mill', 'icon-allow-overlap': true, 'text-field': ex('step', ['zoom'], '', 12, getProp('name')), 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, 1.5], 'text-anchor': 'top', 'text-optional': true }, paint: { 'text-color': POI_COLOR.mill, 'text-halo-color': MAP_COLOR.haloWhite, 'text-halo-width': 1.4 } } },
+  ];
+}
+
 function traceLayers(): LayerEntry[] {
   const polygon = ex('==', ['geometry-type'], 'Polygon');
   return [
@@ -150,5 +159,5 @@ export function buildDataLayers(): LayerEntry[] {
     poiLayer('poi-mill', 'mill', 8.5), poiLayer('poi-market', 'market', 7.5), poiLayer('poi-livestock', 'livestock', 12),
     poiLayer('poi-machine', 'machine', 11.5),
   ];
-  return [...ground, ...overlayLayers(), ...poiLayers, ...pinLayers(), ...ownLayers(), ...traceLayers()];
+  return [...ground, ...overlayLayers(), ...poiLayers, ...pinLayers(), ...ownLayers(), ...millLayers(), ...traceLayers()];
 }

@@ -38,6 +38,8 @@ import { farmCentroid } from '../../lib/farmmap/ownFarms.ts';
 import { TRACE_MIN_ZOOM } from '../../lib/farmmap/trace.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { PoiDetail } from './PoiDetail.tsx';
+import { DeliversTo, SiteDetail, SitesUpload } from './SiteDetail.tsx';
+import { useSites } from './useSites.ts';
 import { RoutePanel } from './RoutePanel.tsx';
 import { StatusStrip } from './StatusStrip.tsx';
 import { useFarmMapEngine } from './useFarmMapEngine.ts';
@@ -121,7 +123,12 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
     const found = ownFarms.find((f) => f.id === farmId);
     return found ? farmCentroid(found.spec) : null;
   }, [ownFarms]);
-  const pickTarget = useFarmMapPick({ engine, selectionRef, onSelection: setSelection, onDismissRoute: planner.dismiss, ownCentre });
+  const millSites = useSites(engine);
+  const siteCentre = useCallback((siteId: string) => {
+    const found = millSites.sites.find((s) => s.id === siteId);
+    return found ? { lat: found.centroid[0], lon: found.centroid[1] } : null;
+  }, [millSites.sites]);
+  const pickTarget = useFarmMapPick({ engine, selectionRef, onSelection: setSelection, onDismissRoute: planner.dismiss, ownCentre, siteCentre });
   const pick = useCallback(
     (target: PickTarget | null, fromMap = false) => {
       setSpot(null);
@@ -225,6 +232,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const surroundings = useSurroundings(engine, farm?.lat ?? Number.NaN, farm?.lon ?? Number.NaN);
   const poi = selection?.kind === 'poi' ? data.poiById[selection.id] : null;
   const ownFarm = selection?.kind === 'own' ? ownFarms.find((f) => f.id === selection.id) ?? null : null;
+  const site = selection?.kind === 'mill' ? millSites.sites.find((s) => s.id === selection.id) ?? null : null;
   const rightKey = tracing ? 'trace' : route ? 'route' : selection ? `${selection.kind}-${selection.id}` : spot ? `site-${spot.lat}-${spot.lon}` : 'overview';
   const setLayer = (key: LayerKey, on: boolean) => setLayers((current) => ({ ...current, [key]: on }));
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
@@ -240,7 +248,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       <FarmMapTopBar
         view={view}
         farms={data.farms.length}
-        canRoute={!!selection && selection.kind !== 'own' && !route}
+        canRoute={!!selection && selection.kind !== 'own' && selection.kind !== 'mill' && !route}
         searchRef={searchRef}
         onView={setView}
         onPick={pickSearch}
@@ -309,11 +317,14 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                     const centre = farmCentroid(ownFarm.spec);
                     if (centre) engine?.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2200 });
                   }}
+                  extra={<DeliversTo farmId={ownFarm.id} parcels={ownFarm.spec.parcels.map((p) => p.id)} sites={millSites.sites} onChanged={millSites.reload} />}
                 />
               ) : selection?.kind === 'own' ? (
                 <DetailSection>
                   <p className="aq-fm-note">{t('farmMap.view.loadingFarm')}</p>
                 </DetailSection>
+              ) : site ? (
+                <SiteDetail site={site} onFocus={() => engine?.fly({ center: [site.centroid[1], site.centroid[0]], zoom: 16.5, duration: 2200 })} />
               ) : poi ? (
                 <PoiDetail poi={poi} onRoute={planner.open} onPick={pick} />
               ) : spot ? (
@@ -334,6 +345,16 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                     {!own.error && yours.length === 0 ? <p className="aq-fm-note">{t('farmMap.view.noOwn')}</p> : null}
                     {own.error ? null : <FarmsRollup farms={ownFarms} />}
                     <AqButton onClick={startTrace}><PenLine size={14} aria-hidden="true" />{t('farmMap.trace.title')}</AqButton>
+                    <SitesUpload onDone={millSites.reload} />
+                    {millSites.sites.map((s) => (
+                      <button key={s.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'mill', id: s.id })}>
+                        <i className="aq-fm-flag is-unknown" aria-hidden="true" />
+                        <span className="aq-fm-near-copy">
+                          <span className="aq-fm-near-name">{s.name}</span>
+                          <span className="aq-fm-near-sub">{t('farmMap.site.kind')} · {t('farmMap.site.suppliersN', { n: s.suppliers.length })}</span>
+                        </span>
+                      </button>
+                    ))}
                     {[...yours, ...demos].map((f) => (
                       <button key={f.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'own', farm: f.id })}>
                         <i className={`aq-fm-flag is-${f.status}`} aria-hidden="true" />

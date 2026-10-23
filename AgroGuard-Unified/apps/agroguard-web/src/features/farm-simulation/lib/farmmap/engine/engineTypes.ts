@@ -55,7 +55,8 @@ export type HoverTarget =
   | { kind: 'field'; id: string; farm: string; stage: string | null; area: number; crop: CropId }
   | { kind: 'chunk'; st: ChunkStatus; key: string }
   | { kind: 'poi'; id: string }
-  | { kind: 'own'; farm: string; parcel: string; name: string; label: string; status: string };
+  | { kind: 'own'; farm: string; parcel: string; name: string; label: string; status: string }
+  | { kind: 'mill'; id: string; name: string };
 
 export type HoverInfo = HoverTarget & { x: number; y: number };
 
@@ -65,7 +66,8 @@ export type PickTarget =
   | { kind: 'place'; id: string }
   | { kind: 'coord'; lat: number; lon: number }
   | { kind: 'country'; country: CountrySummary }
-  | { kind: 'own'; farm: string };
+  | { kind: 'own'; farm: string }
+  | { kind: 'mill'; id: string };
 
 export interface EngineCallbacks {
   onBoot: (step: 'style' | 'icons' | 'ready') => void;
@@ -168,6 +170,7 @@ export interface FarmMapEngine {
   setLayers: (flags: LayerFlags) => void;
   setOwnFarms: (features: OwnFeatures) => void;
   setTrace: (features: FeatureCollection) => void;
+  setSites: (features: FeatureCollection) => void;
   setView: (view: MapView) => void;
   setFilters: (filters: Filters) => void;
   setOffline: (offline: boolean) => void;

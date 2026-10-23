@@ -997,3 +997,30 @@ export async function downloadEvidencePack(farmId: string, parcel: string, start
   const res = await send(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/evidence-pack?${query.toString()}`);
   return res.blob();
 }
+
+export interface ProcessingSite {
+  id: string;
+  name: string;
+  properties: Record<string, unknown>;
+  geometry: { type: 'Polygon'; coordinates: number[][][] };
+  centroid: [number, number];
+  area_ha: number;
+  area_basis: string;
+  precision_level: string;
+  suppliers: { farm_id: string; parcel_id: string }[];
+}
+
+export async function getSites(signal?: AbortSignal) {
+  return request<{ sites: ProcessingSite[] }>('/api/v1/agriquill/sites', { signal });
+}
+
+export async function uploadSites(collection: unknown, uploadedBy: string) {
+  return request<{ sites: ProcessingSite[]; sha256: string }>('/api/v1/agriquill/sites', post({ collection, uploaded_by: uploadedBy }));
+}
+
+export async function linkParcelSite(farmId: string, parcelId: string, siteId: string | null, linkedBy: string) {
+  return request<{ site_id: string | null }>(`/api/v1/agriquill/farms/${encodeURIComponent(farmId)}/parcels/${encodeURIComponent(parcelId)}/delivers-to`, {
+    method: 'PATCH',
+    body: JSON.stringify({ site_id: siteId, linked_by: linkedBy }),
+  });
+}

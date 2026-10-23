@@ -61,10 +61,12 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
   let stopped = false;
   let own: OwnFeatures = { polygons: [], points: [] };
   let trace: FeatureCollection = { type: 'FeatureCollection', features: [] };
+  let sites: FeatureCollection = { type: 'FeatureCollection', features: [] };
   const paintOwn = () => {
     const source = map.getSource('aq-own') as GeoJSONSource | undefined;
     source?.setData({ type: 'FeatureCollection', features: [...own.polygons, ...own.points] });
     (map.getSource('aq-trace') as GeoJSONSource | undefined)?.setData(trace);
+    (map.getSource('aq-sites') as GeoJSONSource | undefined)?.setData(sites);
   };
 
   const loop = (now: number) => {
@@ -117,6 +119,10 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     },
     setTrace: (features) => {
       trace = features;
+      if (ctx.state.ready) paintOwn();
+    },
+    setSites: (features) => {
+      sites = features;
       if (ctx.state.ready) paintOwn();
     },
     setView: (view) => setView(ctx, view),

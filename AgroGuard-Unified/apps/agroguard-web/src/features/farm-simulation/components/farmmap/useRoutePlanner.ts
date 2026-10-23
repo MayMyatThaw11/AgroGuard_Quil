@@ -6,7 +6,7 @@ import { TRAVEL_MODES, type RouteState } from './RoutePanel.tsx';
 import { tr } from '../../lib/i18n.ts';
 import type { ToastInput } from './useToasts.ts';
 
-export type Selection = { kind: 'farm'; id: string; field: string | null } | { kind: 'poi'; id: string } | { kind: 'own'; id: string };
+export type Selection = { kind: 'farm'; id: string; field: string | null } | { kind: 'poi'; id: string } | { kind: 'own'; id: string } | { kind: 'mill'; id: string };
 
 interface PlannerArgs {
   engine: FarmMapEngine | null;
@@ -25,7 +25,7 @@ export function useRoutePlanner({ engine, selection, onRestore, onFocusRight, to
   const patch = useCallback((changes: Partial<RouteState>) => setRoute((current) => (current ? { ...current, ...changes } : current)), []);
 
   const open = useCallback(() => {
-    if (!selection || selection.kind === 'own') return;
+    if (!selection || selection.kind === 'own' || selection.kind === 'mill') return;
     const data = getFarmMap();
     const draft = selection.kind === 'farm' ? draftForFarm(data, data.farmById[selection.id]) : draftForPoi(data, data.poiById[selection.id]);
     back.current = selection;
