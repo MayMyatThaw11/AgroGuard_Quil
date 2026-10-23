@@ -248,7 +248,12 @@ _AS_CREW = Depends(_crew)
 _AS_MANAGER = Depends(_manager)
 WRITE = [_CALLER]
 MANAGER = [_AS_MANAGER]
-_BREAKERS = (gfw_forest._BREAKER, gfw_marine._BREAKER, gleam._BREAKER)
+_BREAKERS = (
+    gfw_forest._BREAKER,
+    gfw_marine._BREAKER,
+    gleam._BREAKER,
+    *sitecontext._BREAKERS.values(),
+)
 _JOBS: dict[str, dict[str, Any]] = {}
 _TWIN_TASKS = twin.TaskStore()
 _TASKS_BODY = Body(...)

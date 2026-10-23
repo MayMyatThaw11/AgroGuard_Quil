@@ -122,3 +122,35 @@ def test_outside_calls_are_timed_and_failures_logged_by_class(caplog):
     assert [line["error"] for line in lines] == ["ConnectError", "CircuitOpen"]
     assert all("token" not in json.dumps(line) for line in lines)
     assert breaker.snapshot()["state"] == "open" and breaker.snapshot()["opened_at"]
+
+
+def test_timed_transport_counts_calls_server_errors_and_timeouts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    replies = iter([200, 503, None])
+
+    def fake(self: httpx.HTTPTransport, request: httpx.Request) -> httpx.Response:
+        status = next(replies)
+        if status is None:
+            raise httpx.ConnectTimeout("slow", request=request)
+        return httpx.Response(status, request=request)
+
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", fake)
+    with httpx.Client(transport=obs.TimedTransport("open-meteo")) as client:
+        assert client.get("https://example.test/a").status_code == 200
+        assert client.get("https://example.test/b").status_code == 503
+        with pytest.raises(httpx.ConnectTimeout):
+            client.get("https://example.test/c")
+    stats = obs.outside()["open-meteo"]
+    assert stats["calls"] == 3 and stats["failures"] == 2
+
+
+def test_site_context_cache_and_breakers_are_named_in_the_stats() -> None:
+    from agriquill import sitecontext
+
+    assert sitecontext._HOT.name == "sitecontext_hot"
+    assert {b.name for b in sitecontext._BREAKERS.values()} == {
+        "sitecontext_open_meteo",
+        "sitecontext_overpass",
+        "sitecontext_soilgrids",
+    }

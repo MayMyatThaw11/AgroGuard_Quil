@@ -7,6 +7,8 @@ import time
 from bisect import bisect_left
 from typing import Any
 
+import httpx
+
 BUCKETS_MS = (5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0)
 METHODS = frozenset({"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"})
 MAX_KEYS = 512
@@ -166,3 +168,45 @@ def reset() -> None:
     with _LOCK:
         _ROUTES.clear()
         _SOURCES.clear()
+
+
+def _status_error(response: httpx.Response) -> BaseException | None:
+    if response.status_code < 500:
+        return None
+    return httpx.HTTPStatusError(
+        f"HTTP {response.status_code}", request=response.request, response=response
+    )
+
+
+class TimedTransport(httpx.HTTPTransport):
+    """Times each call to headers, so a timeout or reset counts as a failed call too."""
+
+    def __init__(self, source: str, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.source = source
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        started = time.perf_counter()
+        try:
+            response = super().handle_request(request)
+        except BaseException as exc:
+            record_outside(self.source, (time.perf_counter() - started) * 1000, exc)
+            raise
+        record_outside(self.source, (time.perf_counter() - started) * 1000, _status_error(response))
+        return response
+
+
+class TimedAsyncTransport(httpx.AsyncHTTPTransport):
+    def __init__(self, source: str, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.source = source
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        started = time.perf_counter()
+        try:
+            response = await super().handle_async_request(request)
+        except BaseException as exc:
+            record_outside(self.source, (time.perf_counter() - started) * 1000, exc)
+            raise
+        record_outside(self.source, (time.perf_counter() - started) * 1000, _status_error(response))
+        return response

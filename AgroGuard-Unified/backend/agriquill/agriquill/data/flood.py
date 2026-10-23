@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from .. import obs
 from ..cache import through
 from ..config import get_settings
 from ..store import RecordCache, log_fetch, missing, sha256, source_ref
@@ -219,7 +220,11 @@ def site_risk(
     today = datetime.now(UTC).date()
     settings = get_settings()
     own = client is None
-    http = client or httpx.Client(timeout=settings.http_timeout_s * 3, follow_redirects=True)
+    http = client or httpx.Client(
+        timeout=settings.http_timeout_s * 3,
+        follow_redirects=True,
+        transport=obs.TimedTransport("open-meteo-flood"),
+    )
     out: dict[str, Any] = {
         "provider": GLOFAS,
         "assumptions": ASSUMPTIONS,

@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 import numpy as np
 
+from .. import obs
 from ..cache import TTLCache
 from ..config import get_settings
 from ..store import RecordCache, log_fetch, missing, sha256, source_ref
@@ -183,7 +184,11 @@ def paddy_radar(
         repr([[round(a, 6), round(b, 6)] for a, b in ring_latlon]).encode()
     ).hexdigest()[:16]
     own = client is None
-    http = client or httpx.Client(timeout=get_settings().http_timeout_s, follow_redirects=True)
+    http = client or httpx.Client(
+        timeout=get_settings().http_timeout_s,
+        follow_redirects=True,
+        transport=obs.TimedTransport("sentinel-1"),
+    )
     out: dict[str, Any] = {
         "shadow": True,
         "provider": PROVIDER,

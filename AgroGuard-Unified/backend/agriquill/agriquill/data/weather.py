@@ -5,6 +5,7 @@ from typing import Any
 
 import httpx
 
+from .. import obs
 from ..cache import TTLCache, through
 from ..config import get_settings
 from ..store import RecordCache, log_fetch, missing, now_iso, sha256, source_ref
@@ -146,7 +147,9 @@ def fetch_hourly(
     def fetch() -> dict[str, Any]:
         cached = _RECORDS.get("openmeteo_hourly", key)
         try:
-            own = client or httpx.Client(timeout=s.http_timeout_s)
+            own = client or httpx.Client(
+                timeout=s.http_timeout_s, transport=obs.TimedTransport("open-meteo")
+            )
             try:
                 response = own.get(s.openmeteo_endpoint, params=params)
                 response.raise_for_status()
@@ -203,7 +206,9 @@ def fetch_archive_hourly(
             cached["payload"], cached["url"], cached["retrieved_at"], cached, ARCHIVE_PROVIDER
         )
     try:
-        own = client or httpx.Client(timeout=s.http_timeout_s)
+        own = client or httpx.Client(
+            timeout=s.http_timeout_s, transport=obs.TimedTransport("open-meteo-archive")
+        )
         try:
             response = own.get(ARCHIVE_ENDPOINT, params=params)
             response.raise_for_status()
@@ -312,7 +317,9 @@ def issued_rain(
         "end_date": end.isoformat(),
         "timezone": "auto",
     }
-    own = client or httpx.Client(timeout=s.http_timeout_s)
+    own = client or httpx.Client(
+        timeout=s.http_timeout_s, transport=obs.TimedTransport("open-meteo-previous-runs")
+    )
     try:
         response = own.get(s.open_meteo_previous_runs_url, params=params)
         response.raise_for_status()

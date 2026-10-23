@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 
+from .. import obs
 from ..config import get_settings
 from ..store import RecordCache, log_fetch, missing, sha256, source_ref
 
@@ -81,7 +82,9 @@ def daily(
     if cached and not cached["stale"]:
         return _envelope(cached["payload"], cached, lat2, lon2)
     try:
-        own = client or httpx.Client(timeout=s.http_timeout_s)
+        own = client or httpx.Client(
+            timeout=s.http_timeout_s, transport=obs.TimedTransport("nasa-power")
+        )
         try:
             response = own.get(s.nasa_power_endpoint, params=params)
             response.raise_for_status()
@@ -153,7 +156,9 @@ def climatology(lat: float, lon: float, client: httpx.Client | None = None) -> d
             "source": source_ref(PROVIDER, url, cached["retrieved_at"], cached["sha256"]),
         }
     try:
-        own = client or httpx.Client(timeout=s.http_timeout_s)
+        own = client or httpx.Client(
+            timeout=s.http_timeout_s, transport=obs.TimedTransport("nasa-power")
+        )
         try:
             response = own.get(s.nasa_power_climatology_url, params=params)
             response.raise_for_status()

@@ -128,7 +128,7 @@ Scope set by the owner during this block: ASEAN-wide, small to large farms.
    - Add `POST /farms/{id}/fumigations/check`, so a blocked treatment is refused before it is saved.
 7. **SDG indicator mapping** (plan step 26) and the hybrid physics checks (step 27).
 8. **Phones:** a bottom-sheet details panel, because the panel still covers the whole map. The close button floats over content when the panel scrolls.
-9. **Timing:** time the sources that call httpx directly (CHIRPS, weather, Sentinel, soil) in `/metrics`, and name the `sitecontext` cache.
+9. **Timing (done 23 Oct):** `obs.TimedTransport` now times Open-Meteo (forecast, archive, previous runs, flood), NASA POWER, CHIRPS, Sentinel-1, Sentinel-2 and SoilGrids in `/metrics`. Timeouts, resets and 5xx count as failures. The site-context cache and its three breakers have names, and the breakers show in `/data/health` and `/metrics`. Not timed yet: the one-off sync jobs (FAOSTAT, EcoCrop, farm sites, Pink Sheet, GVP).
 
 ## Older ordered list (before this block)
 1. Phase A+ last item: OSM outline suggestion, hidden in the demo.

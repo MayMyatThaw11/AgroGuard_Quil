@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 import numpy as np
 
+from .. import obs
 from ..cache import TTLCache
 from ..config import get_settings
 from ..store import RecordCache, log_fetch, missing, sha256, source_ref
@@ -193,7 +194,13 @@ _CLIENT: list[httpx.Client] = []
 
 def _shared() -> httpx.Client:
     if not _CLIENT:
-        _CLIENT.append(httpx.Client(timeout=get_settings().http_timeout_s, follow_redirects=True))
+        _CLIENT.append(
+            httpx.Client(
+                timeout=get_settings().http_timeout_s,
+                follow_redirects=True,
+                transport=obs.TimedTransport("chirps"),
+            )
+        )
     return _CLIENT[0]
 
 

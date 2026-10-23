@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 
+from .. import obs
 from ..cache import TTLCache
 from ..config import get_settings
 
@@ -104,7 +105,9 @@ async def fetch_soil(lat: float, lon: float) -> dict[str, Any]:
     for d in SOIL_DEPTHS:
         params.append(("depth", d))
     try:
-        async with httpx.AsyncClient(timeout=s.http_timeout_s) as client:
+        async with httpx.AsyncClient(
+            timeout=s.http_timeout_s, transport=obs.TimedAsyncTransport("soilgrids")
+        ) as client:
             r = await client.get(s.soilgrids_endpoint, params=params)
             r.raise_for_status()
         profile = parse_soil(r.json())

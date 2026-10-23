@@ -72,8 +72,10 @@ FLOWER_SOURCE = (
 )
 
 _CACHE = RecordCache()
-_HOT = TTLCache()
-_BREAKERS = {name: Breaker() for name in ("open_meteo", "overpass", "soilgrids")}
+_HOT = TTLCache("sitecontext_hot")
+_BREAKERS = {
+    name: Breaker(name=f"sitecontext_{name}") for name in ("open_meteo", "overpass", "soilgrids")
+}
 _FAILURES = (httpx.HTTPError, CircuitOpen, ValueError, KeyError, TypeError)
 
 CATEGORIES: tuple[tuple[str, Callable[[Mapping[str, str]], bool]], ...] = (
