@@ -4,6 +4,7 @@ import type { LayerFlags } from '../../lib/farmmap/farmMapLayerKeys.ts';
 import { loadCamera, saveCamera, saveLayers } from '../../lib/farmmap/farmMapStorage.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 import type { BootStep } from './BootScreen.tsx';
+import { tr } from '../../lib/i18n.ts';
 import type { ToastInput } from './useToasts.ts';
 
 interface SyncArgs {
@@ -36,12 +37,12 @@ export function useFarmMapSync({ engine, boot, layers, view, filters, terrain, c
     let flyIn: number | undefined;
     if (focus) {
       map.jumpTo({ center: [focus.lon, focus.lat], zoom: FOCUS_ZOOM, pitch: 0, bearing: 0 });
-      notify({ tone: 'info', title: 'Back on the farm map', message: 'Keep scrolling out to see the region, the country and the whole globe.' });
+      notify({ tone: 'info', title: tr('farmMap.toast.backTitle'), message: tr('farmMap.toast.backBody') });
     } else if (saved && !picked()) {
       map.jumpTo(saved);
     } else if (!picked()) {
       engine.establishing();
-      notify({ tone: 'info', title: 'Streaming the Ayeyarwady delta', message: 'Only the area in view loads. Pan or search to reveal more of ASEAN.' });
+      notify({ tone: 'info', title: tr('farmMap.toast.streamTitle'), message: tr('farmMap.toast.streamBody') });
       flyIn = window.setTimeout(() => {
         if (map.getZoom() <= ESTABLISHING_MAX_ZOOM && !picked()) engine.fly({ center: [95.62, 16.72], zoom: 10.4, duration: 5200 });
       }, FLY_IN_DELAY_MS);

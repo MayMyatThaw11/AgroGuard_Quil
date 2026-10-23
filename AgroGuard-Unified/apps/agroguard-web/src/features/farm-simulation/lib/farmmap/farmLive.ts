@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { activeLocale, tr } from '../i18n.ts';
 import type { Country, CropId, GlyphName } from './farmMapTypes.ts';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
@@ -130,11 +131,11 @@ export function benchmarkKey(crop: CropId, country: Country): string {
 export function benchmarkLine(
   state: Loaded<{ benchmark: Benchmark | null; provider: string }>
 ): string {
-  if (state.status === 'loading') return 'Loading world benchmark';
-  if (state.status === 'error') return `World benchmark unavailable: ${state.error}`;
+  if (state.status === 'loading') return tr('farmMap.bench.loading');
+  if (state.status === 'error') return tr('farmMap.bench.unavailable', { error: state.error });
   const b = state.value.benchmark;
-  if (!b || b.usd_per_tonne === null) return 'No public world benchmark for this crop';
-  return `World benchmark ${b.series}: ${b.usd_per_tonne.toLocaleString()} USD/t, ${b.month} (World Bank)`;
+  if (!b || b.usd_per_tonne === null) return tr('farmMap.bench.none');
+  return tr('farmMap.bench.line', { series: b.series, price: b.usd_per_tonne.toLocaleString(activeLocale()), month: b.month });
 }
 
 export type Loaded<T> = { status: 'loading' } | { status: 'ready'; value: T } | { status: 'error'; error: string };

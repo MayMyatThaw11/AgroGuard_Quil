@@ -1,3 +1,4 @@
+import { activeLocale, tr } from '../i18n.ts';
 import { hash, rng } from './farmMapRandom.ts';
 import { TZ_NAME } from './farmMapRegions.ts';
 import type { Anchor, GlyphName } from './farmMapTypes.ts';
@@ -34,9 +35,9 @@ export function localTime(tz: number, minutesAgo: number, nowMs: number): string
 }
 
 export function dayLabel(offsetDays: number, nowMs: number): string {
-  if (offsetDays === 0) return 'Today';
-  if (offsetDays === 1) return 'Tomorrow';
-  return new Date(nowMs + offsetDays * DAY_MS).toLocaleDateString('en-GB', { weekday: 'short' });
+  if (offsetDays === 0) return tr('farmMap.wx.today');
+  if (offsetDays === 1) return tr('farmMap.wx.tomorrow');
+  return new Date(nowMs + offsetDays * DAY_MS).toLocaleDateString(activeLocale(), { weekday: 'short' });
 }
 
 export function windMs(weather: Weather): number {
@@ -44,8 +45,8 @@ export function windMs(weather: Weather): number {
 }
 
 export function agoLabel(minutes: number): string {
-  if (minutes < 1) return 'just now';
-  return minutes < 60 ? `${minutes} min ago` : `${Math.round(minutes / 60)} h ago`;
+  if (minutes < 1) return tr('farmMap.ago.now');
+  return minutes < 60 ? tr('farmMap.ago.min', { n: minutes }) : tr('farmMap.ago.h', { n: Math.round(minutes / 60) });
 }
 
 export function distanceLabel(km: number): string {

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getPersonaPlans, type JobKind, type PersonaPlanResult, type PersonaPlans } from '../../lib/api.ts';
 import type { ContractAsset } from '../../lib/contractFarm.ts';
 import { personaVariations, reasonText, type PersonaInputs } from '../../lib/farmmap/personaInputs.ts';
+import { activeLocale, tr, useT } from '../../lib/i18n.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { AqButton } from '../aq/aqPrimitives.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
@@ -19,25 +20,28 @@ const NumberField: React.FC<{ label: string; value: string; onChange: (v: string
 
 function costLine(plan: PersonaPlanResult): string {
   const c = plan.outcome.cost;
-  if (c.priced_total === 0 && c.unpriced_jobs > 0) return 'not priced';
-  const budget = c.budget === null ? '' : ` of ${c.budget.toLocaleString('en-US')}`;
-  return `${c.priced_total.toLocaleString('en-US')}${budget}${c.unpriced_jobs ? ' + unpriced' : ''}`;
+  if (c.priced_total === 0 && c.unpriced_jobs > 0) return tr('farmMap.plan.notPriced');
+  const total = c.priced_total.toLocaleString(activeLocale());
+  const priced = c.budget === null ? total : tr('farmMap.plan.ofBudget', { total, budget: c.budget.toLocaleString(activeLocale()) });
+  return c.unpriced_jobs ? tr('farmMap.plan.plusUnpriced', { cost: priced }) : priced;
 }
 
 const PlanColumn: React.FC<{ plan: PersonaPlanResult }> = ({ plan }) => {
+  const t = useT();
   const c = plan.outcome.cost;
+  const money = (v: number) => v.toLocaleString(activeLocale());
   return (
     <div className="aq-fm-persona">
       <h3 className="aq-fm-persona-title">{plan.label}</h3>
-      <KV k="Jobs planned" v={String(plan.outcome.scheduled)} sub={plan.outcome.by_hand ? `${plan.outcome.by_hand} by hand${plan.persona === 'manual' && plan.own_hours.length === 0 ? ', at contract hours' : ''}` : undefined} />
-      <KV k="Blocked" v={String(plan.outcome.blocked.length)} />
-      <KV k="Hours off the 06:00 start" v={String(plan.outcome.lateness_h)} />
-      <KV k="Cost" v={costLine(plan)} sub={c.within_budget === false ? 'over budget' : c.within_budget === null && c.budget !== null ? 'unknown until every job has a price' : undefined} />
-      {c.dropped.map((d) => <p key={d.id} className="aq-fm-note">Dropped for budget: {d.title}{d.days > 1 ? ` (${d.days} days, ${d.cost.toLocaleString("en-US")})` : ` (${d.cost.toLocaleString("en-US")})`}</p>)}
-      {plan.outcome.blocked.map((b) => <p key={b.id} className="aq-fm-note">Blocked: {b.title} · {reasonText(b.reason)}</p>)}
-      <More label="Jobs">
+      <KV k={t('farmMap.plan.jobsPlanned')} v={String(plan.outcome.scheduled)} sub={plan.outcome.by_hand ? (plan.persona === 'manual' && plan.own_hours.length === 0 ? t('farmMap.plan.byHandContract', { n: plan.outcome.by_hand }) : t('farmMap.plan.byHandN', { n: plan.outcome.by_hand })) : undefined} />
+      <KV k={t('farmMap.verdict.blocked')} v={String(plan.outcome.blocked.length)} />
+      <KV k={t('farmMap.plan.lateness')} v={String(plan.outcome.lateness_h)} />
+      <KV k={t('farmMap.plan.cost')} v={costLine(plan)} sub={c.within_budget === false ? t('farmMap.plan.overBudget') : c.within_budget === null && c.budget !== null ? t('farmMap.plan.unknownCost') : undefined} />
+      {c.dropped.map((d) => <p key={d.id} className="aq-fm-note">{t('farmMap.plan.dropped', { title: d.title })}{d.days > 1 ? ` (${t('farmMap.common.days', { n: d.days })}, ${money(d.cost)})` : ` (${money(d.cost)})`}</p>)}
+      {plan.outcome.blocked.map((b) => <p key={b.id} className="aq-fm-note">{t('farmMap.plan.blockedJob', { title: b.title, reason: reasonText(b.reason) })}</p>)}
+      <More label={t('farmMap.plan.jobs')}>
         {plan.tasks.map((t) => (
-          <KV key={t.id} k={t.title} v={t.schedule.status} sub={[t.schedule.start?.replace('T', ' '), t.cost != null ? `cost ${t.cost}` : null].filter(Boolean).join(' · ') || undefined} />
+          <KV key={t.id} k={t.title} v={t.schedule.status} sub={[t.schedule.start?.replace('T', ' '), t.cost != null ? tr('farmMap.plan.costOf', { n: t.cost }) : null].filter(Boolean).join(' · ') || undefined} />
         ))}
       </More>
     </div>
@@ -45,6 +49,7 @@ const PlanColumn: React.FC<{ plan: PersonaPlanResult }> = ({ plan }) => {
 };
 
 export const PersonaPlan: React.FC<{ farmId: string; assets: ContractAsset[]; onResult?: (plans: PersonaPlans) => void }> = ({ farmId, assets, onResult }) => {
+  const t = useT();
   const [inputs, setInputs] = useState<PersonaInputs>({ crew: '2', budget: '', inflation: '', prices: {}, handHours: {}, machines: assets.map((a) => a.id) });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -79,41 +84,41 @@ export const PersonaPlan: React.FC<{ farmId: string; assets: ContractAsset[]; on
 
   return (
     <DetailSection>
-      <AqSectionLabel aside="by hand or with machines">Plan your work</AqSectionLabel>
+      <AqSectionLabel aside={t('farmMap.plan.aside')}>{t('farmMap.plan.title')}</AqSectionLabel>
       <div className="aq-fm-tiles">
-        <NumberField label="People in the crew" value={inputs.crew} onChange={(crew) => set({ crew })} />
-        <NumberField label="Budget (your currency)" value={inputs.budget} placeholder="optional" onChange={(budget) => set({ budget })} />
+        <NumberField label={t('farmMap.plan.crew')} value={inputs.crew} onChange={(crew) => set({ crew })} />
+        <NumberField label={t('farmMap.plan.budget')} value={inputs.budget} placeholder={t('farmMap.common.optional')} onChange={(budget) => set({ budget })} />
       </div>
-      <More label="Prices and machines">
-        <p className="aq-fm-note">Your own price per hour of each job. A job without a price stays "not priced".</p>
+      <More label={t('farmMap.plan.prices')}>
+        <p className="aq-fm-note">{t('farmMap.plan.pricesNote')}</p>
         <div className="aq-fm-tiles">
-          {KINDS.map((k) => <NumberField key={k} label={`${k} per hour`} value={inputs.prices[k] ?? ''} onChange={(v) => set({ prices: { ...inputs.prices, [k]: v } })} />)}
-          <NumberField label="Price rise, %" value={inputs.inflation} placeholder="0" onChange={(inflation) => set({ inflation })} />
+          {KINDS.map((k) => <NumberField key={k} label={t('farmMap.plan.perHour', { job: t(`farmMap.job.${k}`) })} value={inputs.prices[k] ?? ''} onChange={(v) => set({ prices: { ...inputs.prices, [k]: v } })} />)}
+          <NumberField label={t('farmMap.plan.inflation')} value={inputs.inflation} placeholder="0" onChange={(inflation) => set({ inflation })} />
         </div>
-        <p className="aq-fm-note">Hours each job takes your crew by hand. Empty uses your contract's job hours, which are usually machine hours.</p>
+        <p className="aq-fm-note">{t('farmMap.plan.hoursNote')}</p>
         <div className="aq-fm-tiles">
-          {KINDS.map((k) => <NumberField key={k} label={`hours to ${k} by hand`} value={inputs.handHours[k] ?? ''} onChange={(v) => set({ handHours: { ...inputs.handHours, [k]: v } })} />)}
+          {KINDS.map((k) => <NumberField key={k} label={t('farmMap.plan.handHours', { job: t(`farmMap.job.${k}`) })} value={inputs.handHours[k] ?? ''} onChange={(v) => set({ handHours: { ...inputs.handHours, [k]: v } })} />)}
         </div>
-        {assets.length ? <p className="aq-fm-note">Machines you own:</p> : <p className="aq-fm-note">No machines in your contract, so both plans are by hand.</p>}
+        {assets.length ? <p className="aq-fm-note">{t('farmMap.plan.machines')}</p> : <p className="aq-fm-note">{t('farmMap.plan.noMachines')}</p>}
         {assets.map((a) => (
           <label key={a.id} className="aq-fm-check">
             <input type="checkbox" checked={inputs.machines.includes(a.id)} onChange={(e) => set({ machines: e.target.checked ? [...inputs.machines, a.id] : inputs.machines.filter((m) => m !== a.id) })} />
-            {a.label} ({a.kind ?? 'machine'})
+            {a.label} ({a.kind ?? t('farmMap.plan.machine')})
           </label>
         ))}
       </More>
       {typeof built === 'string' ? <p className="aq-hint is-error">{built}</p> : null}
-      <AqButton variant="primary" disabled={busy || typeof built === 'string'} onClick={() => void run()}>{busy ? 'Planning' : 'Compare by hand and with machines'}</AqButton>
+      <AqButton variant="primary" disabled={busy || typeof built === 'string'} onClick={() => void run()}>{busy ? t('farmMap.plan.planning') : t('farmMap.plan.compare')}</AqButton>
       {error ? <div className="aq-alert is-error" role="alert">{error}</div> : null}
-      {result?.status !== undefined && result.status !== 'OK' ? <p className="aq-fm-note">No plan: {result.missing?.[0]?.reason ?? result.status}</p> : null}
+      {result?.status !== undefined && result.status !== 'OK' ? <p className="aq-fm-note">{t('farmMap.plan.noPlan', { reason: result.missing?.[0]?.reason ?? result.status })}</p> : null}
       {result?.plans && result.plans.every((p) => p.outcome.scheduled + p.outcome.blocked.length + p.outcome.cost.dropped.length === 0) ? (
-        <p className="aq-fm-note" role="status">No field job is due in the forecast window, so there is nothing to plan yet.</p>
+        <p className="aq-fm-note" role="status">{t('farmMap.plan.nothingDue')}</p>
       ) : result?.plans ? (
         <div aria-live="polite">
           <div className="aq-fm-persona-grid">
             {result.plans.map((p) => <PlanColumn key={p.label} plan={p} />)}
           </div>
-          <p className="aq-fm-note">Same weather and water forecast for both · {result.approval}</p>
+          <p className="aq-fm-note">{t('farmMap.plan.same')} · {result.approval}</p>
         </div>
       ) : null}
     </DetailSection>

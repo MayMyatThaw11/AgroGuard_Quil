@@ -1,6 +1,7 @@
 import type { Certificate, FarmMonitoring, FarmRisk, Fumigation, FumigationVerdict, HarvestReference, Lot, PersonaPlans } from '../api.ts';
 import type { ContractSpec } from '../contractFarm.ts';
 import type { FarmStatus, PointFeature, PolygonFeature, Position } from './farmMapTypes.ts';
+import { tr } from '../i18n.ts';
 import { reasonText } from './personaInputs.ts';
 
 export type OwnStatus = FarmStatus | 'unknown';
@@ -381,24 +382,24 @@ function firstJob(plan: PersonaPlans | null): { label: string; title: string; st
 }
 
 export function todayLine({ risk, blocked, advisory, plan }: TodayInputs): TodayLine {
-  const flood = risk?.provider ?? 'farm map flood risk';
+  const flood = risk?.provider ?? tr('farmMap.today.floodSource');
   const action = risk?.parcels?.find((p) => p.advice.action !== 'none');
   if (action) return { tone: action.advice.action === 'protect' ? 'alert' : 'warning', text: `${action.id}: ${action.advice.text}`, source: flood };
   if (risk?.level === 'high' || risk?.level === 'watch') {
-    return { tone: risk.level === 'high' ? 'alert' : 'warning', text: `Flood risk ${risk.level} in the next 30 days${risk.flood_date ? ` from ${risk.flood_date}` : ''}`, source: flood };
+    return { tone: risk.level === 'high' ? 'alert' : 'warning', text: risk.flood_date ? tr('farmMap.today.floodFrom', { level: risk.level, date: risk.flood_date }) : tr('farmMap.today.flood', { level: risk.level }), source: flood };
   }
   const gate = blocked?.[0];
-  if (gate) return { tone: 'warning', text: `${gate.title} is blocked: ${reasonText(gate.reason)}`, source: 'work plan in the farm summary' };
+  if (gate) return { tone: 'warning', text: tr('farmMap.today.blocked', { title: gate.title, reason: reasonText(gate.reason) }), source: tr('farmMap.today.planSource') };
   if (advisory) {
-    return { tone: 'neutral', text: `Water advice: ${advisory.status.replace(/_/g, ' ')}${advisory.reason ? ` · ${advisory.reason}` : ''}`, source: 'AgroGuard water advice saved in this browser' };
+    return { tone: 'neutral', text: tr('farmMap.today.water', { status: `${advisory.status.replace(/_/g, ' ')}${advisory.reason ? ` · ${advisory.reason}` : ''}` }), source: tr('farmMap.today.waterSource') };
   }
   const job = firstJob(plan);
-  if (job) return { tone: 'neutral', text: `${job.title}, ${job.start.replace('T', ' ')}`, source: `Plan your work · ${job.label}` };
-  const unchecked = [risk ? null : 'flood risk', blocked ? null : 'blocked jobs'].filter(Boolean);
+  if (job) return { tone: 'neutral', text: `${job.title}, ${job.start.replace('T', ' ')}`, source: tr('farmMap.today.jobSource', { label: job.label }) };
+  const unchecked = [risk ? null : tr('farmMap.today.floodRisk'), blocked ? null : tr('farmMap.today.blockedJobs')].filter(Boolean);
   return {
     tone: 'neutral',
-    text: 'Nothing urgent today',
-    source: unchecked.length ? `water advice · not loaded: ${unchecked.join(', ')}` : 'flood risk, blocked jobs and water advice, none flagged',
+    text: tr('farmMap.today.nothing'),
+    source: unchecked.length ? tr('farmMap.today.notLoaded', { list: unchecked.join(', ') }) : tr('farmMap.today.noneFlagged'),
   };
 }
 
@@ -408,15 +409,15 @@ const VERDICT_ORDER: FumigationVerdict['result'][] = ['blocked', 'conditional', 
 export function verdictBadge(v: FumigationVerdict): { tone: Tone; word: string; detail: string } {
   switch (v.result) {
     case 'blocked':
-      return { tone: 'alert', word: 'Blocked', detail: `${v.item} is not allowed under ${v.standard} · ${v.clause ?? 'clause not recorded'} · ${v.code}` };
+      return { tone: 'alert', word: tr('farmMap.verdict.blocked'), detail: tr('farmMap.verdict.blockedDetail', { item: v.item, standard: v.standard, clause: v.clause ?? tr('farmMap.verdict.noClause'), code: v.code }) };
     case 'conditional':
-      return { tone: 'warning', word: 'Conditional', detail: `${v.condition} · ${v.clause}` };
+      return { tone: 'warning', word: tr('farmMap.verdict.conditional'), detail: `${v.condition} · ${v.clause}` };
     case 'unchecked':
-      return { tone: 'neutral', word: 'Unchecked', detail: v.reason };
+      return { tone: 'neutral', word: tr('farmMap.verdict.unchecked'), detail: v.reason };
     case 'no_listed_item':
-      return { tone: 'accent', word: 'No listed item', detail: `nothing on the ${v.standard} list matched` };
+      return { tone: 'accent', word: tr('farmMap.verdict.noItem'), detail: tr('farmMap.verdict.noItemDetail', { standard: v.standard }) };
     default:
-      return { tone: 'neutral', word: 'No standard', detail: 'the plot has no organic standard in its contract' };
+      return { tone: 'neutral', word: tr('farmMap.verdict.noStandard'), detail: tr('farmMap.verdict.noStandardDetail') };
   }
 }
 

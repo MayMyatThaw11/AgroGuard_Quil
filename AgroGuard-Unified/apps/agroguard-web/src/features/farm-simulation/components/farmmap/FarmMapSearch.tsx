@@ -3,16 +3,17 @@ import { Crosshair, Factory, MapPin, Search, Sprout, Store, Warehouse, X, type L
 import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
 import { parseCoordinates, searchFarmMap } from '../../lib/farmmap/farmMapSearch.ts';
 import { CROPS } from '../../lib/farmmap/farmMapTheme.ts';
+import { useT, type Key } from '../../lib/i18n.ts';
 import type { SearchKind, SearchResult } from '../../lib/farmmap/farmMapViewTypes.ts';
 import { tintStyle } from './tint.ts';
 
-const KINDS: Record<SearchKind, readonly [LucideIcon, string]> = {
-  place: [MapPin, 'Place'],
-  farm: [Sprout, 'Farm'],
-  market: [Store, 'Market'],
-  storage: [Warehouse, 'Storage'],
-  mill: [Factory, 'Mill'],
-  coord: [Crosshair, 'Coordinates'],
+const KINDS: Record<SearchKind, readonly [LucideIcon, Key]> = {
+  place: [MapPin, 'farmMap.search.place'],
+  farm: [Sprout, 'farmMap.search.farm'],
+  market: [Store, 'farmMap.poi.market'],
+  storage: [Warehouse, 'farmMap.poi.storage'],
+  mill: [Factory, 'farmMap.poi.mill'],
+  coord: [Crosshair, 'farmMap.search.coord'],
 };
 
 interface FarmMapSearchProps {
@@ -21,6 +22,7 @@ interface FarmMapSearchProps {
 }
 
 export const FarmMapSearch: React.FC<FarmMapSearchProps> = ({ inputRef, onPick }) => {
+  const t = useT();
   const data = useMemo(getFarmMap, []);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -62,9 +64,9 @@ export const FarmMapSearch: React.FC<FarmMapSearchProps> = ({ inputRef, onPick }
           role="combobox"
           aria-expanded={showList}
           aria-controls="aq-fm-search-list"
-          aria-label="Search farms, towns, markets or coordinates"
+          aria-label={t('farmMap.search.label')}
           value={query}
-          placeholder="Search farms, towns, markets or 16.73, 95.65"
+          placeholder={t('farmMap.search.placeholder')}
           onChange={(event) => {
             setQuery(event.target.value);
             setOpen(true);
@@ -74,7 +76,7 @@ export const FarmMapSearch: React.FC<FarmMapSearchProps> = ({ inputRef, onPick }
           onKeyDown={handleKey}
         />
         {query ? (
-          <button type="button" className="aq-fm-clear" aria-label="Clear search" onMouseDown={(event) => { event.preventDefault(); setQuery(''); }}>
+          <button type="button" className="aq-fm-clear" aria-label={t('farmMap.search.clear')} onMouseDown={(event) => { event.preventDefault(); setQuery(''); }}>
             <X size={13} aria-hidden="true" />
           </button>
         ) : (
@@ -104,17 +106,17 @@ export const FarmMapSearch: React.FC<FarmMapSearchProps> = ({ inputRef, onPick }
                     <span className="aq-fm-result-title">{result.title}</span>
                     <span className="aq-fm-result-sub">{result.sub}</span>
                   </span>
-                  <span className="aq-fm-result-kind">{label}</span>
+                  <span className="aq-fm-result-kind">{t(label)}</span>
                 </button>
               );
             })
           ) : (
-            <p className="aq-fm-empty">No farm, town or market matches “{query.trim()}”. Try a town (Maubin, Karawang), a crop (coffee) or a farm code (AQ-VN-0341).</p>
+            <p className="aq-fm-empty">{t('farmMap.search.empty', { query: query.trim() })}</p>
           )}
           <div className="aq-fm-result-help">
-            <span><kbd className="aq-kbd">↑</kbd> <kbd className="aq-kbd">↓</kbd> move</span>
-            <span><kbd className="aq-kbd">↵</kbd> fly there</span>
-            <span><kbd className="aq-kbd">esc</kbd> close</span>
+            <span><kbd className="aq-kbd">↑</kbd> <kbd className="aq-kbd">↓</kbd> {t('farmMap.search.move')}</span>
+            <span><kbd className="aq-kbd">↵</kbd> {t('farmMap.search.fly')}</span>
+            <span><kbd className="aq-kbd">esc</kbd> {t('farmMap.common.close')}</span>
           </div>
         </div>
       ) : null}

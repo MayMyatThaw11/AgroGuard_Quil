@@ -1,5 +1,8 @@
 import type { LayerKey } from './farmMapLayerKeys.ts';
-import { BOUND_COLOR, CROPS, MAP_COLOR, POI_COLOR, RICE_STAGES, SOILS, STATUS_COLOR } from './farmMapTheme.ts';
+import { tr } from '../i18n.ts';
+import { BOUND_COLOR, CROPS, CROP_IDS, MAP_COLOR, POI_COLOR, RICE_STAGES, SOILS, STATUS_COLOR } from './farmMapTheme.ts';
+import { cropLabel, soilLabel, stageAt, statusLabel } from './farmMapText.ts';
+import type { SoilId } from './farmMapTypes.ts';
 
 export interface LegendSpec {
   items?: { tint: string; label: string }[];
@@ -11,31 +14,31 @@ export interface LegendSpec {
 export function legendFor(key: LayerKey): LegendSpec | null {
   switch (key) {
     case 'paddies':
-      return { items: RICE_STAGES.map(([label, tint]) => ({ tint, label })) };
+      return { items: RICE_STAGES.map(([, tint], i) => ({ tint, label: stageAt(i) })) };
     case 'crops':
-      return { items: Object.values(CROPS).filter((c) => c.label !== CROPS.rice.label).map((c) => ({ tint: c.color, label: c.label })) };
+      return { items: CROP_IDS.filter((id) => id !== 'rice').map((id) => ({ tint: CROPS[id].color, label: cropLabel(id) })) };
     case 'bounds':
-      return { items: [{ tint: BOUND_COLOR, label: 'Healthy' }, { tint: STATUS_COLOR.watch, label: 'Watch' }, { tint: STATUS_COLOR.risk, label: 'At risk' }] };
+      return { items: [{ tint: BOUND_COLOR, label: statusLabel('ok') }, { tint: STATUS_COLOR.watch, label: statusLabel('watch') }, { tint: STATUS_COLOR.risk, label: statusLabel('risk') }] };
     case 'soil':
-      return { items: Object.values(SOILS).map(([label, tint]) => ({ tint, label: label.split(' (')[0] })) };
+      return { items: (Object.keys(SOILS) as SoilId[]).map((id) => ({ tint: SOILS[id][1], label: soilLabel(id).split(' (')[0] })) };
     case 'irrigation':
-      return { items: [{ tint: MAP_COLOR.canalMain, label: 'Main canal' }, { tint: MAP_COLOR.canalLateral, label: 'Lateral' }] };
+      return { items: [{ tint: MAP_COLOR.canalMain, label: tr('farmMap.legend.mainCanal') }, { tint: MAP_COLOR.canalLateral, label: tr('farmMap.legend.lateral') }] };
     case 'water':
-      return { items: [{ tint: POI_COLOR.water, label: 'Reservoir, weir, pump station' }] };
+      return { items: [{ tint: POI_COLOR.water, label: tr('farmMap.legend.reservoir') }] };
     case 'weather':
       return { gradient: ['#c4e6e5', '#5bbcb9', '#006e78', '#003f48'], labels: ['0.5', '12+'], unit: 'mm/h' };
     case 'flood':
-      return { gradient: ['#97d3d1', '#5bbcb9', '#006e78', '#005660'], labels: ['Low', 'High'] };
+      return { gradient: ['#97d3d1', '#5bbcb9', '#006e78', '#005660'], labels: [tr('farmMap.common.low'), tr('farmMap.common.high')] };
     case 'drought':
-      return { gradient: ['#f0c56a', '#d77a11', '#bc6c2f'], labels: ['Low', 'High'] };
+      return { gradient: ['#f0c56a', '#d77a11', '#bc6c2f'], labels: [tr('farmMap.common.low'), tr('farmMap.common.high')] };
     case 'markets':
-      return { items: [{ tint: POI_COLOR.market, label: 'Wholesale & paddy markets' }] };
+      return { items: [{ tint: POI_COLOR.market, label: tr('farmMap.legend.markets') }] };
     case 'storage':
-      return { items: [{ tint: POI_COLOR.storage, label: 'Warehouse / silo' }, { tint: POI_COLOR.mill, label: 'Mill / processor' }] };
+      return { items: [{ tint: POI_COLOR.storage, label: tr('farmMap.legend.warehouse') }, { tint: POI_COLOR.mill, label: tr('farmMap.legend.mill') }] };
     case 'machinery':
-      return { items: [{ tint: POI_COLOR.machine, label: 'Tractor, harvester, drone, pump' }] };
+      return { items: [{ tint: POI_COLOR.machine, label: tr('farmMap.legend.machinery') }] };
     case 'livestock':
-      return { items: [{ tint: POI_COLOR.livestock, label: 'Buffalo, cattle, ducks, fish ponds' }] };
+      return { items: [{ tint: POI_COLOR.livestock, label: tr('farmMap.legend.livestock') }] };
   }
 }
 

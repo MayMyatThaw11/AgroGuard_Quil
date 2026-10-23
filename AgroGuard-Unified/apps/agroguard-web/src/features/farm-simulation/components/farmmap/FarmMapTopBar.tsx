@@ -4,6 +4,7 @@ import { AqBadge, AqButton, AqIconButton } from '../aq/aqPrimitives.tsx';
 import { AqTabs } from '../aq/aqLayout.tsx';
 import type { MapView } from '../../lib/farmmap/engine/engineTypes.ts';
 import type { SearchResult } from '../../lib/farmmap/farmMapViewTypes.ts';
+import { activeLocale, useT } from '../../lib/i18n.ts';
 import { FarmMapSearch } from './FarmMapSearch.tsx';
 
 interface FarmMapTopBarProps {
@@ -18,36 +19,38 @@ interface FarmMapTopBarProps {
   onOpenFleet: () => void;
 }
 
-const VIEWS = [
-  { value: 'map', label: 'Map' },
-  { value: 'sat', label: 'Satellite' },
-] as const;
-
-export const FarmMapTopBar: React.FC<FarmMapTopBarProps> = ({ view, farms, canRoute, searchRef, onView, onPick, onRoute, onKeys, onOpenFleet }) => (
+export const FarmMapTopBar: React.FC<FarmMapTopBarProps> = ({ view, farms, canRoute, searchRef, onView, onPick, onRoute, onKeys, onOpenFleet }) => {
+  const t = useT();
+  const views = [
+    { value: 'map', label: t('farmMap.top.map') },
+    { value: 'sat', label: t('farmMap.top.satellite') },
+  ] as const;
+  return (
   <header className="aq-fm-top">
     <div className="aq-fm-title">
-      <h1 className="aq-fm-title-text">ASEAN Farm Map</h1>
-      <AqBadge>{farms.toLocaleString()} farms · 11 countries</AqBadge>
-      <AqBadge tone="warning">Farm positions illustrative · weather and prices live</AqBadge>
+      <h1 className="aq-fm-title-text">{t('farmMap.title')}</h1>
+      <AqBadge>{t('farmMap.top.farms', { n: farms.toLocaleString(activeLocale()) })}</AqBadge>
+      <AqBadge tone="warning">{t('farmMap.top.illustrative')}</AqBadge>
     </div>
     <div className="aq-fm-top-search">
       <FarmMapSearch inputRef={searchRef} onPick={onPick} />
     </div>
     <div className="aq-fm-top-actions">
-      <AqTabs value={view} items={VIEWS} label="Map style" onChange={onView} />
+      <AqTabs value={view} items={views} label={t('farmMap.top.mapStyle')} onChange={onView} />
       <div className="aq-fm-top-tools">
         <AqButton variant="secondary" onClick={onRoute} disabled={!canRoute}>
           <Route size={14} aria-hidden="true" />
-          <span className="aq-fm-top-label">Route</span>
+          <span className="aq-fm-top-label">{t('farmMap.common.route')}</span>
         </AqButton>
-        <AqIconButton label="Keyboard shortcuts (?)" onClick={onKeys}>
+        <AqIconButton label={t('farmMap.top.shortcuts')} onClick={onKeys}>
           <Keyboard size={15} aria-hidden="true" />
         </AqIconButton>
         <AqButton variant="ghost" onClick={onOpenFleet}>
           <LayoutGrid size={14} aria-hidden="true" />
-          <span className="aq-fm-top-label">All fields</span>
+          <span className="aq-fm-top-label">{t('farmMap.top.allFields')}</span>
         </AqButton>
       </div>
     </div>
   </header>
-);
+  );
+};

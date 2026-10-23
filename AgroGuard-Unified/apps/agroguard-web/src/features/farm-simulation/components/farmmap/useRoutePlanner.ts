@@ -3,6 +3,7 @@ import type { FarmMapEngine, GuideProgress } from '../../lib/farmmap/engine/engi
 import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
 import { draftForFarm, draftForPoi } from '../../lib/farmmap/farmMapRoutes.ts';
 import { TRAVEL_MODES, type RouteState } from './RoutePanel.tsx';
+import { tr } from '../../lib/i18n.ts';
 import type { ToastInput } from './useToasts.ts';
 
 export type Selection = { kind: 'farm'; id: string; field: string | null } | { kind: 'poi'; id: string } | { kind: 'own'; id: string };
@@ -36,14 +37,14 @@ export function useRoutePlanner({ engine, selection, onRestore, onFocusRight, to
     const from = route.options.find((o) => o.id === route.from);
     const to = route.options.find((o) => o.id === route.to);
     if (!from || !to || from.id === to.id) {
-      toast({ tone: 'warning', title: 'Pick two different places' });
+      toast({ tone: 'warning', title: tr('farmMap.toast.twoPlaces') });
       patch({ go: null });
       return;
     }
     patch({ loading: true });
     engine.route(from, to).then((result) => {
       setRoute((current) => (current ? { ...current, loading: false, result, go: null } : current));
-      if (/Simulated/.test(result.src)) toast({ tone: 'info', title: 'Road service unavailable', message: 'Showing a simulated route along farm tracks.' });
+      if (/Simulated/.test(result.src)) toast({ tone: 'info', title: tr('farmMap.toast.noRoadTitle'), message: tr('farmMap.toast.noRoadBody') });
     });
   }, [engine, route, patch, toast]);
 
@@ -81,7 +82,7 @@ export function useRoutePlanner({ engine, selection, onRestore, onFocusRight, to
         lastEmit.current = now;
         setGuide({ ...progress });
       }
-      if (progress.done) toast({ tone: 'success', title: 'Arrived', message: destination?.label });
+      if (progress.done) toast({ tone: 'success', title: tr('farmMap.guide.arrived'), message: destination?.label });
     });
   }, [engine, route, onFocusRight, toast]);
 

@@ -1,35 +1,41 @@
 import React from 'react';
 import { AqDialog } from '../aq/AqDialog.tsx';
+import { useT, type Key, type Translate } from '../../lib/i18n.ts';
 import { AqButton } from '../aq/aqPrimitives.tsx';
 
-const KEYS: readonly (readonly [readonly string[], string])[] = [
-  [['/'], 'Search farms, towns, markets'],
-  [['Esc'], 'Clear selection, route or search'],
-  [['+', '−'], 'Zoom in / out'],
-  [['Drag', 'Right-drag'], 'Pan · rotate and tilt'],
-  [['N'], 'Reset north and tilt'],
-  [['H'], 'ASEAN overview'],
-  [['S'], 'Map / satellite'],
-  [['T'], '3D terrain'],
-  [['R'], 'Route from the selected farm'],
-  [['F'], 'Open the selected rice farm in the field monitor'],
-  [['L'], 'What fits the land at the map centre'],
-  [['['], 'Hide or show layers'],
-  [[']'], 'Hide or show details'],
-  [['\\'], 'Hide or show both panels'],
-  [['O'], 'Simulate offline'],
-  [['?'], 'This list'],
+const KEYS: readonly (readonly [readonly string[], Key])[] = [
+  [['/'], 'farmMap.keys.search'],
+  [['Esc'], 'farmMap.keys.clear'],
+  [['+', '−'], 'farmMap.keys.zoom'],
+  [['farmMap.keys.drag', 'farmMap.keys.rightDrag'], 'farmMap.keys.pan'],
+  [['N'], 'farmMap.keys.north'],
+  [['H'], 'farmMap.keys.overview'],
+  [['S'], 'farmMap.keys.view'],
+  [['T'], 'farmMap.keys.terrain'],
+  [['R'], 'farmMap.keys.route'],
+  [['F'], 'farmMap.keys.field'],
+  [['L'], 'farmMap.keys.land'],
+  [['['], 'farmMap.keys.layers'],
+  [[']'], 'farmMap.keys.details'],
+  [['\\'], 'farmMap.keys.panels'],
+  [['O'], 'farmMap.keys.offline'],
+  [['?'], 'farmMap.keys.list'],
 ];
 
-export const KeysDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => (
-  <AqDialog title="Keyboard and mouse" width={440} onClose={onClose} footer={<AqButton variant="primary" onClick={onClose}>Done</AqButton>}>
+const keyText = (t: Translate, k: string) => (k === 'farmMap.keys.drag' || k === 'farmMap.keys.rightDrag' ? t(k) : k);
+
+export const KeysDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const t = useT();
+  return (
+  <AqDialog title={t('farmMap.keys.title')} width={440} onClose={onClose} footer={<AqButton variant="primary" onClick={onClose}>{t('farmMap.common.done')}</AqButton>}>
     <dl className="aq-fm-keys">
       {KEYS.map(([keys, label]) => (
         <React.Fragment key={label}>
-          <dt>{keys.map((k) => <kbd key={k} className="aq-kbd">{k}</kbd>)}</dt>
-          <dd>{label}</dd>
+          <dt>{keys.map((k) => <kbd key={k} className="aq-kbd">{keyText(t, k)}</kbd>)}</dt>
+          <dd>{t(label)}</dd>
         </React.Fragment>
       ))}
     </dl>
   </AqDialog>
-);
+  );
+};

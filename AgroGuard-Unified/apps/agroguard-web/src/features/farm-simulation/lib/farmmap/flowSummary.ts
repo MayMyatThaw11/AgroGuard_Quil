@@ -1,4 +1,5 @@
 import type { FarmFlows, ParcelFlows } from '../api.ts';
+import { tr } from '../i18n.ts';
 
 const M3_PER_MM_HA = 10;
 
@@ -49,9 +50,9 @@ export function flowSummary(flows: FarmFlows | null, areaHa: Record<string, numb
   };
   const rain = sum((p) => p.water.total.rain_mm);
   const outflow: FlowTerm[] = [
-    { key: 'transpiration', label: 'Taken up by the crop', m3: sum((p) => p.water.total.transpiration_mm) },
-    { key: 'evaporation', label: 'Evaporated', m3: sum((p) => p.water.total.evaporation_mm) },
-    { key: 'percolation', label: 'Drained down', m3: sum((p) => p.water.total.percolation_mm) },
+    { key: 'transpiration', label: tr('farmMap.flow.transpiration'), m3: sum((p) => p.water.total.transpiration_mm) },
+    { key: 'evaporation', label: tr('farmMap.flow.evaporation'), m3: sum((p) => p.water.total.evaporation_mm) },
+    { key: 'percolation', label: tr('farmMap.flow.percolation'), m3: sum((p) => p.water.total.percolation_mm) },
   ];
   const known = outflow.every((t) => t.m3 !== null) && rain !== null;
   const out = outflow.reduce((s, t) => s + (t.m3 ?? 0), 0);
@@ -72,7 +73,7 @@ export function flowSummary(flows: FarmFlows | null, areaHa: Record<string, numb
           notCounted: sized.reduce((s, p) => s + (p.nitrogen?.not_counted ?? 0), 0),
         }
       : null,
-    inflow: [{ key: 'rain', label: 'Rain', m3: rain }],
+    inflow: [{ key: 'rain', label: tr('farmMap.flow.rain'), m3: rain }],
     outflow,
     netM3: known ? (rain ?? 0) - out : null,
     scale: Math.max(rain ?? 0, out, 1),

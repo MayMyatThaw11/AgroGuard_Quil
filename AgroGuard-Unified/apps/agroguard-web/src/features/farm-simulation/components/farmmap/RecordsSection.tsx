@@ -30,6 +30,7 @@ import { ApiError, SIGN_IN_TO_WRITE, failedText, writeErrorText } from '../../li
 import type { ContractSpec } from '../../lib/contractFarm.ts';
 import { verdictBadge, worstVerdict, type Tone } from '../../lib/farmmap/ownFarms.ts';
 import { activeSession } from '../../lib/session.ts';
+import { activeLocale, tr, useT, type Key } from '../../lib/i18n.ts';
 import { AqSectionLabel, AqSwitch } from '../aq/aqLayout.tsx';
 import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
@@ -45,36 +46,55 @@ interface Loaded {
 
 const PAGE = 500;
 const SHOWN_LOTS = 5;
-const METHODS: Record<FumigationMethod, string> = {
-  synthetic_chemical: 'Synthetic chemical',
-  controlled_atmosphere: 'Controlled atmosphere',
-  hermetic: 'Hermetic storage',
-  heat: 'Heat',
-  other: 'Other',
+const METHODS: Record<FumigationMethod, Key> = {
+  synthetic_chemical: 'farmMap.rec.method.synthetic',
+  controlled_atmosphere: 'farmMap.rec.method.atmosphere',
+  hermetic: 'farmMap.rec.method.hermetic',
+  heat: 'farmMap.rec.method.heat',
+  other: 'farmMap.rec.other',
 };
-const STORAGE: Record<LotStorage, string> = { hermetic: 'Hermetic bag', sack: 'Sack', bin: 'Bin', silo: 'Silo', other: 'Other' };
+const STORAGE: Record<LotStorage, Key> = { hermetic: 'farmMap.rec.store.hermetic', sack: 'farmMap.rec.store.sack', bin: 'farmMap.rec.store.bin', silo: 'farmMap.rec.store.silo', other: 'farmMap.rec.other' };
+const CERT_KINDS: Record<keyof typeof CERTIFICATE_KINDS, Key> = {
+  organic: 'farmMap.rec.cert.organic',
+  gap: 'farmMap.rec.cert.gap',
+  export_licence: 'farmMap.rec.cert.exportLicence',
+  exporter_registration: 'farmMap.rec.cert.exporter',
+  china_exporter_registration: 'farmMap.rec.cert.china',
+  phytosanitary: 'farmMap.rec.cert.phyto',
+  water_test: 'farmMap.rec.cert.water',
+  soil_test: 'farmMap.rec.cert.soil',
+  other: 'farmMap.rec.cert.other',
+};
+
+const labels = <T extends string>(keys: Record<T, Key>): Record<T, string> => {
+  const out = {} as Record<T, string>;
+  (Object.keys(keys) as T[]).forEach((k) => {
+    out[k] = tr(keys[k]);
+  });
+  return out;
+};
 
 const localNow = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 const today = () => localNow().slice(0, 10);
-const kg = (v: number) => `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} kg`;
+const kg = (v: number) => `${v.toLocaleString(activeLocale(), { maximumFractionDigits: 1 })} kg`;
 const list = (v: string) => v.split(',').map((s) => s.trim()).filter(Boolean);
 
 const Entered: React.FC<{ by: string }> = ({ by }) => (
-  <AqBadge><PenLine size={12} aria-hidden="true" />Entered by {by}</AqBadge>
+  <AqBadge><PenLine size={12} aria-hidden="true" />{tr('farmMap.rec.enteredBy', { by })}</AqBadge>
 );
 
 const Computed: React.FC = () => (
-  <AqBadge tone="water"><Calculator size={12} aria-hidden="true" />Computed</AqBadge>
+  <AqBadge tone="water"><Calculator size={12} aria-hidden="true" />{tr('farmMap.rec.computed')}</AqBadge>
 );
 
 function alertBadge(c: Certificate, days: number[]): { tone: Tone; word: string; Icon: typeof CircleCheck } {
-  if (c.alert === 'expired') return { tone: 'alert', word: 'Expired', Icon: OctagonAlert };
-  if (c.alert === 'urgent') return { tone: 'alert', word: `Within ${days[1] ?? '?'} days`, Icon: OctagonAlert };
-  if (c.alert === 'due') return { tone: 'warning', word: `Within ${days[0] ?? '?'} days`, Icon: TriangleAlert };
-  return { tone: 'neutral', word: `More than ${days[0] ?? '?'} days`, Icon: CircleCheck };
+  if (c.alert === 'expired') return { tone: 'alert', word: tr('farmMap.rec.expired'), Icon: OctagonAlert };
+  if (c.alert === 'urgent') return { tone: 'alert', word: tr('farmMap.rec.within', { n: days[1] ?? '?' }), Icon: OctagonAlert };
+  if (c.alert === 'due') return { tone: 'warning', word: tr('farmMap.rec.within', { n: days[0] ?? '?' }), Icon: TriangleAlert };
+  return { tone: 'neutral', word: tr('farmMap.rec.moreThan', { n: days[0] ?? '?' }), Icon: CircleCheck };
 }
 
-const daysText = (d: number) => (d < 0 ? `${-d} days ago` : d === 0 ? 'today' : `in ${d} days`);
+const daysText = (d: number) => (d < 0 ? tr('farmMap.ago.days', { n: -d }) : d === 0 ? tr('farmMap.rec.today') : tr('farmMap.rec.inDays', { n: d }));
 
 const VerdictBadge: React.FC<{ v: FumigationVerdict }> = ({ v }) => {
   const b = verdictBadge(v);
@@ -104,7 +124,7 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
 
 const Plots: React.FC<{ spec: ContractSpec; value: string[]; onChange: (v: string[]) => void }> = ({ spec, value, onChange }) => (
   <fieldset className="aq-fm-badges" style={{ border: 0, padding: 0, margin: 0 }}>
-    <legend className="aq-fm-kv-key">Plots</legend>
+    <legend className="aq-fm-kv-key">{tr('farmMap.rec.plots')}</legend>
     {spec.parcels.map((p) => (
       <label key={p.id} className="aq-fm-check">
         <input type="checkbox" checked={value.includes(p.id)} onChange={(e) => onChange(e.target.checked ? [...value, p.id] : value.filter((v) => v !== p.id))} />
@@ -137,21 +157,21 @@ const RowActions: React.FC<{ fields: EditField[]; write: Write; onCorrect: (chan
   };
   const submit = async () => {
     const changes = Object.fromEntries(fields.filter((f) => draft[f.key].trim() !== f.value).map((f) => [f.key, draft[f.key].trim()]));
-    if (mode === 'edit' && Object.keys(changes).length === 0) return setHint('Change a value first');
-    if (!reason.trim()) return setHint('Give a reason');
+    if (mode === 'edit' && Object.keys(changes).length === 0) return setHint(tr('farmMap.rec.changeFirst'));
+    if (!reason.trim()) return setHint(tr('farmMap.rec.giveReason'));
     setHint(null);
     setBusy(true);
     const ok = mode === 'edit'
-      ? await write((by) => onCorrect(changes, reason.trim(), by), 'Correction saved')
-      : await write((by) => onVoid(reason.trim(), by), 'Record voided');
+      ? await write((by) => onCorrect(changes, reason.trim(), by), tr('farmMap.rec.correctionSaved'))
+      : await write((by) => onVoid(reason.trim(), by), tr('farmMap.rec.voidedDone'));
     setBusy(false);
     if (ok) setMode(null);
   };
   return (
     <>
       <div className="aq-fm-badges">
-        {fields.length ? <AqButton variant="ghost" aria-expanded={mode === 'edit'} onClick={() => open('edit')}><PenLine size={14} aria-hidden="true" />Edit</AqButton> : null}
-        <AqButton variant="ghost" aria-expanded={mode === 'void'} onClick={() => open('void')}><Ban size={14} aria-hidden="true" />Void</AqButton>
+        {fields.length ? <AqButton variant="ghost" aria-expanded={mode === 'edit'} onClick={() => open('edit')}><PenLine size={14} aria-hidden="true" />{tr('farmMap.rec.edit')}</AqButton> : null}
+        <AqButton variant="ghost" aria-expanded={mode === 'void'} onClick={() => open('void')}><Ban size={14} aria-hidden="true" />{tr('farmMap.rec.void')}</AqButton>
       </div>
       {mode ? (
         <div>
@@ -159,10 +179,10 @@ const RowActions: React.FC<{ fields: EditField[]; write: Write; onCorrect: (chan
             <div className="aq-fm-tiles">
               {fields.map((f) => <Field key={f.key} label={f.label} type={f.type} value={draft[f.key] ?? ''} onChange={(v) => setDraft({ ...draft, [f.key]: v })} />)}
             </div>
-          ) : <p className="aq-fm-note">A voided record stays on file with your reason and stops counting.</p>}
-          <Field label={mode === 'edit' ? 'Why it changed' : 'Why it is void'} value={reason} onChange={setReason} />
+          ) : <p className="aq-fm-note">{tr('farmMap.rec.voidNote')}</p>}
+          <Field label={mode === 'edit' ? tr('farmMap.rec.whyChanged') : tr('farmMap.rec.whyVoid')} value={reason} onChange={setReason} />
           <Hint text={hint} />
-          <AqButton variant={mode === 'void' ? 'danger' : 'primary'} disabled={busy} onClick={() => void submit()}>{busy ? 'Saving' : mode === 'edit' ? 'Save correction' : 'Void record'}</AqButton>
+          <AqButton variant={mode === 'void' ? 'danger' : 'primary'} disabled={busy} onClick={() => void submit()}>{busy ? tr('farmMap.common.saving') : mode === 'edit' ? tr('farmMap.rec.saveCorrection') : tr('farmMap.rec.voidRecord')}</AqButton>
         </div>
       ) : null}
     </>
@@ -171,8 +191,8 @@ const RowActions: React.FC<{ fields: EditField[]; write: Write; onCorrect: (chan
 
 const Stamps: React.FC<{ row: RecordStamps }> = ({ row }) => (
   <>
-    {row.voided_at ? <p className="aq-fm-note"><AqBadge><Ban size={12} aria-hidden="true" />Voided</AqBadge> {row.voided_at.slice(0, 10)} by {row.voided_by} · {row.void_reason}</p> : null}
-    {row.corrected_at ? <p className="aq-fm-note">Corrected {row.corrected_at.slice(0, 10)} by {row.corrected_by} · {row.correction_reason}</p> : null}
+    {row.voided_at ? <p className="aq-fm-note"><AqBadge><Ban size={12} aria-hidden="true" />{tr('farmMap.rec.voided')}</AqBadge> {tr('farmMap.rec.dateBy', { date: row.voided_at.slice(0, 10), by: row.voided_by ?? '' })} · {row.void_reason}</p> : null}
+    {row.corrected_at ? <p className="aq-fm-note">{tr('farmMap.rec.corrected', { date: row.corrected_at.slice(0, 10), by: row.corrected_by ?? '' })} · {row.correction_reason}</p> : null}
   </>
 );
 
@@ -184,26 +204,26 @@ const CertificateForm: React.FC<{ spec: ContractSpec; write: Write; farmId: stri
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<typeof blank>) => setD({ ...d, ...patch });
   const save = async () => {
-    if (!d.number.trim() || !d.issuer.trim() || !d.issued || !d.expires) return setHint('Fill in the number, issuer and both dates');
-    if (!/^[A-Z]{2}$/.test(d.country)) return setHint('Country is a two-letter code, for example MM');
+    if (!d.number.trim() || !d.issuer.trim() || !d.issued || !d.expires) return setHint(tr('farmMap.rec.fillCert'));
+    if (!/^[A-Z]{2}$/.test(d.country)) return setHint(tr('farmMap.rec.countryCode'));
     setHint(null);
     setBusy(true);
-    const ok = await write((by) => addCertificate(farmId, { ...d, number: d.number.trim(), issuer: d.issuer.trim(), added_by: by }), 'Certificate added');
+    const ok = await write((by) => addCertificate(farmId, { ...d, number: d.number.trim(), issuer: d.issuer.trim(), added_by: by }), tr('farmMap.rec.certAdded'));
     setBusy(false);
     if (ok) setD(blank);
   };
   return (
-    <More label="Add a certificate">
+    <More label={tr('farmMap.rec.addCert')}>
       <div className="aq-fm-tiles">
-        <Choice label="Kind" value={d.kind} options={CERTIFICATE_KINDS} onChange={(kind) => set({ kind })} />
-        <Field label="Number" value={d.number} onChange={(number) => set({ number })} />
-        <Field label="Issued by" value={d.issuer} onChange={(issuer) => set({ issuer })} />
-        <Field label="Country" value={d.country} placeholder="MM" onChange={(v) => set({ country: v.toUpperCase() })} />
-        <Field label="Issued on" type="date" value={d.issued} onChange={(issued) => set({ issued })} />
-        <Field label="Expires on" type="date" value={d.expires} onChange={(expires) => set({ expires })} />
+        <Choice label={tr('farmMap.rec.kind')} value={d.kind} options={labels(CERT_KINDS)} onChange={(kind) => set({ kind })} />
+        <Field label={tr('farmMap.rec.number')} value={d.number} onChange={(number) => set({ number })} />
+        <Field label={tr('farmMap.rec.issuedBy')} value={d.issuer} onChange={(issuer) => set({ issuer })} />
+        <Field label={tr('farmMap.common.country')} value={d.country} placeholder="MM" onChange={(v) => set({ country: v.toUpperCase() })} />
+        <Field label={tr('farmMap.rec.issuedOn')} type="date" value={d.issued} onChange={(issued) => set({ issued })} />
+        <Field label={tr('farmMap.rec.expiresOn')} type="date" value={d.expires} onChange={(expires) => set({ expires })} />
       </div>
       <Hint text={hint} />
-      <AqButton variant="primary" disabled={busy} onClick={() => void save()}>{busy ? 'Saving' : 'Add certificate'}</AqButton>
+      <AqButton variant="primary" disabled={busy} onClick={() => void save()}>{busy ? tr('farmMap.common.saving') : tr('farmMap.rec.addCertButton')}</AqButton>
     </More>
   );
 };
@@ -216,37 +236,37 @@ const FumigationForm: React.FC<{ spec: ContractSpec; write: Write; farmId: strin
   const [saved, setSaved] = useState<Fumigation | null>(null);
   const set = (patch: Partial<typeof blank>) => setD({ ...d, ...patch });
   const save = async () => {
-    if (!d.store.trim() || !d.product.trim() || !d.applied) return setHint('Fill in the store, product and date');
-    if (d.parcels.length === 0) return setHint('Pick at least one plot');
+    if (!d.store.trim() || !d.product.trim() || !d.applied) return setHint(tr('farmMap.rec.fillFumigation'));
+    if (d.parcels.length === 0) return setHint(tr('farmMap.rec.pickPlot'));
     setHint(null);
     setBusy(true);
     setSaved(null);
     const ok = await write(async (by) => setSaved(await addFumigation(farmId, {
       store: d.store.trim(), product: d.product.trim(), active_ingredient: d.active.trim() || null, method: d.method, applied_at: d.applied, parcels: d.parcels, recorded_by: by,
-    })), 'Fumigation recorded');
+    })), tr('farmMap.rec.fumigationDone'));
     setBusy(false);
     if (ok) setD(blank);
   };
   const blocked = saved ? Object.entries(saved.checks).filter(([, v]) => v.result === 'blocked') : [];
   return (
-    <More label="Record a fumigation">
+    <More label={tr('farmMap.rec.addFumigation')}>
       <div className="aq-fm-tiles">
-        <Field label="Store" value={d.store} onChange={(store) => set({ store })} />
-        <Field label="Product" value={d.product} onChange={(product) => set({ product })} />
-        <Field label="Active ingredient" value={d.active} placeholder="optional" onChange={(active) => set({ active })} />
-        <Choice label="Method" value={d.method} options={METHODS} onChange={(method) => set({ method })} />
-        <Field label="Applied on" type="date" value={d.applied} onChange={(applied) => set({ applied })} />
+        <Field label={tr('farmMap.rec.store')} value={d.store} onChange={(store) => set({ store })} />
+        <Field label={tr('farmMap.rec.product')} value={d.product} onChange={(product) => set({ product })} />
+        <Field label={tr('farmMap.rec.active')} value={d.active} placeholder={tr('farmMap.common.optional')} onChange={(active) => set({ active })} />
+        <Choice label={tr('farmMap.rec.method')} value={d.method} options={labels(METHODS)} onChange={(method) => set({ method })} />
+        <Field label={tr('farmMap.rec.appliedOn')} type="date" value={d.applied} onChange={(applied) => set({ applied })} />
       </div>
       <Plots spec={spec} value={d.parcels} onChange={(parcels) => set({ parcels })} />
-      <p className="aq-fm-note">The server checks the product against each plot's standard when you save, and shows its verdict below.</p>
+      <p className="aq-fm-note">{tr('farmMap.rec.serverChecks')}</p>
       <Hint text={hint} />
-      <AqButton variant="primary" disabled={busy} onClick={() => void save()}>{busy ? 'Checking' : 'Save and check'}</AqButton>
+      <AqButton variant="primary" disabled={busy} onClick={() => void save()}>{busy ? tr('farmMap.rec.checking') : tr('farmMap.rec.saveCheck')}</AqButton>
       {saved ? (
         <div aria-live="polite">
           {blocked.length ? (
             <div className="aq-alert is-error" role="alert">
               <OctagonAlert size={14} aria-hidden="true" />
-              <span><b>Blocked on {blocked.map(([p]) => p).join(', ')}:</b> {verdictBadge(blocked[0][1]).detail}. The treatment is on record and these plots lose organic status.</span>
+              <span><b>{tr('farmMap.rec.blockedOn', { plots: blocked.map(([p]) => p).join(', ') })}</b> {verdictBadge(blocked[0][1]).detail}. {tr('farmMap.rec.losesOrganic')}</span>
             </div>
           ) : null}
           {Object.entries(saved.checks).map(([p, v]) => <KV key={p} k={p} v={<><VerdictBadge v={v} /> <Computed /></>} sub={verdictBadge(v).detail} />)}
@@ -264,26 +284,26 @@ const LotForm: React.FC<{ spec: ContractSpec; write: Write; farmId: string }> = 
   const set = (patch: Partial<typeof blank>) => setD({ ...d, ...patch });
   const save = async () => {
     const mass = Number(d.mass);
-    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,40}$/.test(d.id)) return setHint('Lot id: letters, digits, - or _, up to 41 characters');
-    if (!(mass > 0) || !d.harvested) return setHint('Fill in the harvest date and a mass above 0 kg');
-    if (d.parcels.length === 0) return setHint('Pick at least one plot');
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,40}$/.test(d.id)) return setHint(tr('farmMap.rec.lotIdRule'));
+    if (!(mass > 0) || !d.harvested) return setHint(tr('farmMap.rec.fillLot'));
+    if (d.parcels.length === 0) return setHint(tr('farmMap.rec.pickPlot'));
     setHint(null);
     setBusy(true);
-    const ok = await write((by) => addLot(farmId, { id: d.id, harvested_on: d.harvested, mass_kg: mass, certifier: d.certifier.trim() || null, parcels: d.parcels, recorded_by: by }), 'Lot added');
+    const ok = await write((by) => addLot(farmId, { id: d.id, harvested_on: d.harvested, mass_kg: mass, certifier: d.certifier.trim() || null, parcels: d.parcels, recorded_by: by }), tr('farmMap.rec.lotAdded'));
     setBusy(false);
     if (ok) setD(blank);
   };
   return (
-    <More label="Add a harvest lot">
+    <More label={tr('farmMap.rec.addLot')}>
       <div className="aq-fm-tiles">
-        <Field label="Lot id" value={d.id} onChange={(id) => set({ id })} />
-        <Field label="Harvested on" type="date" value={d.harvested} onChange={(harvested) => set({ harvested })} />
-        <Field label="Mass, kg" inputMode="decimal" value={d.mass} onChange={(mass) => set({ mass })} />
-        <Field label="Certifier" value={d.certifier} placeholder="optional" onChange={(certifier) => set({ certifier })} />
+        <Field label={tr('farmMap.rec.lotId')} value={d.id} onChange={(id) => set({ id })} />
+        <Field label={tr('farmMap.rec.harvestedOn')} type="date" value={d.harvested} onChange={(harvested) => set({ harvested })} />
+        <Field label={tr('farmMap.rec.mass')} inputMode="decimal" value={d.mass} onChange={(mass) => set({ mass })} />
+        <Field label={tr('farmMap.rec.certifier')} value={d.certifier} placeholder={tr('farmMap.common.optional')} onChange={(certifier) => set({ certifier })} />
       </div>
       <Plots spec={spec} value={d.parcels} onChange={(parcels) => set({ parcels })} />
       <Hint text={hint} />
-      <AqButton variant="primary" disabled={busy} onClick={() => void save()}>{busy ? 'Saving' : 'Add lot'}</AqButton>
+      <AqButton variant="primary" disabled={busy} onClick={() => void save()}>{busy ? tr('farmMap.common.saving') : tr('farmMap.rec.addLotButton')}</AqButton>
     </More>
   );
 };
@@ -302,29 +322,29 @@ const LotEntries: React.FC<{ lot: Lot; write: Write; farmId: string }> = ({ lot,
   };
   const addMoisture = () => {
     const pct = Number(moisture.pct);
-    if (!(pct >= 5 && pct <= 40) || !moisture.at) return setHint('Moisture is between 5 and 40 %');
-    void run((by) => addLotMoisture(farmId, lot.id, { moisture_pct: pct, measured_at: new Date(moisture.at).toISOString(), storage: moisture.storage === 'none' ? null : moisture.storage, recorded_by: by }), 'Moisture added', () => setMoisture({ ...moisture, pct: '' }));
+    if (!(pct >= 5 && pct <= 40) || !moisture.at) return setHint(tr('farmMap.rec.moistureRule'));
+    void run((by) => addLotMoisture(farmId, lot.id, { moisture_pct: pct, measured_at: new Date(moisture.at).toISOString(), storage: moisture.storage === 'none' ? null : moisture.storage, recorded_by: by }), tr('farmMap.rec.moistureAdded'), () => setMoisture({ ...moisture, pct: '' }));
   };
   const addMill = () => {
     const broken = Number(mill.broken);
     const cap = mill.cap.trim() ? Number(mill.cap) : null;
-    if (!mill.broken.trim() || !(broken >= 0 && broken <= 100) || (cap !== null && !(cap >= 0 && cap <= 100))) return setHint('Broken grain is between 0 and 100 %');
-    void run((by) => addLotMill(farmId, lot.id, { broken_pct: broken, grade: mill.grade.trim() || null, buyer_max_broken_pct: cap, recorded_by: by }), 'Mill intake added', () => setMill({ broken: '', grade: '', cap: '' }));
+    if (!mill.broken.trim() || !(broken >= 0 && broken <= 100) || (cap !== null && !(cap >= 0 && cap <= 100))) return setHint(tr('farmMap.rec.brokenRule'));
+    void run((by) => addLotMill(farmId, lot.id, { broken_pct: broken, grade: mill.grade.trim() || null, buyer_max_broken_pct: cap, recorded_by: by }), tr('farmMap.rec.millAdded'), () => setMill({ broken: '', grade: '', cap: '' }));
   };
   return (
-    <More label="Moisture or mill entry">
+    <More label={tr('farmMap.rec.entry')}>
       <div className="aq-fm-tiles">
-        <Field label="Moisture, %" inputMode="decimal" value={moisture.pct} onChange={(pct) => setMoisture({ ...moisture, pct })} />
-        <Field label="Measured at" type="datetime-local" value={moisture.at} onChange={(at) => setMoisture({ ...moisture, at })} />
-        <Choice label="Stored in" value={moisture.storage} options={{ none: 'Not stored yet', ...STORAGE }} onChange={(storage) => setMoisture({ ...moisture, storage })} />
+        <Field label={tr('farmMap.rec.moisture')} inputMode="decimal" value={moisture.pct} onChange={(pct) => setMoisture({ ...moisture, pct })} />
+        <Field label={tr('farmMap.rec.measuredAt')} type="datetime-local" value={moisture.at} onChange={(at) => setMoisture({ ...moisture, at })} />
+        <Choice label={tr('farmMap.rec.storedIn')} value={moisture.storage} options={{ none: tr('farmMap.rec.notStored'), ...labels(STORAGE) }} onChange={(storage) => setMoisture({ ...moisture, storage })} />
       </div>
-      <AqButton disabled={busy} onClick={addMoisture}>Add moisture</AqButton>
+      <AqButton disabled={busy} onClick={addMoisture}>{tr('farmMap.rec.addMoisture')}</AqButton>
       <div className="aq-fm-tiles">
-        <Field label="Broken grain, %" inputMode="decimal" value={mill.broken} onChange={(broken) => setMill({ ...mill, broken })} />
-        <Field label="Grade" value={mill.grade} placeholder="optional" onChange={(grade) => setMill({ ...mill, grade })} />
-        <Field label="Buyer's broken limit, %" inputMode="decimal" value={mill.cap} placeholder="optional" onChange={(cap) => setMill({ ...mill, cap })} />
+        <Field label={tr('farmMap.rec.broken')} inputMode="decimal" value={mill.broken} onChange={(broken) => setMill({ ...mill, broken })} />
+        <Field label={tr('farmMap.rec.grade')} value={mill.grade} placeholder={tr('farmMap.common.optional')} onChange={(grade) => setMill({ ...mill, grade })} />
+        <Field label={tr('farmMap.rec.brokenCap')} inputMode="decimal" value={mill.cap} placeholder={tr('farmMap.common.optional')} onChange={(cap) => setMill({ ...mill, cap })} />
       </div>
-      <AqButton disabled={busy} onClick={addMill}>Add mill intake</AqButton>
+      <AqButton disabled={busy} onClick={addMill}>{tr('farmMap.rec.addMill')}</AqButton>
       <Hint text={hint} />
     </More>
   );
@@ -349,23 +369,23 @@ const EvidencePack: React.FC<{ farmId: string; spec: ContractSpec }> = ({ farmId
       a.download = `evidence-${farmId}-${parcel}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
-      setState(`Downloaded the ${format.toUpperCase()} pack`);
+      setState(tr('farmMap.rec.downloaded', { format: format.toUpperCase() }));
     } catch (err) {
-      setState(failedText(err, 'Evidence pack not downloaded'));
+      setState(failedText(err, tr('farmMap.rec.notDownloaded')));
     } finally {
       setBusy(false);
     }
   };
-  if (!parcel) return <p className="aq-fm-note">Evidence pack: add a plot to your contract first.</p>;
+  if (!parcel) return <p className="aq-fm-note">{tr('farmMap.rec.packNoPlot')}</p>;
   return (
     <>
-      <AqSectionLabel aside="one plot, one season">Evidence pack</AqSectionLabel>
+      <AqSectionLabel aside={tr('farmMap.rec.packAside')}>{tr('farmMap.rec.pack')}</AqSectionLabel>
       <div className="aq-fm-tiles">
-        <Choice label="Plot" value={parcel} options={plots} onChange={setParcel} />
-        <Field label="Season from" type="date" value={start} onChange={setStart} />
-        <Field label="Season to" type="date" value={end} onChange={setEnd} />
+        <Choice label={tr('farmMap.rec.plot')} value={parcel} options={plots} onChange={setParcel} />
+        <Field label={tr('farmMap.rec.seasonFrom')} type="date" value={start} onChange={setStart} />
+        <Field label={tr('farmMap.rec.seasonTo')} type="date" value={end} onChange={setEnd} />
       </div>
-      <p className="aq-fm-note">{planted ? 'Season starts at the earliest planting date in your contract.' : 'No planting date in your contract, so the pack starts at the first record unless you pick a date.'}</p>
+      <p className="aq-fm-note">{planted ? tr('farmMap.rec.seasonStart') : tr('farmMap.rec.noPlanting')}</p>
       <div className="aq-fm-badges">
         <AqButton disabled={busy} onClick={() => void get('csv')}><Download size={14} aria-hidden="true" />CSV</AqButton>
         <AqButton disabled={busy} onClick={() => void get('html')}><Download size={14} aria-hidden="true" />HTML</AqButton>
@@ -376,27 +396,27 @@ const EvidencePack: React.FC<{ farmId: string; spec: ContractSpec }> = ({ farmId
 };
 
 const certFields = (c: Certificate): EditField[] => [
-  { key: 'issuer', label: 'Issued by', value: c.issuer },
-  { key: 'country', label: 'Country', value: c.country },
-  { key: 'issued', label: 'Issued on', value: c.issued, type: 'date' },
-  { key: 'expires', label: 'Expires on', value: c.expires, type: 'date' },
+  { key: 'issuer', label: tr('farmMap.rec.issuedBy'), value: c.issuer },
+  { key: 'country', label: tr('farmMap.common.country'), value: c.country },
+  { key: 'issued', label: tr('farmMap.rec.issuedOn'), value: c.issued, type: 'date' },
+  { key: 'expires', label: tr('farmMap.rec.expiresOn'), value: c.expires, type: 'date' },
 ];
 
 const lotFields = (l: Lot): EditField[] => [
-  { key: 'harvested_on', label: 'Harvested on', value: l.harvested_on, type: 'date' },
-  { key: 'mass_kg', label: 'Mass, kg', value: String(l.mass_kg) },
-  { key: 'certifier', label: 'Certifier', value: l.certifier ?? '' },
-  { key: 'parcels', label: 'Plots, comma separated', value: l.parcels.join(', ') },
+  { key: 'harvested_on', label: tr('farmMap.rec.harvestedOn'), value: l.harvested_on, type: 'date' },
+  { key: 'mass_kg', label: tr('farmMap.rec.mass'), value: String(l.mass_kg) },
+  { key: 'certifier', label: tr('farmMap.rec.certifier'), value: l.certifier ?? '' },
+  { key: 'parcels', label: tr('farmMap.rec.plotsList'), value: l.parcels.join(', ') },
 ];
 
 const fumigationFields = (f: Fumigation): EditField[] => [
-  { key: 'active_ingredient', label: 'Active ingredient', value: f.active_ingredient ?? '' },
-  { key: 'parcels', label: 'Plots, comma separated', value: f.parcels.join(', ') },
+  { key: 'active_ingredient', label: tr('farmMap.rec.active'), value: f.active_ingredient ?? '' },
+  { key: 'parcels', label: tr('farmMap.rec.plotsList'), value: f.parcels.join(', ') },
 ];
 
 function lotChanges(d: Record<string, string>) {
   const mass = d.mass_kg === undefined ? undefined : Number(d.mass_kg);
-  if (mass !== undefined && !(mass > 0)) throw new Error('Mass must be above 0 kg');
+  if (mass !== undefined && !(mass > 0)) throw new Error(tr('farmMap.rec.massRule'));
   return {
     harvested_on: d.harvested_on,
     mass_kg: mass,
@@ -405,9 +425,10 @@ function lotChanges(d: Record<string, string>) {
   };
 }
 
-const moistureLine = (l: Lot, max: number) => (l.moisture_now === null ? 'moisture not measured' : `moisture ${l.moisture_now} %${l.moisture_now > max ? `, above ${max} %` : ''}`);
+const moistureLine = (l: Lot, max: number) => (l.moisture_now === null ? tr('farmMap.rec.noMoisture') : l.moisture_now > max ? tr('farmMap.rec.moistureAbove', { n: l.moisture_now, max }) : tr('farmMap.rec.moistureIs', { n: l.moisture_now }));
 
 export const RecordsSection: React.FC<{ farmId: string; spec: ContractSpec }> = ({ farmId, spec }) => {
+  const t = useT();
   const [data, setData] = useState<Loaded | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [showVoided, setShowVoided] = useState(false);
@@ -425,7 +446,7 @@ export const RecordsSection: React.FC<{ farmId: string; spec: ContractSpec }> = 
         setData({ certs, fumigations, lots });
         rememberRecords(farmId, certs, lots);
       },
-      (err: unknown) => alive && setFailed(failedText(err, 'Records are unavailable right now')),
+      (err: unknown) => alive && setFailed(failedText(err, t('farmMap.rec.unavailable'))),
     );
     return () => {
       alive = false;
@@ -445,7 +466,7 @@ export const RecordsSection: React.FC<{ farmId: string; spec: ContractSpec }> = 
       setTick((t) => t + 1);
       return true;
     } catch (err) {
-      setNote({ error: true, text: `${writeErrorText(err, 'Not saved')}${err instanceof ApiError && err.requestId ? ` · request ${err.requestId}` : ''}` });
+      setNote({ error: true, text: `${writeErrorText(err, t('farmMap.rec.notSaved'))}${err instanceof ApiError && err.requestId ? ` · ${t('farmMap.rec.request', { id: err.requestId })}` : ''}` });
       return false;
     }
   };
@@ -455,8 +476,8 @@ export const RecordsSection: React.FC<{ farmId: string; spec: ContractSpec }> = 
   if (!data) {
     return (
       <DetailSection>
-        <AqSectionLabel>Records</AqSectionLabel>
-        <p className="aq-fm-note" role="status">{failed ?? 'Loading certificates, lots and fumigations…'}</p>
+        <AqSectionLabel>{t('farmMap.rec.title')}</AqSectionLabel>
+        <p className="aq-fm-note" role="status">{failed ?? t('farmMap.rec.loading')}</p>
       </DetailSection>
     );
   }
@@ -471,39 +492,39 @@ export const RecordsSection: React.FC<{ farmId: string; spec: ContractSpec }> = 
 
   return (
     <DetailSection>
-      <AqSectionLabel aside="certificates, lots, fumigations">Records</AqSectionLabel>
+      <AqSectionLabel aside={t('farmMap.rec.aside')}>{t('farmMap.rec.title')}</AqSectionLabel>
       {next && nextBadge ? (
         <>
-          <KV k="Next deadline" v={<>{next.label} <AqBadge tone={nextBadge.tone}><nextBadge.Icon size={12} aria-hidden="true" />{nextBadge.word}</AqBadge></>} sub={`${next.due_for} ${next.due}, ${daysText(next.days_left)}${next.deadline_status ? ` · date ${next.deadline_status}` : ''}`} />
+          <KV k={t('farmMap.rec.nextDeadline')} v={<>{next.label} <AqBadge tone={nextBadge.tone}><nextBadge.Icon size={12} aria-hidden="true" />{nextBadge.word}</AqBadge></>} sub={`${next.due_for} ${next.due}, ${daysText(next.days_left)}${next.deadline_status ? ` · ${t('farmMap.rec.dateStatus', { status: next.deadline_status })}` : ''}`} />
           <div className="aq-fm-badges"><Entered by={next.added_by} /><Computed /></div>
         </>
-      ) : <KV k="Next deadline" v="No certificate recorded" sub="add one below to get alerts at 60 and 14 days" />}
-      <KV k="Lots in store" v={stored.length ? `${stored.length} · ${kg(stored.reduce((s, l) => s + l.mass_kg, 0))}` : 'None recorded'} sub={stored.length ? `lots without a mill intake · store at ${max} % or drier` : undefined} />
+      ) : <KV k={t('farmMap.rec.nextDeadline')} v={t('farmMap.rec.noCert')} sub={t('farmMap.rec.addForAlerts')} />}
+      <KV k={t('farmMap.rec.lotsInStore')} v={stored.length ? `${stored.length} · ${kg(stored.reduce((s, l) => s + l.mass_kg, 0))}` : t('farmMap.rec.noneRecorded')} sub={stored.length ? t('farmMap.rec.storeAt', { max }) : undefined} />
       {stored.slice(0, SHOWN_LOTS).map((l) => (
         <div key={l.id} className={`aq-alert ${l.moisture_now !== null && l.moisture_now > max ? 'is-warning' : ''}`}>
           {l.moisture_now !== null && l.moisture_now > max ? <TriangleAlert size={14} aria-hidden="true" /> : l.moisture_now === null ? <CircleHelp size={14} aria-hidden="true" /> : <CircleCheck size={14} aria-hidden="true" />}
           <span><b>{l.id}</b> · {kg(l.mass_kg)} · {moistureLine(l, max)}</span>
         </div>
       ))}
-      {stored.length > SHOWN_LOTS ? <p className="aq-fm-note">and {stored.length - SHOWN_LOTS} more lots</p> : null}
+      {stored.length > SHOWN_LOTS ? <p className="aq-fm-note">{t('farmMap.rec.moreLots', { n: stored.length - SHOWN_LOTS })}</p> : null}
       {last && lastVerdict ? (
         <>
-          <KV k="Last fumigation" v={<>{last.product} <VerdictBadge v={lastVerdict} /></>} sub={`${last.applied_at} · ${last.store} · ${verdictBadge(lastVerdict).detail}`} />
+          <KV k={t('farmMap.rec.lastFumigation')} v={<>{last.product} <VerdictBadge v={lastVerdict} /></>} sub={`${last.applied_at} · ${last.store} · ${verdictBadge(lastVerdict).detail}`} />
           <div className="aq-fm-badges"><Entered by={last.recorded_by} /><Computed /></div>
         </>
-      ) : <KV k="Last fumigation" v="None recorded" />}
+      ) : <KV k={t('farmMap.rec.lastFumigation')} v={t('farmMap.rec.noneRecorded')} />}
 
-      <More label="Add, correct or void records">
-        <AqSwitch checked={showVoided} label="Show voided" onChange={setShowVoided} />
+      <More label={t('farmMap.rec.manage')}>
+        <AqSwitch checked={showVoided} label={t('farmMap.rec.showVoided')} onChange={setShowVoided} />
         {note ? <div className={`aq-alert ${note.error ? 'is-error' : 'is-success'}`} role={note.error ? 'alert' : 'status'}>{note.text}</div> : null}
         {failed ? <p className="aq-fm-note">{failed}</p> : null}
 
-        <AqSectionLabel aside={`${certs.total}`}>Certificates</AqSectionLabel>
+        <AqSectionLabel aside={`${certs.total}`}>{t('farmMap.rec.certificates')}</AqSectionLabel>
         {certs.certificates.map((c) => {
           const b = alertBadge(c, certs.alert_days);
           return (
             <div key={c.id}>
-              <KV k={`${c.label} ${c.number}`} v={c.voided_at ? 'Voided' : <AqBadge tone={b.tone}><b.Icon size={12} aria-hidden="true" />{b.word}</AqBadge>} sub={`${c.issuer}, ${c.country} · ${c.issued} to ${c.expires} · ${c.due_for} ${daysText(c.days_left)}`} />
+              <KV k={`${c.label} ${c.number}`} v={c.voided_at ? t('farmMap.rec.voided') : <AqBadge tone={b.tone}><b.Icon size={12} aria-hidden="true" />{b.word}</AqBadge>} sub={`${c.issuer}, ${c.country} · ${t('farmMap.rec.dateRange', { from: c.issued, to: c.expires })} · ${c.due_for} ${daysText(c.days_left)}`} />
               <div className="aq-fm-badges"><Entered by={c.added_by} /><Computed /></div>
               <Stamps row={c} />
               {c.voided_at ? null : <RowActions fields={certFields(c)} write={write} onCorrect={(d, reason, by) => correct('certificates', c.id)({ issuer: d.issuer, country: d.country, issued: d.issued, expires: d.expires }, reason, by)} onVoid={remove('certificates', c.id)} />}
@@ -512,12 +533,12 @@ export const RecordsSection: React.FC<{ farmId: string; spec: ContractSpec }> = 
         })}
         <CertificateForm spec={spec} write={write} farmId={farmId} />
 
-        <AqSectionLabel aside={`${fumigations.length}`}>Fumigations</AqSectionLabel>
+        <AqSectionLabel aside={`${fumigations.length}`}>{t('farmMap.rec.fumigations')}</AqSectionLabel>
         {fumigations.map((f) => {
           const v = worstVerdict(f);
           return (
             <div key={f.id}>
-              <KV k={`${f.applied_at} ${f.product}`} v={v ? <VerdictBadge v={v} /> : 'No plot checked'} sub={`${f.store} · ${METHODS[f.method]} · plots ${f.parcels.join(', ')}${f.blocks_organic.length ? ` · blocks organic on ${f.blocks_organic.join(', ')}` : ''}`} />
+              <KV k={`${f.applied_at} ${f.product}`} v={v ? <VerdictBadge v={v} /> : t('farmMap.rec.noPlotChecked')} sub={`${f.store} · ${t(METHODS[f.method])} · ${t('farmMap.rec.plotsOf', { list: f.parcels.join(', ') })}${f.blocks_organic.length ? ` · ${t('farmMap.rec.blocksOrganic', { list: f.blocks_organic.join(', ') })}` : ''}`} />
               <div className="aq-fm-badges"><Entered by={f.recorded_by} /><Computed /></div>
               <Stamps row={f} />
               {f.voided_at ? null : <RowActions fields={fumigationFields(f)} write={write} onCorrect={(d, reason, by) => correct('fumigations', f.id)({ active_ingredient: d.active_ingredient === undefined ? undefined : d.active_ingredient || null, parcels: d.parcels === undefined ? undefined : list(d.parcels) }, reason, by)} onVoid={remove('fumigations', f.id)} />}
@@ -526,10 +547,10 @@ export const RecordsSection: React.FC<{ farmId: string; spec: ContractSpec }> = 
         })}
         <FumigationForm spec={spec} write={write} farmId={farmId} />
 
-        <AqSectionLabel aside={`${lots.total}`}>Harvest lots</AqSectionLabel>
+        <AqSectionLabel aside={`${lots.total}`}>{t('farmMap.rec.lots')}</AqSectionLabel>
         {lots.lots.map((l) => (
           <div key={l.id}>
-            <KV k={`${l.id} · ${l.harvested_on}`} v={kg(l.mass_kg)} sub={`plots ${l.parcels.join(', ')} · ${moistureLine(l, max)}${l.mill ? ` · milled, ${l.mill.broken_pct} % broken` : ''}${l.estimate.limit_kg ? ` · plots can give up to ${kg(l.estimate.limit_kg)}` : l.estimate.reason ? ` · ${l.estimate.reason}` : ''}`} />
+            <KV k={`${l.id} · ${l.harvested_on}`} v={kg(l.mass_kg)} sub={`${t('farmMap.rec.plotsOf', { list: l.parcels.join(', ') })} · ${moistureLine(l, max)}${l.mill ? ` · ${t('farmMap.rec.milled', { n: l.mill.broken_pct })}` : ''}${l.estimate.limit_kg ? ` · ${t('farmMap.rec.upTo', { kg: kg(l.estimate.limit_kg) })}` : l.estimate.reason ? ` · ${l.estimate.reason}` : ''}`} />
             <div className="aq-fm-badges"><Entered by={l.recorded_by} /><Computed /></div>
             {l.flags.map((flag) => <div key={flag} className="aq-alert is-warning"><TriangleAlert size={14} aria-hidden="true" /><span>{flag}</span></div>)}
             <Stamps row={l} />

@@ -1,3 +1,5 @@
+import { tr } from '../i18n.ts';
+
 export type NearKind = 'river' | 'canal' | 'coast' | 'lake' | 'forest' | 'wetland' | 'peak';
 
 type Coord = number[];
@@ -139,27 +141,27 @@ const within = (hit: NearHit | null, km: number): hit is NearHit => hit !== null
 export function favors(near: Nearest, elevationM: number | null): Favor[] {
   const out: Favor[] = [];
   if (within(near.coast, SCREENING.coastKm)) {
-    out.push({ kind: 'coast', tone: 'watch', text: 'Sea within reach: test irrigation water salinity in the dry season before it reaches the rice gate of 3.0 dS/m.' });
-    out.push({ kind: 'coast', tone: 'info', text: 'Brackish water also opens rice-shrimp rotation.' });
+    out.push({ kind: 'coast', tone: 'watch', text: tr('farmMap.favor.salinity') });
+    out.push({ kind: 'coast', tone: 'info', text: tr('farmMap.favor.shrimp') });
   }
   if (within(near.river, SCREENING.riverKm)) {
-    out.push({ kind: 'river', tone: 'good', text: 'River water is within reach for pumped irrigation, rice–fish or a fish pond.' });
+    out.push({ kind: 'river', tone: 'good', text: tr('farmMap.favor.river') });
     if (elevationM !== null && elevationM <= SCREENING.floodElevationM) {
-      out.push({ kind: 'river', tone: 'watch', text: 'Low ground beside a river: plan for wet-season flooding and drainage.' });
+      out.push({ kind: 'river', tone: 'watch', text: tr('farmMap.favor.lowRiver') });
     }
   }
-  if (within(near.canal, SCREENING.canalKm)) out.push({ kind: 'canal', tone: 'good', text: 'Canal access supports gravity irrigation, AWD re-flooding and rice–fish refuge trenches.' });
-  if (within(near.lake, SCREENING.lakeKm)) out.push({ kind: 'lake', tone: 'good', text: 'Stored water nearby for dry-season irrigation or fish.' });
+  if (within(near.canal, SCREENING.canalKm)) out.push({ kind: 'canal', tone: 'good', text: tr('farmMap.favor.canal') });
+  if (within(near.lake, SCREENING.lakeKm)) out.push({ kind: 'lake', tone: 'good', text: tr('farmMap.favor.lake') });
   if (within(near.forest, SCREENING.forestKm)) {
-    out.push({ kind: 'forest', tone: 'watch', text: 'Forest edge: prove deforestation-free land (EUDR) before exporting coffee, rubber, palm or cocoa to the EU.' });
+    out.push({ kind: 'forest', tone: 'watch', text: tr('farmMap.favor.forest') });
   }
-  if (within(near.wetland, SCREENING.wetlandKm)) out.push({ kind: 'wetland', tone: 'info', text: 'Wetland nearby: drainage limits and protected-area rules may apply.' });
+  if (within(near.wetland, SCREENING.wetlandKm)) out.push({ kind: 'wetland', tone: 'info', text: tr('farmMap.favor.wetland') });
   if (near.peak?.ele != null && elevationM !== null && near.peak.ele - elevationM >= SCREENING.reliefM) {
-    out.push({ kind: 'peak', tone: 'info', text: 'Hilly surroundings: plan contour drainage or terraces; slopes suit mixed crop–livestock with goats or cattle.' });
+    out.push({ kind: 'peak', tone: 'info', text: tr('farmMap.favor.hills') });
   }
-  if (elevationM !== null && elevationM <= SCREENING.lowlandM) out.push({ kind: 'elevation', tone: 'watch', text: 'Near sea level: tidal and flood exposure.' });
+  if (elevationM !== null && elevationM <= SCREENING.lowlandM) out.push({ kind: 'elevation', tone: 'watch', text: tr('farmMap.favor.lowland') });
   if (elevationM !== null && elevationM >= SCREENING.highlandM) {
-    out.push({ kind: 'elevation', tone: 'info', text: 'Highland climate suits tea, Arabica coffee and temperate vegetables.' });
+    out.push({ kind: 'elevation', tone: 'info', text: tr('farmMap.favor.highland') });
   }
   return out;
 }

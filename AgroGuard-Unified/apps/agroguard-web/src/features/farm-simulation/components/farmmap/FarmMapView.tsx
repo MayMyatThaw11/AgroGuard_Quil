@@ -8,6 +8,8 @@ import type { LayerKey } from '../../lib/farmmap/farmMapLayerKeys.ts';
 import { loadLayers } from '../../lib/farmmap/farmMapStorage.ts';
 import type { SearchResult } from '../../lib/farmmap/farmMapViewTypes.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
+import { statusLabel } from '../../lib/farmmap/farmMapText.ts';
+import { useT } from '../../lib/i18n.ts';
 import { applyPanelToggle, type PanelState, type PanelToggle } from '../../lib/panelShortcuts.ts';
 import { usePanelShortcuts } from '../../lib/usePanelShortcuts.ts';
 import { AqPanel, AqReopen } from '../aq/aqLayout.tsx';
@@ -65,6 +67,7 @@ interface Spot {
 const spotAt = (lat: number, lon: number): Spot => ({ lat: Number(lat.toFixed(SPOT_DECIMALS)), lon: Number(lon.toFixed(SPOT_DECIMALS)) });
 
 export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps, focus = null }) => {
+  const t = useT();
   const data = useMemo(getFarmMap, []);
   const mapRef = useRef<HTMLDivElement>(null);
   const fogRef = useRef<HTMLCanvasElement>(null);
@@ -97,9 +100,9 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       push({
         key: 'chunk-error',
         tone: 'warning',
-        title: errors.current > 1 ? `${errors.current} regions failed to load` : 'A region failed to load',
-        message: `Cell ${key.replace(':', '° N, ')}° E did not respond (simulated for the demo). Farms there stay hidden until it loads.`,
-        action: ['Retry', () => { errors.current = 0; engine?.retryAll(); }],
+        title: errors.current > 1 ? t('farmMap.toast.regionsFailed', { n: errors.current }) : t('farmMap.toast.regionFailed'),
+        message: t('farmMap.toast.cellFailed', { cell: `${key.replace(':', '° N, ')}° E` }),
+        action: [t('farmMap.common.retry'), () => { errors.current = 0; engine?.retryAll(); }],
         ms: 7000,
       });
     },
@@ -168,7 +171,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
     (next: boolean) => {
       setOffline(next);
       engine?.setOffline(next);
-      if (!next) push({ tone: 'success', title: 'Back online', message: 'Missing regions are loading again.' });
+      if (!next) push({ tone: 'success', title: t('farmMap.toast.onlineTitle'), message: t('farmMap.toast.onlineBody') });
     },
     [engine, push],
   );
@@ -182,7 +185,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       meRef.current = new Marker({ element }).setLngLat([anchor.lon - 0.002, anchor.lat + 0.002]).addTo(engine.map());
     }
     engine.fly({ center: [anchor.lon, anchor.lat], zoom: 12, duration: 2600 });
-    push({ tone: 'info', title: 'Location (simulated)', message: 'Maubin field office, Ayeyarwady · ±12 m' });
+    push({ tone: 'info', title: t('farmMap.toast.locationTitle'), message: t('farmMap.toast.locationBody') });
   };
 
   const togglePanels = useCallback((toggle: PanelToggle) => setPanels((state) => applyPanelToggle(state, toggle)), []);
@@ -256,15 +259,15 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
             onHide={() => togglePanels('left')}
           />
         ) : (
-          <AqReopen side="left" label="Show layers ( [ )" onClick={() => togglePanels('left')} />
+          <AqReopen side="left" label={t('farmMap.view.showLayers')} onClick={() => togglePanels('left')} />
         )}
         {booted && engine && panels.left ? <Minimap engine={engine} loaded={stats.chunks.loaded} evicted={stats.chunks.evicted} /> : null}
       </div>
       <div className="aq-fm-right">
         {panels.right ? (
-          <AqPanel label="Farm map details" side="right" hideLabel="Hide details panel ( ] )" onHide={() => togglePanels('right')}>
+          <AqPanel label={t('farmMap.view.details')} side="right" hideLabel={t('farmMap.view.hideDetails')} onHide={() => togglePanels('right')}>
             {(selection || spot) && !route && !tracing ? (
-              <button type="button" className="aq-fm-close aq-icon-btn" aria-label="Close details (Esc)" onClick={() => pick(null)}>
+              <button type="button" className="aq-fm-close aq-icon-btn" aria-label={t('farmMap.view.closeDetails')} onClick={() => pick(null)}>
                 <X size={15} aria-hidden="true" />
               </button>
             ) : null}
@@ -308,15 +311,15 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                 />
               ) : selection?.kind === 'own' ? (
                 <DetailSection>
-                  <p className="aq-fm-note">Loading this farm. If it does not appear, it may have been removed or the farm map API is not reachable.</p>
+                  <p className="aq-fm-note">{t('farmMap.view.loadingFarm')}</p>
                 </DetailSection>
               ) : poi ? (
                 <PoiDetail poi={poi} onRoute={planner.open} onPick={pick} />
               ) : spot ? (
                 <>
                   <DetailSection className="is-head">
-                    <h2 className="aq-title">Land check</h2>
-                    <p className="aq-meta">{spot.lat.toFixed(SPOT_DECIMALS)}, {spot.lon.toFixed(SPOT_DECIMALS)} · map centre or searched point</p>
+                    <h2 className="aq-title">{t('farmMap.view.landCheck')}</h2>
+                    <p className="aq-meta">{spot.lat.toFixed(SPOT_DECIMALS)}, {spot.lon.toFixed(SPOT_DECIMALS)} · {t('farmMap.view.spotNote')}</p>
                   </DetailSection>
                   <DetailSection>
                     <TechniqueFit lat={spot.lat} lon={spot.lon} />
@@ -325,17 +328,17 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
               ) : (
                 <>
                   <DetailSection>
-                    <AqSectionLabel aside={own.error ? 'unavailable' : undefined}>Your farms</AqSectionLabel>
-                    {own.error ? <p className="aq-fm-note">Could not load your farms: {own.error}</p> : null}
-                    {!own.error && yours.length === 0 ? <p className="aq-fm-note">No farm onboarded yet. Trace your field or import a boundary file to see a replica of your real farm here.</p> : null}
+                    <AqSectionLabel aside={own.error ? t('farmMap.common.unavailableLower') : undefined}>{t('farmMap.view.yourFarms')}</AqSectionLabel>
+                    {own.error ? <p className="aq-fm-note">{t('farmMap.view.ownFailed', { error: own.error })}</p> : null}
+                    {!own.error && yours.length === 0 ? <p className="aq-fm-note">{t('farmMap.view.noOwn')}</p> : null}
                     {own.error ? null : <FarmsRollup farms={ownFarms} />}
-                    <AqButton onClick={startTrace}><PenLine size={14} aria-hidden="true" />Trace your field</AqButton>
+                    <AqButton onClick={startTrace}><PenLine size={14} aria-hidden="true" />{t('farmMap.trace.title')}</AqButton>
                     {[...yours, ...demos].map((f) => (
                       <button key={f.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'own', farm: f.id })}>
                         <i className={`aq-fm-flag is-${f.status}`} aria-hidden="true" />
                         <span className="aq-fm-near-copy">
                           <span className="aq-fm-near-name">{f.spec.farm.name ?? f.id}</span>
-                          <span className="aq-fm-near-sub">{f.status === 'unknown' ? 'Unknown' : f.status} · {f.spec.parcels.length} parcels · {f.seed ? 'bundled demo contract' : 'from your boundary file'}</span>
+                          <span className="aq-fm-near-sub">{statusLabel(f.status)} · {t('farmMap.common.parcels', { n: f.spec.parcels.length })} · {f.seed ? t('farmMap.view.demoContract') : t('farmMap.view.fromFile')}</span>
                         </span>
                       </button>
                     ))}
@@ -346,7 +349,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
             </div>
           </AqPanel>
         ) : (
-          <AqReopen side="right" label="Show details ( ] )" onClick={() => togglePanels('right')} />
+          <AqReopen side="right" label={t('farmMap.view.showDetails')} onClick={() => togglePanels('right')} />
         )}
       </div>
       {engine ? (

@@ -4,29 +4,31 @@ import { failedText } from '../../lib/apiError.ts';
 import type { ContractSpec } from '../../lib/contractFarm.ts';
 import { flowSummary, type FlowTerm } from '../../lib/farmmap/flowSummary.ts';
 import { PROVENANCE_CLASS, PROVENANCE_LABEL } from '../../lib/provenance.ts';
+import { activeLocale, tr, useT, type Key } from '../../lib/i18n.ts';
 import { AqProgress, AqSectionLabel } from '../aq/aqLayout.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
 
 const TONE: Record<FlowTerm['key'], 'water' | 'accent' | 'warning'> = { rain: 'water', transpiration: 'accent', evaporation: 'warning', percolation: 'water' };
-const GAS_LABEL: Record<string, string> = { n2o: 'N₂O (no fertiliser logged)', urea_co2: 'urea CO₂', fuel: 'machine fuel' };
-const m3 = (v: number) => `${v.toLocaleString('en-US')} m³`;
+const GAS_LABEL: Record<string, Key> = { n2o: 'farmMap.flow.gasN2o', urea_co2: 'farmMap.flow.gasUrea', fuel: 'farmMap.flow.gasFuel' };
+const m3 = (v: number) => `${v.toLocaleString(activeLocale())} m³`;
 
 const Term: React.FC<{ term: FlowTerm; scale: number }> = ({ term, scale }) => (
   <div className="aq-fm-bar-row is-flow">
     <span className="aq-fm-kv-key">{term.label}</span>
-    {term.m3 === null ? <span className="aq-fm-note">not known</span> : <AqProgress label={`${term.label} ${m3(term.m3)}`} value={term.m3 / scale} tone={TONE[term.key]} />}
+    {term.m3 === null ? <span className="aq-fm-note">{tr('farmMap.flow.notKnown')}</span> : <AqProgress label={`${term.label} ${m3(term.m3)}`} value={term.m3 / scale} tone={TONE[term.key]} />}
     <span className="aq-fm-bar-value">{term.m3 === null ? '—' : m3(term.m3)}</span>
   </div>
 );
 
 export const FlowView: React.FC<{ farmId: string; spec: ContractSpec }> = ({ farmId, spec }) => {
+  const t = useT();
   const [data, setData] = useState<FarmFlows | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     setData(null);
     setFailed(null);
-    getFlows(farmId).then((f) => alive && setData(f), (err: unknown) => alive && setFailed(failedText(err, 'Flows are unavailable right now')));
+    getFlows(farmId).then((f) => alive && setData(f), (err: unknown) => alive && setFailed(failedText(err, t('farmMap.flow.failed'))));
     return () => {
       alive = false;
     };
@@ -37,56 +39,56 @@ export const FlowView: React.FC<{ farmId: string; spec: ContractSpec }> = ({ far
   if (!summary || !data) {
     return (
       <DetailSection>
-        <AqSectionLabel>Water and methane flows</AqSectionLabel>
-        <p className="aq-fm-note">{failed ?? (data ? data.missing?.[0]?.reason ?? 'Add field areas to see the flows.' : 'Loading the water and methane flows…')}</p>
+        <AqSectionLabel>{t('farmMap.flow.title')}</AqSectionLabel>
+        <p className="aq-fm-note">{failed ?? (data ? data.missing?.[0]?.reason ?? t('farmMap.flow.addAreas') : t('farmMap.flow.loading'))}</p>
       </DetailSection>
     );
   }
   const net = summary.netM3;
   return (
     <DetailSection>
-      <AqSectionLabel aside={`next ${summary.days} days`}>Water and methane flows</AqSectionLabel>
+      <AqSectionLabel aside={t('farmMap.flow.nextDays', { n: summary.days })}>{t('farmMap.flow.title')}</AqSectionLabel>
       <div className="aq-fm-badges">
         <span className={PROVENANCE_CLASS.modelled}>{PROVENANCE_LABEL.modelled}</span>
       </div>
       {summary.inflow.map((t) => <Term key={t.key} term={t} scale={summary.scale} />)}
       {summary.outflow.map((t) => <Term key={t.key} term={t} scale={summary.scale} />)}
-      <KV k="Balance" v={net === null ? 'not known' : `${net > 0 ? '+' : ''}${m3(net)}`} sub={net === null ? 'a term is missing' : net < 0 ? 'the field loses more than rain brings; irrigation is not logged' : 'rain covers the known losses'} />
-      {summary.evaporationUpperBound ? <p className="aq-fm-note">Evaporation is an upper bound on days the water depth is unknown or the soil is drying.</p> : null}
+      <KV k={t('farmMap.flow.balance')} v={net === null ? t('farmMap.flow.notKnown') : `${net > 0 ? '+' : ''}${m3(net)}`} sub={net === null ? t('farmMap.flow.termMissing') : net < 0 ? t('farmMap.flow.losing') : t('farmMap.flow.covered')} />
+      {summary.evaporationUpperBound ? <p className="aq-fm-note">{t('farmMap.flow.upperBound')}</p> : null}
       {summary.methane ? (
         <KV
-          k="Methane this season"
+          k={t('farmMap.flow.methane')}
           v={`${summary.methane.kgHa} kg/ha`}
-          sub={`${summary.methane.low}–${summary.methane.high} kg/ha · ${summary.methane.regime}${summary.methane.savedKgHa ? ` · ${summary.methane.savedKgHa} kg/ha less than continuous flooding` : ''}`}
+          sub={`${summary.methane.low}–${summary.methane.high} kg/ha · ${summary.methane.regime}${summary.methane.savedKgHa ? ` · ${t('farmMap.flow.saved', { n: summary.methane.savedKgHa })}` : ''}`}
         />
       ) : null}
       {summary.nitrogen ? (
         <KV
-          k="Nitrogen this season"
-          v={`${summary.nitrogen.appliedKg} kg N applied`}
-          sub={`${summary.nitrogen.airKg} kg to air · ${summary.nitrogen.waterKg} kg washed out · ${summary.nitrogen.n2oKg} kg as N₂O${summary.nitrogen.notCounted ? ` · ${summary.nitrogen.notCounted} rows without a rate or N %` : ''}`}
+          k={t('farmMap.flow.nitrogen')}
+          v={t('farmMap.flow.nApplied', { n: summary.nitrogen.appliedKg })}
+          sub={`${t('farmMap.flow.nFate', { air: summary.nitrogen.airKg, water: summary.nitrogen.waterKg, n2o: summary.nitrogen.n2oKg })}${summary.nitrogen.notCounted ? ` · ${t('farmMap.flow.nRows', { n: summary.nitrogen.notCounted })}` : ''}`}
         />
-      ) : <KV k="Nitrogen this season" v="no fertiliser logged" sub="log fertiliser with its rate and N % to see where it goes" />}
+      ) : <KV k={t('farmMap.flow.nitrogen')} v={t('farmMap.flow.noFertiliser')} sub={t('farmMap.flow.logFertiliser')} />}
       {summary.climate ? (
         <KV
-          k="Greenhouse gases this season"
+          k={t('farmMap.flow.ghg')}
           v={`${summary.climate.farmT} t CO₂e`}
-          sub={`${summary.climate.lowT}–${summary.climate.highT} t${summary.climate.leftOut.length ? ` · not counted: ${summary.climate.leftOut.map((k) => GAS_LABEL[k] ?? k).join(', ')}` : ''}`}
+          sub={`${summary.climate.lowT}–${summary.climate.highT} t${summary.climate.leftOut.length ? ` · ${t('farmMap.flow.notCounted', { list: summary.climate.leftOut.map((k) => (GAS_LABEL[k] ? t(GAS_LABEL[k]) : k)).join(', ') })}` : ''}`}
         />
       ) : null}
-      {summary.wettestDay ? <KV k="Leaf wetness" v={`${summary.wettestDay.wetHours} h`} sub={`wettest day ${summary.wettestDay.date} · humid hours favour blast and sheath blight`} /> : null}
-      <More label="How these are worked out">
+      {summary.wettestDay ? <KV k={t('farmMap.flow.leafWetness')} v={`${summary.wettestDay.wetHours} h`} sub={t('farmMap.flow.wettest', { date: summary.wettestDay.date })} /> : null}
+      <More label={t('farmMap.flow.how')}>
         {(data.parcels ?? []).map((p) => (
-          <KV key={p.id} k={`${p.id} (${p.stage ?? 'stage unknown'})`} v={`rain ${p.water.total.rain_mm} · crop ${p.water.total.transpiration_mm} · evap ${p.water.total.evaporation_mm} · drain ${p.water.total.percolation_mm ?? '—'} mm`} sub={p.methane.kg_ha === null ? p.methane.reason : `${p.methane.season_days} days, ${p.methane.season_basis}`} />
+          <KV key={p.id} k={`${p.id} (${p.stage ?? t('farmMap.flow.stageUnknown')})`} v={t('farmMap.flow.parcelMm', { rain: p.water.total.rain_mm, crop: p.water.total.transpiration_mm, evap: p.water.total.evaporation_mm, drain: p.water.total.percolation_mm ?? '—' })} sub={p.methane.kg_ha === null ? p.methane.reason : `${t('farmMap.common.days', { n: p.methane.season_days ?? '?' })}, ${p.methane.season_basis}`} />
         ))}
         <p className="aq-fm-note">{data.parcels?.[0]?.water.method}</p>
-        {data.parcels?.[0]?.water.unknown.map((u) => <p key={u.field} className="aq-fm-note">Not counted: {u.reason}</p>)}
-        {data.parcels?.[0]?.methane.assumed?.map((a) => <p key={a} className="aq-fm-note">Assumed: {a}</p>)}
-        <p className="aq-fm-note">Water: {data.sources?.water}</p>
-        <p className="aq-fm-note">Methane: {data.sources?.methane}</p>
-        <p className="aq-fm-note">Nitrogen: {data.parcels?.[0]?.nitrogen?.source}</p>
+        {data.parcels?.[0]?.water.unknown.map((u) => <p key={u.field} className="aq-fm-note">{t('farmMap.flow.notCountedReason', { reason: u.reason })}</p>)}
+        {data.parcels?.[0]?.methane.assumed?.map((a) => <p key={a} className="aq-fm-note">{t('farmMap.flow.assumed', { text: a })}</p>)}
+        <p className="aq-fm-note">{t('farmMap.flow.srcWater', { src: data.sources?.water ?? '' })}</p>
+        <p className="aq-fm-note">{t('farmMap.flow.srcMethane', { src: data.sources?.methane ?? '' })}</p>
+        <p className="aq-fm-note">{t('farmMap.flow.srcNitrogen', { src: data.parcels?.[0]?.nitrogen?.source ?? '' })}</p>
         <p className="aq-fm-note">CO₂e: {data.parcels?.[0]?.climate?.source}</p>
-        <p className="aq-fm-note">Weather: {data.sources?.weather}</p>
+        <p className="aq-fm-note">{t('farmMap.flow.srcWeather', { src: data.sources?.weather ?? '' })}</p>
       </More>
     </DetailSection>
   );

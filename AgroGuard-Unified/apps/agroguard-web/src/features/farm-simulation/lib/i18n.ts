@@ -85,3 +85,7 @@ export function useT(): Translate {
 export function localeOf(lang: Lang): string {
   return LANGS.find((l) => l.id === lang)?.locale ?? 'en';
 }
+
+export const tr: Translate = (key, vars) => translate(getLang(), key, vars);
+
+export const activeLocale = (): string => localeOf(getLang());

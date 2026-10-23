@@ -5,6 +5,7 @@ import { ASEAN_BOUNDS } from '../../lib/farmmap/farmMapRegions.ts';
 import { CROPS, MAP_COLOR, miniPending } from '../../lib/farmmap/farmMapTheme.ts';
 import type { Position } from '../../lib/farmmap/farmMapTypes.ts';
 import { landPolygons, type Topology } from '../../lib/farmmap/topoLand.ts';
+import { useT } from '../../lib/i18n.ts';
 
 const WIDTH = 232;
 const HEIGHT = 212;
@@ -62,6 +63,7 @@ function drawViewport(g: CanvasRenderingContext2D, engine: FarmMapEngine) {
 }
 
 export const Minimap: React.FC<MinimapProps> = ({ engine, loaded, evicted }) => {
+  const t = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [land, setLand] = useState<Position[][][]>([]);
 
@@ -112,12 +114,12 @@ export const Minimap: React.FC<MinimapProps> = ({ engine, loaded, evicted }) => 
 
   return (
     <div className="aq-fm-mini">
-      <button type="button" className="aq-fm-mini-btn" onClick={flyTo} aria-label="Minimap of ASEAN. Click to fly to a place.">
+      <button type="button" className="aq-fm-mini-btn" onClick={flyTo} aria-label={t('farmMap.mini.label')}>
         <canvas ref={canvasRef} className="aq-fm-mini-canvas" style={{ width: WIDTH, height: HEIGHT }} />
       </button>
       <p className="aq-fm-mini-foot">
-        <span><b>{loaded}</b> regions loaded{evicted ? ` · ${evicted} unloaded` : ''}</span>
-        <span>1 cell = 1°</span>
+        <span>{t('farmMap.mini.loaded', { n: loaded })}{evicted ? ` · ${t('farmMap.mini.unloaded', { n: evicted })}` : ''}</span>
+        <span>{t('farmMap.mini.cell')}</span>
       </p>
     </div>
   );
