@@ -196,7 +196,9 @@ def harvest_reference(spec: dict[str, Any]) -> dict[str, Any]:
             else:
                 lo, hi = found["t_ha_5y"]
                 row["tonnes"] = [round(area * lo, 2), round(area * hi, 2)]
+                row["tonnes_basis"] = "area_ha x the 5-year FAOSTAT national yield range in yield"
                 row["area_ha"] = area
+                row["area_ha_source"] = "parcel area declared in the contract"
         parcels.append(row)
     name = fao_pack.COUNTRIES[iso3]["name"] if iso3 else None
     return {

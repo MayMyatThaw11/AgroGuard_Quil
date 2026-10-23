@@ -196,6 +196,7 @@ def water(
     total["percolation_mm"] = round(perc * len(rows), 1) if perc is not None else None
     known_out = total["transpiration_mm"] + total["evaporation_mm"] + (total["percolation_mm"] or 0)
     return {
+        "source": FAO56,
         "days": rows,
         "total": total,
         "net_mm": round(total["rain_mm"] - known_out, 1) if perc is not None else None,
@@ -431,7 +432,7 @@ def farm_flows(farm_id: str) -> dict[str, Any]:
         raise KeyError(farm_id)
     days = _days(current["hourly"])
     reports = {r["id"]: r for r in current.get("paddies") or []}
-    inputs = [r for r in onboard._INPUTS.items("input") if r.get("farm_id") == farm_id]
+    inputs = onboard._INPUTS.items("input", f"{farm_id}|")
     parcels = []
     for p in spec["parcels"]:
         hydro = contract.terms_for(spec, p["id"]).get("hydrology", {})
@@ -453,7 +454,15 @@ def farm_flows(farm_id: str) -> dict[str, Any]:
     return {
         "farm_id": farm_id,
         "status": "OK",
-        "days": [{"date": d["date"], "et0_mm": d["et0_mm"], "canopy": d["canopy"]} for d in days],
+        "days": [
+            {
+                "date": d["date"],
+                "et0_mm": d["et0_mm"],
+                "canopy": d["canopy"],
+                "basis": "daily sums of the hourly weather in sources.weather (FAO-56 ET0)",
+            }
+            for d in days
+        ],
         "parcels": parcels,
         "sources": {
             "water": FAO56,

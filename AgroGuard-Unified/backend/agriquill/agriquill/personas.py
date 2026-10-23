@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date, timedelta
 from typing import Any
 
-from . import contract, live, schedule
+from . import contract, farmers, live, schedule
 
 PERSONAS = ("manual", "tech")
 JOB_KINDS = ("irrigate", "drain", "scout", "spray", "harvest")
@@ -13,6 +13,15 @@ PLANNER_REASONS = ("NO_CAPACITY", "NO_GATE_WINDOW", "horizon")
 # An 8-hour labour day fits inside ASEAN daylight all year; a farm with longer shifts sets hours.
 WORK_DAY_H = 8
 HAND_JOBS = {"drone": "scout", "irrigation_valve": "irrigate", "sluice_gate": "drain"}
+PREFERRED_HOUR = 6
+LATENESS_BASIS = (
+    f"sum over scheduled jobs of the hours between the solver's start and {PREFERRED_HOUR:02d}:00 "
+    "on the job's date, our preferred start"
+)
+PRICED_BASIS = (
+    "sum over scheduled jobs of your unit price x (1 + inflation_pct / 100) x job hours; "
+    "jobs you gave no price are left out"
+)
 
 
 def _fresh(task: Mapping[str, Any]) -> dict[str, Any]:
@@ -93,7 +102,9 @@ def split_days(tasks: Sequence[dict[str, Any]], hours: Mapping[str, float]) -> l
     return out
 
 
-def _lateness(task: Mapping[str, Any], times: Sequence[str], preferred_hour: int = 6) -> int:
+def _lateness(
+    task: Mapping[str, Any], times: Sequence[str], preferred_hour: int = PREFERRED_HOUR
+) -> int:
     start = task["schedule"].get("start_index")
     first = next((i for i, t in enumerate(times) if t[:10] == task["date"]), None)
     return 0 if start is None or first is None else abs(start - (first + preferred_hour))
@@ -104,6 +115,7 @@ def cost(
     prices: Mapping[str, float],
     budget: float | None,
     inflation_pct: float,
+    inflation_source: str = "entered by you in this request",
 ) -> dict[str, Any]:
     factor = 1 + inflation_pct / 100
     done = [t for t in tasks if t["schedule"]["status"] == "scheduled"]
@@ -146,15 +158,64 @@ def cost(
     within = None if budget is None else (total <= budget if unpriced == 0 else None)
     return {
         "priced_total": round(total, 2),
+        "priced_total_basis": PRICED_BASIS,
         "unpriced_jobs": unpriced,
         "budget": budget,
         "inflation_pct": inflation_pct,
+        "inflation_pct_source": inflation_source,
         "within_budget": within,
         "dropped": dropped,
         "note": None
         if unpriced == 0
         else f"{unpriced} job(s) have no price from you, so the total is a lower bound",
     }
+
+
+def _hours_basis(
+    task: Mapping[str, Any], own: Mapping[str, float], contract_h: Mapping[str, Any]
+) -> str:
+    kind = task["schedule"].get("kind")
+    if task.get("part_of") and task.get("duration_h"):
+        return f"your hand hours for {kind}, split into {WORK_DAY_H} h days"
+    if task.get("duration_h"):
+        return "job hours set on the task"
+    if kind in own:
+        return f"hours you entered for {kind}, rounded to whole hours"
+    if kind in contract_h:
+        return f"contract schedule block, {kind} hours, rounded to whole hours"
+    return f"no hours declared for {kind}; scheduler default {schedule.DEFAULT_DURATION_H} h"
+
+
+def _water_basis(declared: Mapping[str, float]) -> dict[str, str]:
+    def said(key: str, name: str) -> str:
+        return f"contract {name}" if key in declared else f"default, {farmers.THRESHOLD_STATUS}"
+
+    lock = said("flowering_min_depth_cm", "flowering_lock_depth")
+    return {
+        "floor_cm_basis": (
+            f"AWD trigger depth ({said('awd_safe_depth_cm', 'trigger_irrig_below')}); "
+            f"in flowering the flowering-lock minimum ({lock}); "
+            "raised to a herd's min_water when one is set"
+        ),
+        "target_cm_basis": (
+            f"re-flood depth ({said('awd_reflood_target_cm', 'reflood_depth')}); "
+            f"in flowering capped at the flowering-lock maximum ({lock})"
+        ),
+    }
+
+
+def _annotate(
+    tasks: list[dict[str, Any]],
+    own: Mapping[str, float],
+    contract_h: Mapping[str, Any],
+    water: Mapping[str, str],
+) -> None:
+    for t in tasks:
+        sched = t.get("schedule") or {}
+        if "duration_h" in sched:
+            sched["duration_h_basis"] = _hours_basis(t, own, contract_h)
+        if t.get("water"):
+            t["water"] = {**t["water"], **water}
 
 
 def run(farm_id: str, variations: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -173,6 +234,7 @@ def run(farm_id: str, variations: Sequence[Mapping[str, Any]]) -> dict[str, Any]
     gates[None] = contract.gates_for(spec)
     hourly, times = current["hourly"], current["hourly"]["time"]
     owned = {a["id"] for a in spec["assets"]}
+    water = _water_basis(contract.to_thresholds(spec))
     plans = []
     for v in variations:
         machines = set(v["machines"]) & owned if v.get("machines") is not None else owned
@@ -187,13 +249,16 @@ def run(farm_id: str, variations: Sequence[Mapping[str, Any]]) -> dict[str, Any]
             positions=contract.parcel_positions(spec),
             travel_kmh=terms.get("travel_kmh"),
         )
+        given = v.get("inflation_pct")
         money = cost(
             solved["tasks"],
             v.get("unit_prices") or {},
             v.get("budget"),
-            v.get("inflation_pct") or 0.0,
+            given or 0.0,
+            "entered by you in this request" if given else "none entered, so 0 % is applied",
         )
         out = solved["tasks"]
+        _annotate(out, v.get("durations_h") or {}, terms.get("durations_h") or {}, water)
         plans.append(
             {
                 "label": v.get("label") or v["persona"],
@@ -211,6 +276,7 @@ def run(farm_id: str, variations: Sequence[Mapping[str, Any]]) -> dict[str, Any]
                     "lateness_h": sum(
                         _lateness(t, times) for t in out if t["schedule"]["status"] == "scheduled"
                     ),
+                    "lateness_h_basis": LATENESS_BASIS,
                     "by_hand": sum(
                         1
                         for t in out

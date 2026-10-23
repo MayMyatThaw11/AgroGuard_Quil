@@ -24,24 +24,46 @@ PERSONAS = {
 }
 
 
+def _has_source(node: dict[str, Any], key: str | None = None) -> bool:
+    names = PROVENANCE if key is None else {f"{key}_{k}" for k in PROVENANCE}
+    return any(node.get(k) for k in names)
+
+
 def bare_numbers(node: Any, path: str = "$", covered: bool = False) -> list[tuple[str, float]]:
-    """Numeric leaves with no provenance key beside them or on any enclosing dict."""
+    """Numeric leaves with no provenance on themselves, their own dict or a named block.
+
+    A provenance key on the root covers only the root's own numbers, not nested blocks.
+    """
     found: list[tuple[str, float]] = []
     if isinstance(node, dict):
-        here = covered or any(node.get(k) for k in PROVENANCE)
+        here = covered or _has_source(node)
+        below = here if path != "$" else covered
         items = [(f"{path}.{k}", k, v) for k, v in node.items()]
     elif isinstance(node, list):
-        here = covered
+        here = below = covered
         items = [(f"{path}[*]", path.rsplit(".", 1)[-1], v) for v in node]
     else:
         return found
     for at, key, value in items:
+        own = isinstance(node, dict) and _has_source(node, key)
         if isinstance(value, int | float) and not isinstance(value, bool):
-            if not here and key not in STRUCTURAL:
+            if not (here or own) and key not in STRUCTURAL:
                 found.append((at, value))
         else:
-            found.extend(bare_numbers(value, at, here))
+            found.extend(bare_numbers(value, at, below or own))
     return found
+
+
+def _strip_sources(node: Any) -> Any:
+    if isinstance(node, dict):
+        return {
+            k: _strip_sources(v)
+            for k, v in node.items()
+            if k not in PROVENANCE and not k.endswith(tuple(f"_{p}" for p in PROVENANCE))
+        }
+    if isinstance(node, list):
+        return [_strip_sources(v) for v in node]
+    return node
 
 
 def strings(node: Any) -> list[str]:
@@ -66,24 +88,18 @@ def fetch(name: str) -> Any:
 
 
 ENDPOINTS = ("flows", "harvest-reference", "persona-plan", "model-card", "evidence-pack")
-KNOWN = {
-    "persona-plan": {
-        "$.plans[*].outcome.lateness_h": "personas.run: schedule lateness with no source",
-        "$.plans[*].outcome.cost.priced_total": "personas.cost: priced total with no source",
-        "$.plans[*].outcome.cost.inflation_pct": "personas.cost: echoes the caller's inflation",
-        "$.plans[*].tasks[*].schedule.duration_h": "schedule.solve: job hours, contract or default",
-        "$.plans[*].tasks[*].water.floor_cm": "farmers task water floor from the contract",
-        "$.plans[*].tasks[*].water.target_cm": "farmers task water target from the contract",
-    },
-    "evidence-pack": {
-        "$.plot.area_ha": "evidence_pack.build: contract area beside contract_sha256, no source",
-    },
+NAMED = {
+    "persona-plan": (
+        "$.plans[*].outcome.lateness_h",
+        "$.plans[*].outcome.cost.priced_total",
+        "$.plans[*].outcome.cost.inflation_pct",
+        "$.plans[*].tasks[*].schedule.duration_h",
+        "$.plans[*].tasks[*].water.floor_cm",
+        "$.plans[*].tasks[*].water.target_cm",
+    ),
+    "evidence-pack": ("$.plot.area_ha",),
 }
-KNOWN_CASES = [
-    pytest.param(name, path, marks=pytest.mark.xfail(strict=True, reason=reason), id=path)
-    for name, paths in KNOWN.items()
-    for path, reason in paths.items()
-]
+NAMED_CASES = [pytest.param(name, path, id=path) for name, paths in NAMED.items() for path in paths]
 
 
 @pytest.fixture
@@ -108,21 +124,27 @@ def test_the_walker_catches_a_bare_number():
         ("$.band.p50[*]", 2.0),
     ]
     assert bare_numbers({"source": None, "t_ha": 3.1}) == [("$.t_ha", 3.1)]
-    assert bare_numbers({"sources": {"w": "FAO-56"}, "deep": {"x": [1]}}) == []
+    assert bare_numbers({"sources": {"w": "FAO-56"}, "deep": {"x": [1]}}) == [("$.deep.x[*]", 1)]
+    assert bare_numbers({"sources": {"w": "FAO-56"}, "n": 1}) == []
+    assert bare_numbers({"block": {"source": "IPCC", "deep": {"x": [1]}}}) == []
+    assert bare_numbers({"cost": {"total": 3, "total_basis": "sum of prices"}}) == []
+    assert bare_numbers({"cost": {"total": 3, "total_basis": None}}) == [("$.cost.total", 3)]
+    assert bare_numbers({"p": {"t": [1, 2], "t_basis": "area x yield"}}) == []
     assert bare_numbers({"crew": 2, "plans": [{"crew": 3}]}) == []
 
 
 @pytest.mark.usefixtures("readings")
 @pytest.mark.parametrize("name", ENDPOINTS)
 def test_every_api_number_carries_provenance(name: str):
-    found = {path for path, _ in bare_numbers(fetch(name))}
-    assert found - set(KNOWN.get(name, {})) == set(), sorted(found)
+    assert bare_numbers(fetch(name)) == []
 
 
 @pytest.mark.usefixtures("readings")
-@pytest.mark.parametrize(("name", "path"), KNOWN_CASES)
-def test_known_bare_numbers_get_a_source(name: str, path: str):
-    assert path not in {p for p, _ in bare_numbers(fetch(name))}
+@pytest.mark.parametrize(("name", "path"), NAMED_CASES)
+def test_named_numbers_are_present_and_carry_a_source(name: str, path: str):
+    body = fetch(name)
+    assert path in {p for p, _ in bare_numbers(_strip_sources(body))}
+    assert path not in {p for p, _ in bare_numbers(body)}
 
 
 @pytest.mark.usefixtures("readings")

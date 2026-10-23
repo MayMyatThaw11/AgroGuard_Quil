@@ -41,9 +41,8 @@ def build(
     standard = safety.resolve_standard(parcel.get("standard"))
     banned = safety.prohibited_for(standard) or ()
     inputs = []
-    for r in sorted(_INPUTS.items("input"), key=lambda r: r["applied_at"]):
-        if r.get("farm_id") != farm_id or r.get("field") != parcel_id:
-            continue
+    rows = _INPUTS.items("input", f"{farm_id}|{parcel_id}|")
+    for r in sorted(rows, key=lambda r: r["applied_at"]):
         if not _in_season(r["applied_at"], start, end):
             continue
         hit = next((i for i in banned if _banned_match(str(r.get("product", "")), i)), None)
@@ -74,6 +73,9 @@ def build(
             "farm_id": farm_id,
             "parcel": parcel_id,
             "area_ha": parcel.get("area_ha"),
+            "area_ha_source": "parcel area declared in the contract (contract_sha256)"
+            if parcel.get("area_ha") is not None
+            else None,
             "crop": parcel.get("crop"),
             "standard": standard,
             "season": [start.isoformat() if start else None, end.isoformat() if end else None],
