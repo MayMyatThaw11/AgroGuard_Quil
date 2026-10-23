@@ -282,8 +282,14 @@
   }
 
   .aq-fm-right {
+    top: 46%;
     left: var(--aq-fm-gutter);
     width: auto;
+  }
+
+  .aq-fm-right .aq-fm-right-body {
+    margin-top: calc(var(--aq-control-h) + 12px);
+    border-top: 1px solid var(--aq-border-subtle);
   }
 
   .aq-farmmap.is-tracing .aq-fm-right {

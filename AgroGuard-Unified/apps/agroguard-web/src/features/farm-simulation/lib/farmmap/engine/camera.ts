@@ -6,12 +6,17 @@ import type { EngineContext, FlyTarget } from './engineTypes.ts';
 import { applyRelief } from './viewModes.ts';
 
 const PADDING = { left: 300, right: 380, top: 60, bottom: 90 };
+export const PHONE_SHEET = 0.54;
+
+export const isPhone = () => window.matchMedia('(max-width: 639px)').matches;
+
+export const viewPadding = (height: number) => (isPhone() ? { left: 0, right: 0, top: 0, bottom: Math.round(height * PHONE_SHEET) } : PADDING);
 
 export function fly(ctx: EngineContext, target: FlyTarget, flat = false) {
   const cinematic = ctx.state.cinematic && !flat;
   const pitch = cinematic ? (target.zoom >= 12 ? 55 : target.zoom >= 9 ? 35 : 0) : 0;
   const bearing = cinematic && target.zoom >= 9 ? (target.bearing ?? -14) : 0;
-  ctx.map.flyTo({ curve: 1.55, speed: 0.85, essential: true, pitch, bearing, padding: PADDING, center: target.center, zoom: target.zoom, duration: target.duration });
+  ctx.map.flyTo({ curve: 1.55, speed: 0.85, essential: true, pitch, bearing, padding: viewPadding(ctx.map.getContainer().clientHeight), center: target.center, zoom: target.zoom, duration: target.duration });
 }
 
 export function focusFarm(ctx: EngineContext, farm: Farm) {

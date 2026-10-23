@@ -2,6 +2,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Marker } from 'maplibre-gl';
 import { PenLine, X } from 'lucide-react';
+import { isPhone } from '../../lib/farmmap/engine/camera.ts';
 import type { Filters, MapView, PickTarget } from '../../lib/farmmap/engine/engineTypes.ts';
 import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
 import type { LayerKey } from '../../lib/farmmap/farmMapLayerKeys.ts';
@@ -83,7 +84,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const [terrain, setTerrain] = useState(false);
   const [cinematic, setCinematic] = useState(true);
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
-  const [panels, setPanels] = useState<PanelState>({ left: true, right: true });
+  const [panels, setPanels] = useState<PanelState>(() => ({ left: !isPhone(), right: true }));
   const [offline, setOffline] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
   const [tracing, setTracing] = useState(false);

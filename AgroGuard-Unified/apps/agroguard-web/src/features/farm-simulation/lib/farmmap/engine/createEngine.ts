@@ -8,7 +8,7 @@ import { OVERVIEW_ZOOM, PLAIN_SOURCES, buildDataLayers } from '../dataLayersThem
 import { DEFAULT_LAYERS } from '../farmMapLayerKeys.ts';
 import { getFarmMap } from '../farmMapData.ts';
 import { registerMapIcons } from '../iconTheme.ts';
-import { establishing, fly, focusFarm, select, setTerrain } from './camera.ts';
+import { establishing, fly, focusFarm, isPhone, select, setTerrain, viewPadding } from './camera.ts';
 import { retry, retryAll, stream } from './chunkStream.ts';
 import { dataDirty, emitStats, farmsInView, setRegions } from './dataAssembly.ts';
 import { drawFog } from './fogOverlay.ts';
@@ -46,6 +46,8 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     attributionControl: false, fadeDuration: 0, canvasContextAttributes: { preserveDrawingBuffer: true },
     dragRotate: true, keyboard: true, renderWorldCopies: false,
   });
+  // shortcut: padding is read once at start; recompute on resize if phone rotation matters
+  if (isPhone()) map.setPadding(viewPadding(container.clientHeight));
   const ctx: EngineContext = {
     map, fog, fctx, dpr: Math.min(2, window.devicePixelRatio || 1), cb: callbacks, data: getFarmMap(), chunks: new Map(), state: initialState(),
   };

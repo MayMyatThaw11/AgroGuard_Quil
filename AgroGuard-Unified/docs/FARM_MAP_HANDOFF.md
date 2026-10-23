@@ -127,7 +127,7 @@ Scope set by the owner during this block: ASEAN-wide, small to large farms.
    - Map `UnicodeDecodeError` to 500, not 422.
    - Add `POST /farms/{id}/fumigations/check`, so a blocked treatment is refused before it is saved.
 7. **SDG indicator mapping** (plan step 26) and the hybrid physics checks (step 27).
-8. **Phones:** a bottom-sheet details panel, because the panel still covers the whole map. The close button floats over content when the panel scrolls.
+8. **Phones (done 23 Oct):** at 639 px and below, the details panel is a bottom sheet from 46 % down. Its scroll area starts below the hide and close buttons, the layers panel starts closed, and the camera centres in the map area above the sheet. Still to do: recompute the padding when a phone rotates.
 9. **Timing (done 23 Oct):** `obs.TimedTransport` now times Open-Meteo (forecast, archive, previous runs, flood), NASA POWER, CHIRPS, Sentinel-1, Sentinel-2 and SoilGrids in `/metrics`. Timeouts, resets and 5xx count as failures. The site-context cache and its three breakers have names, and the breakers show in `/data/health` and `/metrics`. Not timed yet: the one-off sync jobs (FAOSTAT, EcoCrop, farm sites, Pink Sheet, GVP).
 
 ## Older ordered list (before this block)
