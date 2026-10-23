@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Literal
 
+import httpx
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ConfigDict
 
+from app.core.config import get_settings
 from app.services.council.orchestrator import CouncilOrchestrator
 from app.services.council.schemas import DeliberationResponse
 from app.services.llm_provider_adapter import ProviderConfig, ping_provider, stream_provider_chat
@@ -17,6 +20,7 @@ from app.services.subagents_council import (
 )
 
 router = APIRouter(prefix="/council", tags=["subagents-council"])
+logger = logging.getLogger(__name__)
 
 
 class CouncilEvaluationRequest(BaseModel):
@@ -33,6 +37,7 @@ class CouncilEvaluationRequest(BaseModel):
     ndvi_slope: float = -0.04
     grain_moisture_pct: float | None = 23.0
     days_to_harvest: int = 6
+    farm_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]{1,64}$")
 
 
 class ProviderPingRequest(BaseModel):
@@ -81,7 +86,29 @@ async def evaluate_scenario(req: CouncilEvaluationRequest) -> dict[str, Any]:
         grain_moisture_pct=req.grain_moisture_pct,
         days_to_harvest=req.days_to_harvest,
     )
-    return evaluation.to_dict()
+    out = evaluation.to_dict()
+    if req.farm_id:
+        await _record_in_vault(req.farm_id, out)
+    return out
+
+
+async def _record_in_vault(farm_id: str, evaluation: dict[str, Any]) -> None:
+    """Best effort: a vault failure is logged and never fails the evaluation."""
+    settings = get_settings()
+    if settings.agriquill_bridge_token is None:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.post(
+                f"{settings.agriquill_api_url}/api/v1/agriquill/farms/{farm_id}/vault/council",
+                json={"evaluation": evaluation, "sent_by": settings.agriquill_bridge_reporter},
+                headers={
+                    "X-AgriQuill-Write-Token": settings.agriquill_bridge_token.get_secret_value()
+                },
+            )
+            response.raise_for_status()
+    except httpx.HTTPError:
+        logger.warning("AgriQill council record failed for farm %s", farm_id, exc_info=True)
 
 
 @router.post("/ping", status_code=status.HTTP_200_OK, summary="Test LLM provider connection")

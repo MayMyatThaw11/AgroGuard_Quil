@@ -337,3 +337,52 @@ def dawn_sync(client: Any = None, today: date | None = None) -> dict[str, Any]:
         daily.append("")
     write(f"daily/{day.isoformat()}.md", "\n".join(daily))
     return {"date": day.isoformat(), "farms": farms}
+
+
+COUNCIL_LIMIT = 65536
+INTERCEPT = "CIRCUIT_BREAKER_INTERCEPT"
+
+
+def _strings(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [s for v in value.values() for s in _strings(v)]
+    if isinstance(value, list):
+        return [s for v in value for s in _strings(v)]
+    return []
+
+
+def write_council(farm_id: str, evaluation: dict[str, Any], by: str) -> dict[str, Any]:
+    dumped = yaml.safe_dump(evaluation, sort_keys=False, allow_unicode=True)
+    if len(dumped.encode("utf-8")) > COUNCIL_LIMIT:
+        raise VaultError(f"council record is over {COUNCIL_LIMIT} bytes")
+    verdicts = evaluation.get("verdicts") or {}
+    front = {
+        "farm_id": farm_id,
+        "by": by,
+        "at": now_iso(),
+        "field_id": evaluation.get("field_id"),
+        "stage": evaluation.get("stage"),
+        "verdicts": {k: (v or {}).get("verdict") for k, v in verdicts.items()},
+        "intercepts": [s for s in _strings(evaluation) if INTERCEPT in s],
+        "untraced_numbers": sum(
+            len((v or {}).get("untraced_numbers") or []) for v in verdicts.values()
+        ),
+    }
+    stamp = now_iso().replace(":", "")
+    rel = f"council/{_check_id(farm_id)}/{stamp}-{secrets.token_hex(3)}.md"
+    _resolve(rel).parent.mkdir(parents=True, exist_ok=True)
+    body = f"Council record, as sent by {by}.\n\n```yaml\n{dumped}```\n"
+    return {**write(rel, render(front, body), by), "council": front}
+
+
+def councils(farm_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    folder = ensure() / "council" / _check_id(farm_id)
+    if not folder.is_dir():
+        return []
+    files = sorted(folder.glob("*.md"), reverse=True)[:limit]
+    return [
+        {**parse(f.read_text(encoding="utf-8"))[0], "path": f"council/{farm_id}/{f.name}"}
+        for f in files
+    ]

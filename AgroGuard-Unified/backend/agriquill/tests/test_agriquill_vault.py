@@ -4,8 +4,11 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from agriquill import store, vault
+from agriquill.api.main import create_app
 from agriquill.config import get_settings
 from agriquill.ledger import get_ledger
 
@@ -137,3 +140,49 @@ def test_a_failed_plan_leaves_depth_unknown(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(vault.nasapower, "et0", _stub_et0)
     out = vault.dawn_sync(today=date(2026, 10, 23))
     assert "unknown (live plan failed: TimeoutError)" in out["farms"][FARM]["lines"][0]
+
+
+@pytest.fixture
+def api() -> Iterator[TestClient]:
+    settings = get_settings()
+    saved = settings.users
+    settings.users = SecretStr(f"Ann:code-a:crew,manager:{FARM}; Bob:code-b:crew:farm_other")
+    yield TestClient(create_app())
+    settings.users = saved
+
+
+BASE = f"/api/v1/agriquill/farms/{FARM}/vault"
+ANN = {"X-AgriQuill-Write-Token": "code-a"}
+
+
+def test_the_farm_file_is_served_with_notes_and_councils(api: TestClient) -> None:
+    note = {"text": "Water at the low corner is green.", "added_by": "Ann"}
+    assert api.post(f"{BASE}/notes", json=note, headers=ANN).status_code == 200
+    evaluation = {
+        "field_id": "P1",
+        "stage": "Flowering",
+        "verdicts": {"alpha": {"verdict": "HOLD", "untraced_numbers": []}},
+        "notes": ["[CIRCUIT_BREAKER_INTERCEPT] Invariant B Violated: SKU 'X' banned."],
+    }
+    sent = api.post(
+        f"{BASE}/council", json={"evaluation": evaluation, "sent_by": "Ann"}, headers=ANN
+    )
+    assert sent.status_code == 200 and sent.json()["council"]["intercepts"]
+    got = api.get(BASE, headers=ANN).json()
+    assert got["markdown"].startswith("---\n") and got["farm"]["farm_id"] == FARM
+    assert got["notes"][0]["text"] == note["text"]
+    assert got["councils"][0]["verdicts"] == {"alpha": "HOLD"}
+
+
+def test_vault_writes_need_the_farm_and_the_right_name(api: TestClient) -> None:
+    note = {"text": "x", "added_by": "Ann"}
+    assert api.post(f"{BASE}/notes", json=note).status_code == 401
+    bob = {"X-AgriQuill-Write-Token": "code-b"}
+    assert (
+        api.post(f"{BASE}/notes", json={**note, "added_by": "Bob"}, headers=bob).status_code == 403
+    )
+    assert (
+        api.post(f"{BASE}/notes", json={**note, "added_by": "Bob"}, headers=ANN).status_code == 403
+    )
+    big = {"text": "x" * (vault.NOTE_LIMIT + 1), "added_by": "Ann"}
+    assert api.post(f"{BASE}/notes", json=big, headers=ANN).status_code == 422

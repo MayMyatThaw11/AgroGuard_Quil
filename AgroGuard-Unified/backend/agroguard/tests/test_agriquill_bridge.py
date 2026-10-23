@@ -72,3 +72,39 @@ async def test_bridge_failure_is_swallowed_not_raised() -> None:
         with patch("app.services.observation.httpx.AsyncClient") as client_factory:
             client_factory.return_value.__aenter__.return_value = mock_client
             await _bridge_to_agriquill(_payload())  # must not raise
+
+
+@pytest.mark.asyncio
+async def test_council_record_goes_to_the_farm_vault_with_the_bridge_token() -> None:
+    from app.api.v1.endpoints.council import _record_in_vault
+
+    with patch("app.api.v1.endpoints.council.get_settings") as get_settings:
+        get_settings.return_value.agriquill_bridge_token = SecretStr("bridge-token")
+        get_settings.return_value.agriquill_bridge_reporter = "agroguard-bridge"
+        get_settings.return_value.agriquill_api_url = "http://localhost:8010"
+        mock_client = AsyncMock()
+        url = "http://localhost:8010/api/v1/agriquill/farms/farm_a/vault/council"
+        request = httpx.Request("POST", url)
+        mock_client.post.return_value = httpx.Response(200, json={}, request=request)
+        with patch("app.api.v1.endpoints.council.httpx.AsyncClient") as client_factory:
+            client_factory.return_value.__aenter__.return_value = mock_client
+            await _record_in_vault("farm_a", {"field_id": "P1"})
+
+    assert mock_client.post.call_args[0][0] == url
+    kwargs = mock_client.post.call_args[1]
+    assert kwargs["json"] == {"evaluation": {"field_id": "P1"}, "sent_by": "agroguard-bridge"}
+    assert kwargs["headers"]["X-AgriQuill-Write-Token"] == "bridge-token"
+
+
+@pytest.mark.asyncio
+async def test_council_record_failure_never_fails_the_evaluation() -> None:
+    from app.api.v1.endpoints.council import _record_in_vault
+
+    with patch("app.api.v1.endpoints.council.get_settings") as get_settings:
+        get_settings.return_value.agriquill_bridge_token = SecretStr("bridge-token")
+        get_settings.return_value.agriquill_api_url = "http://localhost:8010"
+        mock_client = AsyncMock()
+        mock_client.post.side_effect = httpx.ConnectError("connection refused")
+        with patch("app.api.v1.endpoints.council.httpx.AsyncClient") as client_factory:
+            client_factory.return_value.__aenter__.return_value = mock_client
+            await _record_in_vault("farm_a", {})

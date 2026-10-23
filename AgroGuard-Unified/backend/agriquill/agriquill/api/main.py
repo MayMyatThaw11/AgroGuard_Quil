@@ -56,6 +56,7 @@ from .. import (
     sitecontext,
     telemetry,
     twin,
+    vault,
 )
 from ..config import Settings, get_settings
 from ..data import (
@@ -1433,6 +1434,66 @@ async def farms_add_certificate(
     _own(caller, farm_id)
     cert = req.model_dump(mode="json", exclude={"added_by"})
     return await asyncio.to_thread(_record_call, certificates.add, farm_id, cert, req.added_by)
+
+
+class VaultNoteReq(BaseModel):
+    text: str = Field(min_length=1, max_length=vault.NOTE_LIMIT)
+    kind: Literal["scouting_notes", "verification_checks"] = "scouting_notes"
+    added_by: str = Field(min_length=1, max_length=80)
+
+
+class CouncilRecordReq(BaseModel):
+    evaluation: dict[str, Any]
+    sent_by: str = Field(min_length=1, max_length=80)
+
+
+def _vault_view(farm_id: str) -> dict[str, Any]:
+    if vault.read_farm(farm_id) is None:
+        vault.write_farm(farm_id)
+    path = vault.root() / vault.farm_rel(farm_id)
+    loaded = vault.read_farm(farm_id)
+    assert loaded is not None
+    return {
+        "farm_id": farm_id,
+        "path": vault.farm_rel(farm_id),
+        "markdown": path.read_text(encoding="utf-8"),
+        "farm": loaded[0].model_dump(),
+        "notes": vault.notes(farm_id),
+        "checks": vault.notes(farm_id, "verification_checks"),
+        "councils": vault.councils(farm_id),
+    }
+
+
+@router.get("/farms/{farm_id}/vault")
+async def farms_vault(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(_record_call, _vault_view, farm_id)
+
+
+@router.post("/farms/{farm_id}/vault/notes")
+async def farms_vault_note(
+    farm_id: str, req: VaultNoteReq, caller: Caller = _AS_CREW
+) -> dict[str, Any]:
+    _named(caller, req.added_by)
+    _own(caller, farm_id)
+    if live.load(farm_id) is None:
+        raise HTTPException(status_code=404, detail="no contract for this farm")
+    return await asyncio.to_thread(
+        _record_call, vault.add_note, farm_id, req.text, req.added_by, req.kind
+    )
+
+
+@router.post("/farms/{farm_id}/vault/council")
+async def farms_vault_council(
+    farm_id: str, req: CouncilRecordReq, caller: Caller = _AS_CREW
+) -> dict[str, Any]:
+    _named(caller, req.sent_by)
+    _own(caller, farm_id)
+    if live.load(farm_id) is None:
+        raise HTTPException(status_code=404, detail="no contract for this farm")
+    return await asyncio.to_thread(
+        _record_call, vault.write_council, farm_id, req.evaluation, req.sent_by
+    )
 
 
 @router.patch("/farms/{farm_id}/certificates/{cert_id}")
