@@ -71,6 +71,12 @@
   }
 }
 
+@media (max-width: 639px) {
+  .aq-fm-selbar-wrap:not(.is-right-hidden) {
+    display: none;
+  }
+}
+
 .aq-fm-sec.is-head > .aq-btn {
   width: 100%;
   justify-content: center;

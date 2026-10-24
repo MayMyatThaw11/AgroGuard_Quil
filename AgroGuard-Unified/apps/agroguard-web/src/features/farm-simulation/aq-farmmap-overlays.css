@@ -79,7 +79,7 @@
 
 .aq-fm-toasts {
   position: absolute;
-  bottom: calc(var(--aq-status-h) + var(--aq-space-6));
+  top: calc(var(--aq-top-h) + var(--aq-space-6));
   left: 50%;
   z-index: var(--aq-z-toast);
   display: flex;

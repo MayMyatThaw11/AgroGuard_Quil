@@ -1,6 +1,6 @@
 import type { LayerKey } from './farmMapLayerKeys.ts';
 import { tr } from '../i18n.ts';
-import { BOUND_COLOR, CROPS, CROP_IDS, MAP_COLOR, POI_COLOR, RICE_STAGES, SOILS, STATUS_COLOR } from './farmMapTheme.ts';
+import { CROPS, CROP_IDS, MAP_COLOR, POI_COLOR, RICE_STAGES, SOILS, STATUS_COLOR } from './farmMapTheme.ts';
 import { cropLabel, soilLabel, stageAt, statusLabel } from './farmMapText.ts';
 import type { SoilId } from './farmMapTypes.ts';
 
@@ -18,7 +18,7 @@ export function legendFor(key: LayerKey): LegendSpec | null {
     case 'crops':
       return { items: CROP_IDS.filter((id) => id !== 'rice').map((id) => ({ tint: CROPS[id].color, label: cropLabel(id) })) };
     case 'bounds':
-      return { items: [{ tint: BOUND_COLOR, label: statusLabel('ok') }, { tint: STATUS_COLOR.watch, label: statusLabel('watch') }, { tint: STATUS_COLOR.risk, label: statusLabel('risk') }] };
+      return { items: [{ tint: STATUS_COLOR.ok, label: statusLabel('ok') }, { tint: STATUS_COLOR.watch, label: statusLabel('watch') }, { tint: STATUS_COLOR.risk, label: statusLabel('risk') }] };
     case 'soil':
       return { items: (Object.keys(SOILS) as SoilId[]).map((id) => ({ tint: SOILS[id][1], label: soilLabel(id).split(' (')[0] })) };
     case 'irrigation':

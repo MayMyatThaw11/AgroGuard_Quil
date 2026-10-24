@@ -132,7 +132,7 @@
 
 .aq-lc-text {
   fill: var(--aq-text-muted);
-  font: 400 9px/1 var(--aq-font-sans);
+  font: 400 11px/1 var(--aq-font-sans);
 }
 
 .aq-toast-copy {

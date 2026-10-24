@@ -103,12 +103,6 @@
   cursor: pointer;
 }
 
-.aq-seg[aria-selected="true"] {
-  background: var(--aq-surface-card);
-  color: var(--aq-text-strong);
-  box-shadow: var(--aq-shadow-xs);
-}
-
 .aq-chips {
   display: flex;
   flex-wrap: wrap;
@@ -131,12 +125,6 @@
 
 .aq-chip:hover {
   background: var(--aq-surface-hover);
-}
-
-.aq-chip[aria-pressed="true"] {
-  border-color: var(--aq-leaf-400);
-  background: var(--aq-surface-selected);
-  color: var(--aq-text-strong);
 }
 
 .aq-chip.is-compact {

@@ -133,11 +133,6 @@
   cursor: pointer;
 }
 
-.aq-fm-chip.is-on {
-  border-color: var(--aq-leaf-600);
-  background: var(--aq-mint-200);
-}
-
 .aq-fm-sim-when {
   display: grid;
   min-width: 150px;
@@ -364,7 +359,7 @@
   flex-wrap: wrap;
   gap: 0 var(--aq-space-4);
   color: var(--aq-text-strong);
-  font-size: 10px;
+  font-size: 12px;
   text-shadow: 0 0 3px var(--aq-surface-card);
   pointer-events: none;
 }

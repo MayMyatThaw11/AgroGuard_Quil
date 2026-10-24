@@ -58,11 +58,6 @@
   background: transparent;
 }
 
-.aq-kpi[aria-pressed="true"] {
-  background: var(--aq-surface-selected);
-  box-shadow: 0 0 0 1.5px var(--aq-leaf-500);
-}
-
 .aq-kpi:focus-visible {
   outline: 2px solid var(--aq-focus-ring);
   outline-offset: 2px;
@@ -198,10 +193,6 @@
 
 .aq-row:hover {
   background: var(--aq-surface-hover);
-}
-
-.aq-row[aria-pressed="true"] {
-  background: var(--aq-surface-selected);
 }
 
 .aq-row:focus-visible {

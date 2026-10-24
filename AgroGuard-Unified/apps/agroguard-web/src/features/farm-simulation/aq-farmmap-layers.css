@@ -44,11 +44,6 @@
   color: var(--aq-text-muted);
 }
 
-.aq-fm-glyph.is-on {
-  background: var(--aq-accent-tint);
-  color: var(--aq-accent-ink);
-}
-
 .aq-fm-legend-wrap {
   padding: var(--aq-space-3) 0 var(--aq-space-1) 32px;
   animation: aq-fm-fade var(--aq-dur-base) var(--aq-ease);

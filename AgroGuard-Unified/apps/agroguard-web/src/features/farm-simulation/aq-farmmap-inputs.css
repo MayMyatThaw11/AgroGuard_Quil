@@ -153,13 +153,6 @@
 .aq-tile:active { transform: scale(0.97); }
 .aq-tile:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--aq-focus-ring); }
 
-.aq-tile[aria-checked='true'] {
-  border-color: var(--aq-leaf-600);
-  background: var(--aq-mint-200);
-  color: var(--aq-text-strong);
-  box-shadow: 0 0 0 3px var(--aq-focus-ring);
-}
-
 .aq-dial {
   position: relative;
   flex: none;
@@ -207,10 +200,10 @@
 .aq-dial-canopy { fill: var(--aq-leaf-500); opacity: 0.32; }
 .aq-dial-well { fill: var(--aq-surface-card); stroke: var(--aq-border-default); stroke-width: 1; }
 
-.aq-dial-caption { fill: var(--aq-text-muted); font: 600 10px/1 var(--aq-font-sans); text-anchor: middle; }
+.aq-dial-caption { fill: var(--aq-text-muted); font: 600 11px/1 var(--aq-font-sans); text-anchor: middle; }
 .aq-dial-big { fill: var(--aq-text-strong); font: 700 30px/1 var(--aq-font-sans); text-anchor: middle; }
 .aq-dial-date { fill: var(--aq-text-body); font: 500 11px/1 var(--aq-font-mono); text-anchor: middle; }
-.aq-dial-stage-name { fill: var(--aq-text-muted); font: 600 10px/1 var(--aq-font-sans); text-anchor: middle; }
+.aq-dial-stage-name { fill: var(--aq-text-muted); font: 600 11px/1 var(--aq-font-sans); text-anchor: middle; }
 
 .aq-day-picker { display: grid; gap: var(--aq-space-3); }
 
@@ -250,7 +243,6 @@
 .aq-day.is-outside { color: var(--aq-text-faint); }
 .aq-day.is-span { background: var(--aq-mint-100); }
 .aq-day.is-span-end { background: var(--aq-grain-100); }
-.aq-day[aria-pressed='true'] { background: var(--aq-leaf-700); color: var(--aq-text-on-accent); }
 .aq-day.is-rain::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--aq-water-500); }
 
 @media (pointer: coarse) {

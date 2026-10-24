@@ -54,12 +54,6 @@
   box-shadow: var(--aq-shadow-sm);
 }
 
-.aq-fm-controls .aq-icon-btn[aria-pressed="true"] {
-  border-color: var(--aq-leaf-200);
-  background: var(--aq-accent-tint);
-  color: var(--aq-accent-ink);
-}
-
 .aq-fm-zoom {
   display: flex;
   flex-direction: column;

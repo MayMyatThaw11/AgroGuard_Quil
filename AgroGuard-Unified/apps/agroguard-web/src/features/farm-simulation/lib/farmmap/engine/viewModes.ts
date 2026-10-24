@@ -1,8 +1,6 @@
-import type { ExpressionSpecification } from 'maplibre-gl';
-import { LAYER_MAP, reliefVisibility } from '../dataLayersTheme.ts';
+import { FIELD_FILL_OPACITY, LAYER_MAP, hoverOpacity, reliefVisibility } from '../dataLayersTheme.ts';
 import { SAT_KEEP_LAYERS } from '../basemapTheme.ts';
-import { ex, getProp } from '../mapExpr.ts';
-import { BOUND_COLOR, MAP_COLOR, STATUS_COLOR } from '../farmMapTheme.ts';
+import { MAP_COLOR } from '../farmMapTheme.ts';
 import type { LayerFlags, LayerKey } from '../farmMapLayerKeys.ts';
 import { rebuild, setRegions } from './dataAssembly.ts';
 import { retryAll } from './chunkStream.ts';
@@ -54,10 +52,9 @@ export function setView(ctx: EngineContext, view: MapView) {
     map.setLayoutProperty(id, 'visibility', satellite && !SAT_KEEP_LAYERS.has(id) ? 'none' : 'visible');
   });
   ['road-motorway', 'road-major'].forEach((id) => map.setPaintProperty(id, 'line-opacity', satellite ? 0.55 : 1));
-  map.setPaintProperty('paddies', 'fill-opacity', satellite ? 0.55 : 0.9);
-  map.setPaintProperty('crops', 'fill-opacity', satellite ? 0.5 : 0.88);
-  const boundColor: ExpressionSpecification = ex('match', getProp('status'), 'risk', STATUS_COLOR.risk, 'watch', STATUS_COLOR.watch, BOUND_COLOR);
-  map.setPaintProperty('bounds', 'line-color', satellite ? MAP_COLOR.satText : boundColor);
+  const fieldOpacity = hoverOpacity(satellite ? FIELD_FILL_OPACITY.satellite : FIELD_FILL_OPACITY.map);
+  map.setPaintProperty('paddies', 'fill-opacity', fieldOpacity);
+  map.setPaintProperty('crops', 'fill-opacity', fieldOpacity);
   map.setPaintProperty('own-line', 'line-color', satellite ? MAP_COLOR.satText : MAP_COLOR.ownLine);
 }
 

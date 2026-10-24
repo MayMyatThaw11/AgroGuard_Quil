@@ -119,11 +119,6 @@
   background: var(--aq-surface-hover);
 }
 
-.aq-tab[aria-selected="true"] {
-  background: var(--aq-surface-selected);
-  color: var(--aq-text-strong);
-}
-
 .aq-tab-count {
   min-width: 18px;
   height: 18px;

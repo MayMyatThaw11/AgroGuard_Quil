@@ -1,0 +1,29 @@
+.aq-seg[aria-selected="true"],
+.aq-tab[aria-selected="true"],
+.aq-chip[aria-pressed="true"],
+.aq-tile[aria-checked="true"],
+.aq-fm-chip[aria-pressed="true"],
+.aq-fm-controls .aq-icon-btn[aria-pressed="true"],
+.aq-day[aria-pressed="true"],
+.aq-kpi[aria-pressed="true"],
+.aq-tw-pest.is-on {
+  background: var(--aq-sel-bg);
+  color: var(--aq-sel-ink);
+  font-weight: 700;
+  outline: 2px solid var(--aq-sel-edge);
+  outline-offset: -2px;
+}
+
+.aq-row[aria-pressed="true"],
+.aq-table-row[aria-selected="true"],
+.aq-fm-result.is-active,
+.aq-tw-option.is-on {
+  background: var(--aq-sel-bg);
+  color: var(--aq-sel-ink);
+  box-shadow: inset 3px 0 0 var(--aq-sel-edge);
+}
+
+.aq-fm-glyph.is-on {
+  background: var(--aq-sel-bg);
+  color: var(--aq-sel-edge);
+}

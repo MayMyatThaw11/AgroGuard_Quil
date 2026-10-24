@@ -1,6 +1,6 @@
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import { ex, getProp, zoomInterp } from './mapExpr.ts';
-import { BOUND_COLOR, MAP_COLOR, POI_COLOR, STATUS_COLOR } from './farmMapTheme.ts';
+import { MAP_COLOR, POI_COLOR, STATUS_COLOR } from './farmMapTheme.ts';
 import type { LayerFlags, LayerKey } from './farmMapLayerKeys.ts';
 import type { PoiType } from './farmMapTypes.ts';
 
@@ -16,7 +16,7 @@ export interface LayerEntry {
 export const LAYER_MAP: Record<LayerKey, string[]> = {
   paddies: ['paddies'],
   crops: ['crops', 'field-edges'],
-  bounds: ['bounds'],
+  bounds: ['bounds-fill', 'bounds-halo', 'bounds-case', 'bounds', 'farm-halo'],
   soil: ['soil', 'soil-label'],
   irrigation: ['canals-main', 'canals-lat'],
   water: ['poi-water'],
@@ -50,7 +50,11 @@ const BEFORE = 'road-minor-case';
 const radius = zoomInterp(5, 18, 9, 40, 12, 70);
 const intensity = zoomInterp(5, 0.6, 11, 1.4);
 const density = (...stops: unknown[]) => ex('interpolate', ['linear'], ['heatmap-density'], ...stops);
-const hoverOpacity = (normal: number) => ex('case', ex('boolean', ex('feature-state', 'hover'), false), 1, normal);
+export const FIELD_FILL_OPACITY = { map: 0.92, satellite: 0.74 } as const;
+const byStatus = (risk: string, watch: string, ok: string) => ex('match', getProp('status'), 'risk', risk, 'watch', watch, ok);
+const STATUS_FILL = byStatus(STATUS_COLOR.risk, STATUS_COLOR.watch, STATUS_COLOR.ok);
+const FIELD_EDGE = byStatus(STATUS_COLOR.risk, STATUS_COLOR.watch, MAP_COLOR.white);
+export const hoverOpacity = (normal: number) => ex('case', ex('boolean', ex('feature-state', 'hover'), false), 1, normal);
 const round = { 'line-cap': 'round', 'line-join': 'round' } as const;
 
 function poiLayer(id: string, type: PoiType, minzoom: number): LayerEntry {
@@ -78,12 +82,15 @@ function groundLayers(): LayerEntry[] {
     { spec: { id: 'soil-label', type: 'symbol', source: 'aq-soil', minzoom: 7, maxzoom: 11.5, layout: { 'text-field': getProp('label'), 'text-font': ['Noto Sans Italic'], 'text-size': 11 }, paint: { 'text-color': MAP_COLOR.soilLabel, 'text-halo-color': 'rgba(255,255,255,.85)', 'text-halo-width': 1.2 } } },
     risk('flood', 'flood', [0, 'rgba(0,0,0,0)', 0.2, 'rgba(151,211,209,.5)', 0.45, '#5bbcb9', 0.7, '#006e78', 1, '#005660']),
     risk('drought', 'drought', [0, 'rgba(0,0,0,0)', 0.2, 'rgba(240,197,106,.45)', 0.5, '#f0c56a', 0.75, '#d77a11', 1, '#bc6c2f']),
-    { before: BEFORE, spec: { id: 'paddies', type: 'fill', source: 'aq-fields', minzoom: 10, filter: ex('==', getProp('rice'), 1), paint: { 'fill-color': getProp('color'), 'fill-opacity': hoverOpacity(0.9) } } },
-    { before: BEFORE, spec: { id: 'crops', type: 'fill', source: 'aq-fields', minzoom: 10, filter: ex('==', getProp('rice'), 0), paint: { 'fill-color': getProp('color'), 'fill-opacity': hoverOpacity(0.88) } } },
+    { before: BEFORE, spec: { id: 'paddies', type: 'fill', source: 'aq-fields', minzoom: 10, filter: ex('==', getProp('rice'), 1), paint: { 'fill-color': getProp('color'), 'fill-opacity': hoverOpacity(FIELD_FILL_OPACITY.map) } } },
+    { before: BEFORE, spec: { id: 'crops', type: 'fill', source: 'aq-fields', minzoom: 10, filter: ex('==', getProp('rice'), 0), paint: { 'fill-color': getProp('color'), 'fill-opacity': hoverOpacity(FIELD_FILL_OPACITY.map) } } },
     { before: BEFORE, spec: relief('paddies-3d', 'aq-fields', ex('==', getProp('rice'), 1), getProp('color'), RELIEF_HEIGHT_M.paddy, 12) },
     { before: BEFORE, spec: relief('crops-3d', 'aq-fields', ex('==', getProp('rice'), 0), getProp('color'), RELIEF_HEIGHT_M.crop, 12) },
-    { before: BEFORE, spec: { id: 'field-edges', type: 'line', source: 'aq-fields', minzoom: 12.5, paint: { 'line-color': MAP_COLOR.edgeLine, 'line-width': zoomInterp(12.5, 0.4, 16, 1.6) } } },
-    { spec: { id: 'bounds', type: 'line', source: 'aq-bounds', minzoom: 10.5, paint: { 'line-color': ex('match', getProp('status'), 'risk', STATUS_COLOR.risk, 'watch', STATUS_COLOR.watch, BOUND_COLOR), 'line-width': zoomInterp(10.5, 0.8, 16, 2.2), 'line-dasharray': [3, 2], 'line-opacity': 0.75 } } },
+    { before: BEFORE, spec: { id: 'field-edges', type: 'line', source: 'aq-fields', minzoom: 10, layout: round, paint: { 'line-color': FIELD_EDGE, 'line-width': zoomInterp(10, 0.9, 16, 2.6), 'line-opacity': 1 } } },
+    { before: BEFORE, spec: { id: 'bounds-fill', type: 'fill', source: 'aq-bounds', minzoom: 7.5, paint: { 'fill-color': STATUS_FILL, 'fill-opacity': zoomInterp(7.5, 0.6, 11, 0.38, 13, 0.14) } } },
+    { before: BEFORE, spec: { id: 'bounds-halo', type: 'line', source: 'aq-bounds', minzoom: 7.5, layout: round, paint: { 'line-color': STATUS_FILL, 'line-width': zoomInterp(7.5, 6, 12, 14, 16, 26), 'line-blur': zoomInterp(7.5, 3, 16, 10), 'line-opacity': 0.5 } } },
+    { spec: { id: 'bounds-case', type: 'line', source: 'aq-bounds', minzoom: 7.5, layout: round, paint: { 'line-color': MAP_COLOR.white, 'line-width': zoomInterp(7.5, 3.6, 16, 7), 'line-opacity': 0.95 } } },
+    { spec: { id: 'bounds', type: 'line', source: 'aq-bounds', minzoom: 7.5, layout: round, paint: { 'line-color': STATUS_FILL, 'line-width': zoomInterp(7.5, 1.8, 16, 3.8), 'line-opacity': 1 } } },
     { spec: { id: 'canals-main', type: 'line', source: 'aq-canals', minzoom: 9, filter: ex('==', getProp('kind'), 'main'), layout: round, paint: { 'line-color': MAP_COLOR.canalMain, 'line-width': zoomInterp(9, 1.2, 15, 4.5) } } },
     { spec: { id: 'canals-lat', type: 'line', source: 'aq-canals', minzoom: 11, filter: ex('==', getProp('kind'), 'lateral'), layout: round, paint: { 'line-color': MAP_COLOR.canalLateral, 'line-width': zoomInterp(11, 0.8, 15, 2.4), 'line-dasharray': [2, 1.2] } } },
     { spec: { id: 'weather', type: 'heatmap', source: 'aq-wx', paint: { 'heatmap-weight': getProp('rain'), 'heatmap-radius': zoomInterp(4, 14, 8, 42, 12, 110), 'heatmap-intensity': zoomInterp(4, 0.7, 10, 1.3), 'heatmap-opacity': 0.55, 'heatmap-color': density(0, 'rgba(0,0,0,0)', 0.15, 'rgba(196,230,229,.5)', 0.4, 'rgba(91,188,185,.75)', 0.7, '#006e78', 1, '#003f48') } } },
@@ -113,6 +120,7 @@ function pinLayers(): LayerEntry[] {
     { spec: { id: 'regions-n', type: 'symbol', source: 'aq-regions', minzoom: 2.8, maxzoom: OVERVIEW_ZOOM, layout: { 'text-field': ex('concat', ex('to-string', getProp('n')), '\n', getProp('country')), 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-line-height': 1.15, 'text-allow-overlap': true }, paint: { 'text-color': MAP_COLOR.ink } } },
     { spec: { id: 'clusters', type: 'circle', source: 'aq-farms', filter: isCluster, paint: { 'circle-radius': ex('step', getProp('point_count'), 15, 6, 18, 15, 22), 'circle-color': MAP_COLOR.white, 'circle-stroke-color': MAP_COLOR.leaf, 'circle-stroke-width': 3 } } },
     { spec: { id: 'clusters-n', type: 'symbol', source: 'aq-farms', filter: isCluster, layout: { 'text-field': getProp('point_count_abbreviated'), 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true }, paint: { 'text-color': MAP_COLOR.ink } } },
+    { spec: { id: 'farm-halo', type: 'circle', source: 'aq-farms', minzoom: OVERVIEW_ZOOM, filter: single, paint: { 'circle-radius': zoomInterp(OVERVIEW_ZOOM, 9, 9, 15, 12, 24, 14, 40), 'circle-color': STATUS_FILL, 'circle-opacity': zoomInterp(OVERVIEW_ZOOM, 0.3, 12, 0.24, 14.5, 0), 'circle-blur': 0.5, 'circle-stroke-color': STATUS_FILL, 'circle-stroke-width': 2, 'circle-stroke-opacity': zoomInterp(OVERVIEW_ZOOM, 0.95, 13, 0.85, 14.5, 0) } } },
     { spec: { id: 'farm-pins', type: 'symbol', source: 'aq-farms', filter: single, layout: { 'icon-image': getProp('icon'), 'icon-anchor': 'bottom', 'icon-allow-overlap': true, 'icon-size': zoomInterp(8, 0.8, 13, 1) } } },
     { spec: { id: 'farm-status', type: 'circle', source: 'aq-farms', filter: ex('all', single, ex('!=', getProp('status'), 'ok')), paint: { 'circle-radius': 4.5, 'circle-color': ex('match', getProp('status'), 'risk', STATUS_COLOR.risk, STATUS_COLOR.watch), 'circle-stroke-color': MAP_COLOR.white, 'circle-stroke-width': 2, 'circle-translate': [11, -40], 'circle-translate-anchor': 'viewport' } } },
     { spec: { id: 'farm-labels', type: 'symbol', source: 'aq-farms', minzoom: 10.2, filter: single, layout: { 'icon-image': 'aq-pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [3, 9, 3, 9], 'text-field': labelText, 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-anchor': 'left', 'text-offset': [1.9, -2.15], 'text-max-width': 30, 'text-optional': false }, paint: { 'text-color': MAP_COLOR.ink } } },

@@ -233,10 +233,6 @@
   background: var(--aq-surface-hover);
 }
 
-.aq-tw-option.is-on {
-  background: var(--aq-mint-200);
-}
-
 .aq-tw-option.is-barred {
   opacity: 0.55;
 }
@@ -557,10 +553,6 @@
   background: var(--aq-surface-hover);
 }
 
-.aq-tw-pest.is-on {
-  background: var(--aq-mint-200);
-}
-
 .aq-tw-pest:focus-visible {
   outline: 2px solid var(--aq-focus-ring);
   outline-offset: 1px;
@@ -836,7 +828,7 @@
 }
 
 .aq-tw-map .maplibregl-ctrl-attrib {
-  font: 10px var(--aq-font-sans);
+  font: 12px var(--aq-font-sans);
   background: var(--aq-attrib-bg);
 }
 

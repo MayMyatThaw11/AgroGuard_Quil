@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SAT_KEEP_LAYERS, basemapStyle } from '../../src/features/farm-simulation/lib/farmmap/basemapTheme.ts';
-import { HOVER_LAYERS, LAYER_MAP, PLAIN_SOURCES, RELIEF_LAYERS, buildDataLayers, reliefVisibility } from '../../src/features/farm-simulation/lib/farmmap/dataLayersTheme.ts';
+import { FIELD_FILL_OPACITY, HOVER_LAYERS, LAYER_MAP, PLAIN_SOURCES, RELIEF_LAYERS, buildDataLayers, reliefVisibility } from '../../src/features/farm-simulation/lib/farmmap/dataLayersTheme.ts';
 import { DEFAULT_LAYERS, LAYER_GROUPS } from '../../src/features/farm-simulation/lib/farmmap/farmMapLayerKeys.ts';
 
 const style = basemapStyle();
@@ -58,6 +58,33 @@ test('Farm map style: your own farm draws above every seeded farm layer and is h
   assert.ok(HOVER_LAYERS.includes('own-fill') && HOVER_LAYERS.includes('own-point'));
   assert.ok(PLAIN_SOURCES.includes('aq-own'));
   dataLayers.filter((e) => ownIds.includes(e.spec.id)).forEach((e) => assert.equal(e.before, undefined));
+});
+
+const layerOf = (id: string) => dataLayers.find((entry) => entry.spec.id === id)?.spec;
+const minZoomOf = (id: string) => {
+  const spec = layerOf(id);
+  return spec && 'minzoom' in spec ? spec.minzoom ?? 0 : Number.NaN;
+};
+const paintOf = (id: string) => (layerOf(id) as { paint?: Record<string, unknown> } | undefined)?.paint ?? {};
+
+test('Farm map style: every farm is marked from the overview zoom and its boundary from regional zoom', () => {
+  assert.equal(layerOf('farm-halo')?.type, 'circle');
+  assert.ok(LAYER_MAP.bounds.includes('farm-halo'));
+  assert.ok(minZoomOf('bounds') <= 8, 'farm boundaries start too late');
+  assert.ok(minZoomOf('bounds-fill') <= 8 && minZoomOf('bounds-halo') <= 8);
+  assert.ok(minZoomOf('field-edges') <= 10, 'field outlines start too late');
+});
+
+test('Farm map style: the farm boundary is a solid outline over a casing and a glow, all toggled with the boundary layer', () => {
+  ['bounds-fill', 'bounds-halo', 'bounds-case', 'bounds', 'farm-halo'].forEach((id) => assert.ok(LAYER_MAP.bounds.includes(id), `${id} is not toggled with the boundary layer`));
+  assert.equal(paintOf('bounds')['line-dasharray'], undefined);
+  assert.equal(paintOf('bounds')['line-opacity'], 1);
+  assert.ok(dataIds.indexOf('bounds-halo') < dataIds.indexOf('bounds-case') && dataIds.indexOf('bounds-case') < dataIds.indexOf('bounds'));
+});
+
+test('Farm map style: field outlines carry the farm status and satellite does not dim the fields', () => {
+  assert.ok(JSON.stringify(paintOf('field-edges')['line-color']).includes('"risk"'));
+  assert.ok(FIELD_FILL_OPACITY.satellite >= 0.7 && FIELD_FILL_OPACITY.map >= 0.9);
 });
 
 test('Farm map style: 3D field relief starts hidden and follows the terrain switch and the layer toggles', () => {

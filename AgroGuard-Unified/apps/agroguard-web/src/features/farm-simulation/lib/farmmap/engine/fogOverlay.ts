@@ -31,7 +31,7 @@ const LABEL: Partial<Record<ChunkRecord['st'], string>> = {
 
 function drawBadge(c: CanvasRenderingContext2D, ch: ChunkRecord, cx: number, cy: number, alpha: number, now: number) {
   const text = LABEL[ch.st] ?? '';
-  c.font = '600 11.5px "Plus Jakarta Sans", system-ui';
+  c.font = '600 12.5px "Segoe UI", system-ui, sans-serif';
   const width = c.measureText(text).width + 38;
   c.globalAlpha = alpha;
   c.shadowColor = MAP_COLOR.pinShadow;

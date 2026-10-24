@@ -37,7 +37,7 @@
 }
 
 .aq-farmmap .maplibregl-ctrl-attrib {
-  font: 10px var(--aq-font-sans);
+  font: 12px var(--aq-font-sans);
   background: var(--aq-attrib-bg);
 }
 
@@ -133,7 +133,7 @@
   background: var(--aq-surface-card);
   color: var(--aq-text-muted);
   font: var(--aq-type-mono);
-  font-size: 10.5px;
+  font-size: 12px;
 }
 
 .aq-farmmap-loading {

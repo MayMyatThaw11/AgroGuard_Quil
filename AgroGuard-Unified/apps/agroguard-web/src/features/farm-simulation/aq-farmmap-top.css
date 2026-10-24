@@ -187,10 +187,6 @@
   cursor: pointer;
 }
 
-.aq-fm-result.is-active {
-  background: var(--aq-surface-selected);
-}
-
 .aq-fm-result-icon,
 .aq-fm-crop-tile,
 .aq-fm-poi-tile {
