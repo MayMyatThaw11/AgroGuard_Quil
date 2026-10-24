@@ -1038,12 +1038,25 @@ export interface SeasonScore {
   reason?: string | null;
 }
 
+export interface Calibration {
+  pairs: number;
+  factor: number | null;
+  raw_mape_pct: number | null;
+  leave_one_out_mape_pct: number | null;
+  baseline_mape_pct: number | null;
+  status: 'promoted' | 'shadow';
+  reason: string | null;
+  rule: string;
+  basis: string;
+}
+
 export interface HarvestScore {
   farm_id: string;
   scored_at: string;
   min_pairs: number;
   engines: Record<string, SeasonScore>;
   baseline: SeasonScore;
+  calibration: Record<string, Calibration>;
   skipped: { id: string; harvested_on: string; reason: string }[];
   status: string;
   note: string;

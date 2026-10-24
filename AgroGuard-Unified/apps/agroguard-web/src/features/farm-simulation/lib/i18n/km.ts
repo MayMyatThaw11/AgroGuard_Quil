@@ -1132,4 +1132,6 @@ export const KM: Dictionary = {
   'farmMap.replica.regime': 'ទឹក៖ {regime}',
   'farmMap.sim.open3dNeeds': 'ស្រែ 3D ចាក់ផ្សាយលទ្ធផលម៉ូដែល។ សូមបញ្ចូលរយៈពេលរដូវ និងកម្ពស់ដងស្រែជាមុន គ្មានតម្លៃណាត្រូវបានសន្មតទេ។',
   'farmMap.replica.engineNoYield': '{engine}៖ គ្មានទិន្នផល។ {reason}',
+  'farmMap.harvest.calib.promoted': '{engine}៖ កែដោយ ×{factor}។ កំហុសលើរដូវដែលទុកចោល {loo} % មុនកែ {raw} %។ កំពុងប្រើ។',
+  'farmMap.harvest.calib.shadow': '{engine}៖ បានសាកល្បងការកែ ×{factor}។ កំហុសលើរដូវដែលទុកចោល {loo} % មុនកែ {raw} %។ មិនទាន់ប្រើ។',
 };

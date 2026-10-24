@@ -159,3 +159,13 @@ def test_the_model_card_copies_the_saved_score(engines):
     assert own["value"] == pytest.approx(15.0, abs=0.05) and own["pairs"] == 3
     assert own["status"] == "shadow" and own["baseline_value"] == pytest.approx(15.27, abs=0.05)
     assert rows["season engine wofost"]["status"] == "not run"
+
+
+def test_the_score_includes_a_held_out_calibration_per_engine(engines):
+    three_seasons()
+    calibration = client.get(URL, headers=ANN).json()["calibration"]
+    own = calibration["own"]
+    assert own["pairs"] == 3 and own["factor"] == pytest.approx(4000 / 3600, abs=0.0001)
+    assert own["status"] == "shadow" and "raw engine" in own["reason"]
+    assert own["baseline_mape_pct"] == pytest.approx(15.27, abs=0.05)
+    assert calibration["wofost"]["pairs"] == 0 and calibration["wofost"]["factor"] is None

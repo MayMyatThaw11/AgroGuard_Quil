@@ -1132,4 +1132,6 @@ export const MY: Dictionary = {
   'farmMap.replica.regime': 'ရေ: {regime}',
   'farmMap.sim.open3dNeeds': '၃ဒီ လယ်ကွက်သည် မော်ဒယ်လည်ပတ်မှုကို ပြသသည်။ ရာသီကြာချိန်နှင့် ကန်သင်းအမြင့်ကို အရင်ဖြည့်ပါ၊ တန်ဖိုးမည်သည့်အရာမျှ မခန့်မှန်းပါ။',
   'farmMap.replica.engineNoYield': '{engine}: အထွက်နှုန်း မရှိပါ။ {reason}',
+  'farmMap.harvest.calib.promoted': '{engine}: ×{factor} ဖြင့် ပြင်ထားသည်။ ထားခဲ့သော ရာသီတွင် အမှား {loo} %၊ မပြင်မီ {raw} %။ အသုံးပြုနေသည်။',
+  'farmMap.harvest.calib.shadow': '{engine}: ×{factor} ပြင်ဆင်မှုကို စမ်းသပ်ခဲ့သည်။ ထားခဲ့သော ရာသီတွင် အမှား {loo} %၊ မပြင်မီ {raw} %။ မသုံးသေးပါ။',
 };

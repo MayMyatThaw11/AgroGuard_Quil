@@ -126,6 +126,11 @@ const ScoreLines: React.FC<{ score: HarvestScore }> = ({ score }) => (
             : tr('farmMap.harvest.score.line', { engine: ENGINE_LABEL[name] ?? name, abs: percent(s.mean_abs_pct_error), n: s.pairs, signed: percent(s.mean_signed_pct_error) })}
       </p>
     ))}
+    {Object.entries(score.calibration ?? {}).filter(([, c]) => c.factor !== null).map(([name, c]) => (
+      <p key={`calib-${name}`} className="aq-fm-note">
+        {tr(c.status === 'promoted' ? 'farmMap.harvest.calib.promoted' : 'farmMap.harvest.calib.shadow', { engine: ENGINE_LABEL[name] ?? name, factor: c.factor ?? '', loo: percent(c.leave_one_out_mape_pct), raw: percent(c.raw_mape_pct) })}
+      </p>
+    ))}
     {score.baseline.pairs ? <p className="aq-fm-note">{tr('farmMap.harvest.score.baseline', { abs: percent(score.baseline.mean_abs_pct_error), n: score.baseline.pairs })}</p> : null}
     {score.skipped.map((s) => <p key={s.id} className="aq-fm-note">{tr('farmMap.harvest.score.skipped', { date: s.harvested_on, reason: s.reason })}</p>)}
     <p className="aq-fm-note">{tr('farmMap.harvest.score.note')}</p>

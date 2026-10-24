@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from . import cropvalue, harvests, live, season_run
+from . import calibration, cropvalue, harvests, live, season_run
 from .store import RecordCache, now_iso
 
 _STORE = RecordCache("contracts.sqlite")
@@ -134,13 +134,21 @@ def score(farm_id: str) -> dict[str, Any]:
             **summary,
             "reason": reasons.get(name) if len(seasons) < len(scorable) else None,
         }
+    baseline_summary = _summary(baseline, BASELINE_BASIS)
     out = {
         "farm_id": farm_id,
         "scored_at": now_iso(),
         "min_pairs": MIN_PAIRS,
         "min_pairs_basis": "our rule: fewer scored seasons are shown but not called a score",
         "engines": engines,
-        "baseline": _summary(baseline, BASELINE_BASIS),
+        "baseline": baseline_summary,
+        "calibration": {
+            name: calibration.calibrate(
+                [(row["engine_kg_dm_ha"], row["measured_dry_kg_ha"]) for row in seasons],
+                baseline_summary["mean_abs_pct_error"],
+            )
+            for name, seasons in pairs.items()
+        },
         "skipped": skipped,
         "status": "uncalibrated",
         "note": NOTE,

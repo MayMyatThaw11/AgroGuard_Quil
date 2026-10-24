@@ -1132,4 +1132,6 @@ export const FIL: Dictionary = {
   'farmMap.replica.regime': 'Tubig: {regime}',
   'farmMap.sim.open3dNeeds': 'Pinapatakbo ng 3D na bukid ang resulta ng modelo. Ilagay muna ang haba ng panahon at taas ng pilapil; walang ipinapalagay na halaga.',
   'farmMap.replica.engineNoYield': '{engine}: walang ani. {reason}',
+  'farmMap.harvest.calib.promoted': '{engine}: itinama ng ×{factor}. Error sa itinabing panahon {loo} %, bago itama {raw} %. Ginagamit.',
+  'farmMap.harvest.calib.shadow': '{engine}: sinubukan ang pagtatama ng ×{factor}. Error sa itinabing panahon {loo} %, bago itama {raw} %. Hindi ginagamit.',
 };

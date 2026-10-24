@@ -1131,6 +1131,8 @@ export const EN = {
   'farmMap.replica.regime': 'Water: {regime}',
   'farmMap.sim.open3dNeeds': 'The 3D field plays the model run. Give the season length and the bund height first; nothing is assumed.',
   'farmMap.replica.engineNoYield': '{engine}: no yield. {reason}',
+  'farmMap.harvest.calib.promoted': '{engine}: corrected by ×{factor}. Held-out error {loo} %, uncorrected {raw} %. In use.',
+  'farmMap.harvest.calib.shadow': '{engine}: a ×{factor} correction was tested. Held-out error {loo} %, uncorrected {raw} %. Not in use.',
 } as const;
 
 export type Key = keyof typeof EN;

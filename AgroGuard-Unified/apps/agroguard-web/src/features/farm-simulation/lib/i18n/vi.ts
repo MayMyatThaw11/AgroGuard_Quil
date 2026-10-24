@@ -1132,4 +1132,6 @@ export const VI: Dictionary = {
   'farmMap.replica.regime': 'Nước: {regime}',
   'farmMap.sim.open3dNeeds': 'Ruộng 3D chạy lại kết quả mô hình. Hãy nhập độ dài vụ và chiều cao bờ trước; không có giá trị nào được tự giả định.',
   'farmMap.replica.engineNoYield': '{engine}: chưa có năng suất. {reason}',
+  'farmMap.harvest.calib.promoted': '{engine}: hiệu chỉnh ×{factor}. Sai số trên vụ giữ lại {loo} %, chưa hiệu chỉnh {raw} %. Đang dùng.',
+  'farmMap.harvest.calib.shadow': '{engine}: đã thử hiệu chỉnh ×{factor}. Sai số trên vụ giữ lại {loo} %, chưa hiệu chỉnh {raw} %. Chưa dùng.',
 };

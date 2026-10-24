@@ -1132,4 +1132,6 @@ export const TH: Dictionary = {
   'farmMap.replica.regime': 'น้ำ: {regime}',
   'farmMap.sim.open3dNeeds': 'แปลง 3 มิติเล่นผลจากโมเดล โปรดใส่ความยาวฤดูและความสูงคันนาก่อน ระบบไม่สมมติค่าใดเลย',
   'farmMap.replica.engineNoYield': '{engine}: ไม่มีผลผลิต {reason}',
+  'farmMap.harvest.calib.promoted': '{engine}: ปรับด้วย ×{factor} ความคลาดเคลื่อนบนฤดูที่กันไว้ {loo} % ก่อนปรับ {raw} % ใช้งานอยู่',
+  'farmMap.harvest.calib.shadow': '{engine}: ทดสอบการปรับ ×{factor} ความคลาดเคลื่อนบนฤดูที่กันไว้ {loo} % ก่อนปรับ {raw} % ยังไม่ใช้',
 };

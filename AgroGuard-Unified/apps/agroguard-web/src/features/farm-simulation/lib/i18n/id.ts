@@ -1132,4 +1132,6 @@ export const ID: Dictionary = {
   'farmMap.replica.regime': 'Air: {regime}',
   'farmMap.sim.open3dNeeds': 'Petak 3D memutar hasil model. Isi dulu panjang musim dan tinggi pematang; tidak ada nilai yang diasumsikan.',
   'farmMap.replica.engineNoYield': '{engine}: belum ada hasil. {reason}',
+  'farmMap.harvest.calib.promoted': '{engine}: dikoreksi ×{factor}. Galat pada musim yang ditahan {loo} %, tanpa koreksi {raw} %. Dipakai.',
+  'farmMap.harvest.calib.shadow': '{engine}: koreksi ×{factor} diuji. Galat pada musim yang ditahan {loo} %, tanpa koreksi {raw} %. Belum dipakai.',
 };
