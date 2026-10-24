@@ -43,7 +43,7 @@ export interface SeasonDialProps {
   water: number | null;
   canopy: number | null;
   hazy: boolean;
-  centre: { big: string; date: string; stage: string };
+  centre: { caption: string; big: string; date: string; stage: string };
   onDay: (day: number) => void;
 }
 
@@ -149,6 +149,7 @@ export const SeasonDial: React.FC<SeasonDialProps> = ({ label, valueText, day, l
           {canopy !== null ? <circle className="aq-dial-canopy fx-canopy-fill" cx={C} cy={C} r={R_WELL} style={{ transform: `scale(${Math.sqrt(Math.min(1, Math.max(0, canopy)))})` }} /> : null}
           {water !== null ? <rect className="aq-dial-water fx-water-fill" x={C - R_WELL} y={C + R_WELL - 2 * R_WELL * Math.min(1, Math.max(0, water))} width={2 * R_WELL} height={2 * R_WELL} /> : null}
         </g>
+        <text className="aq-dial-caption" x={C} y={C - 26}>{centre.caption}</text>
         <text key={centre.big} className="aq-dial-big is-flip fx-day-flip" x={C} y={C + 2}>{centre.big}</text>
         <text className="aq-dial-date" x={C} y={C + 16}>{centre.date}</text>
         <text className="aq-dial-stage-name" x={C} y={C + 30}>{centre.stage}</text>

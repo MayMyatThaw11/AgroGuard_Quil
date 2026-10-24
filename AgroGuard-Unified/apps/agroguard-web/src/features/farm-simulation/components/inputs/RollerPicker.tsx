@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { bandState, chillOf, heatOf, snapToStep, wheelKey, type Band } from '../../lib/inputs/dialMath.ts';
 import { decimalsOf, reducedMotion, tick } from '../../lib/inputs/motion.ts';
-import { useT } from '../../lib/i18n.ts';
+import { useT, type Key } from '../../lib/i18n.ts';
 import { Odometer } from './Odometer.tsx';
 
 const ITEM_PX = 26;
@@ -37,6 +37,8 @@ export interface RollerPickerProps {
 }
 
 type Zone = 'none' | 'below' | 'in' | 'above';
+
+const ZONE_NOTE: Record<Exclude<Zone, 'none'>, Key> = { below: 'farmMap.input.zoneBelow', in: 'farmMap.input.zoneIn', above: 'farmMap.input.zoneAbove' };
 
 const resist = (px: number) => OVERSHOOT_PX * (1 - Math.exp(-px / OVERSHOOT_PX));
 
@@ -263,6 +265,7 @@ export const RollerPicker: React.FC<RollerPickerProps> = ({ label, unit, value, 
         </div>
       )}
       {hint ? <span className="aq-fm-note">{hint}</span> : null}
+      {zone !== 'none' ? <span className="aq-fm-note aq-roll-zone">{t(ZONE_NOTE[zone])}</span> : null}
       {value === null ? <span className="aq-fm-note">{t('farmMap.input.unset')}</span> : null}
     </div>
   );

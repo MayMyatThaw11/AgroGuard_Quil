@@ -140,7 +140,7 @@ export const SeasonTimeline: React.FC<SeasonTimelineProps> = ({ run, parcelId, y
           water={ponded !== null && bund ? ponded / bund : null}
           canopy={canopy}
           hazy={row?.vars.heat_day?.value === true}
-          centre={{ big: String(row?.das ?? playback.day), date: row?.date ?? '—', stage: stageKey ? t(`farmMap.sim.stage.${stageKey}` as Key) : '—' }}
+          centre={{ caption: t('farmMap.sim.day'), big: String(row?.das ?? playback.day), date: row?.date ?? '—', stage: stageKey ? t(`farmMap.sim.stage.${stageKey}` as Key) : '—' }}
           onDay={(day) => onPlayback((p) => ({ ...p, day, playing: false }))}
         />
         <div className="aq-fm-sim-side">

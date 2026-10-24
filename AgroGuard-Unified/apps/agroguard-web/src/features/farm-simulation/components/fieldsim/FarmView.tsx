@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree, type RootState } from '@react-three/fiber';
 import { OrbitControls, Sky } from '@react-three/drei';
-import { Box, Eye, Loader, Map as MapIcon, X } from 'lucide-react';
+import { Box, CircleHelp, Eye, Info, Loader, Map as MapIcon, X } from 'lucide-react';
 import type { SeasonReplay } from '../../lib/api.ts';
 import { SAT_ATTRIBUTION } from '../../lib/farmmap/basemapTheme.ts';
 import { engineDays } from '../../lib/farmmap/seasonPlayback.ts';
@@ -12,6 +12,8 @@ import { mainField, type FarmTarget, type TargetField } from '../../lib/farmview
 import { sunPosition, weedDensity } from '../../lib/farmview/seasonField.ts';
 import { OMT_ATTRIBUTION } from '../../lib/farmview/captureOmt.ts';
 import { buildProfile, type Chip } from '../../lib/farmview/profile.ts';
+import { HEIGHT_KEY, distanceWord, heightLine, terrainKey } from '../../lib/farmview/plainHud.ts';
+import { browserStorage, guideSeen, markGuideSeen } from '../../lib/farmview/guideSeen.ts';
 import { FAR_HALF_KM, NEIGHBOURHOOD_HALF_KM, RELIEF_ATTRIBUTION, clampCamera, clearView, fogDensity, heightAt, ringPlan, slopeStats } from '../../lib/farmview/terrain.ts';
 import { nearest, type NearFeature } from '../../lib/farmmap/surroundings.ts';
 import { localFrame, type XZ } from '../../lib/fieldsim/localFrame.ts';
@@ -24,6 +26,7 @@ import { FieldLayer } from './FieldLayer.tsx';
 import { BUND_WIDTH_M, useFieldTextures } from './fieldKit.ts';
 import { ReplicaModels } from './ReplicaModels.tsx';
 import { useGround, type Patch } from './useGround.ts';
+import { FarmViewGuide } from './FarmViewGuide.tsx';
 import { Neighbourhood } from './Neighbourhood.tsx';
 import { OutlineFields } from './OutlineFields.tsx';
 import { useNeighbourhood, type Capture } from './useNeighbourhood.ts';
@@ -163,6 +166,11 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const detach = useRef<() => void>(() => {});
   const [lost, setLost] = useState(false);
   const [eye, setEye] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(() => !guideSeen(browserStorage()));
+  const closeGuide = () => {
+    markGuideSeen(browserStorage());
+    setGuideOpen(false);
+  };
   const textures = useFieldTextures();
   const main = useMemo(() => mainField(target), [target]);
   const frame = useMemo(() => {
@@ -245,13 +253,17 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   }, [placed]);
 
   useEffect(() => {
-    closeRef.current?.focus();
+    if (!guideOpen) closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (guideOpen) {
+        markGuideSeen(browserStorage());
+        setGuideOpen(false);
+      } else onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, guideOpen]);
 
   const onCreated = (state: RootState) => {
     detach.current();
@@ -259,6 +271,15 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   };
 
   const ready = ground.status !== 'loading' && hood.status !== 'loading';
+  const height = heightLine(profile.chips.find((c) => c.key === 'elevation')?.value ?? null);
+  const landLine = ground.status === 'loading' ? '' : [t(terrainKey(profile.terrain)), height ? t(HEIGHT_KEY[height.kind], { m: height.m }) : null].filter(Boolean).join(' · ');
+  const nearby = profile.chips.filter((c) => c.key !== 'elevation' && c.key !== 'slope' && c.value !== null);
+  const awayText = (c: Chip) => {
+    const label = c.name ? `${t(CHIP_LABEL[c.key])}: ${c.name}` : t(CHIP_LABEL[c.key]);
+    const d = distanceWord(c.value ?? 0);
+    if (d.kind === 'edge') return t('farmMap.farmView.edge', { label });
+    return d.kind === 'metres' ? t('farmMap.farmView.awayM', { label, m: d.value }) : t('farmMap.farmView.away', { label, km: d.value });
+  };
   const dryRun = Boolean(season) && !plan;
 
   return (
@@ -302,11 +323,14 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           <CameraLimits eye={eye} groundAt={ground.groundAt} />
         </Canvas>
       </CanvasErrorBoundary>
-      <button ref={closeRef} type="button" className="aq-icon-btn aq-fm-replica-close" aria-label={t('farmMap.farmView.close')} onClick={onClose}><X size={16} aria-hidden="true" /></button>
-      <button type="button" className="aq-btn aq-btn-secondary aq-fm-replica-view" aria-pressed={eye} onClick={() => setEye((value) => !value)}>
-        {eye ? <MapIcon size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
-        {eye ? t('farmMap.replica.overview') : t('farmMap.replica.eye')}
-      </button>
+      <div className="aq-fm-replica-tools">
+        <button type="button" className="aq-btn aq-btn-secondary" aria-pressed={eye} aria-label={eye ? t('farmMap.replica.overview') : t('farmMap.replica.eye')} onClick={() => setEye((value) => !value)}>
+          {eye ? <MapIcon size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
+          <span className="aq-fm-replica-view-label">{eye ? t('farmMap.replica.overview') : t('farmMap.replica.eye')}</span>
+        </button>
+        <button type="button" className="aq-icon-btn" aria-label={t('farmMap.farmView.help')} onClick={() => setGuideOpen(true)}><CircleHelp size={16} aria-hidden="true" /></button>
+        <button ref={closeRef} type="button" className="aq-icon-btn" aria-label={t('farmMap.farmView.close')} onClick={onClose}><X size={16} aria-hidden="true" /></button>
+      </div>
       {season && run ? <ReplicaModels run={run} year={season.year} /> : null}
       <div className="aq-fm-replica-hud" role="status">
         <b><Box size={13} aria-hidden="true" /> {target.label}{row ? ` · ${row.date}` : ''}</b>
@@ -314,24 +338,36 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
         {target.kind === 'example' ? <span>{t('farmMap.farmView.example')}</span> : null}
         {!season && target.kind === 'own' ? <span>{t('farmMap.farmView.noSeason')}</span> : null}
         {dryRun ? <span>{t('farmMap.replica.noBoundary')}</span> : null}
+        {landLine ? <span>{landLine}</span> : null}
         {plan && row ? (
           <>
             <span>{t('farmMap.replica.water', { mm: Math.round(ponded), bund: Math.round(plan.bund_height_cm * 10) })}</span>
-            <span>{t('farmMap.replica.plantSize')}</span>
             {plan.trench && plan.fish ? <span>{t('farmMap.replica.trench', { depth: plan.trench.depth_cm, width: plan.trench.width_cm })}</span> : null}
-            <span>{t('farmMap.replica.design', { bund: plan.bund_height_cm })}</span>
             {rain > 1 ? <span>{t('farmMap.replica.rain', { mm: Math.round(rain) })}</span> : null}
             {sprayed ? <span>{t('farmMap.replica.spray')}</span> : null}
           </>
         ) : null}
-        {profile.chips.filter((c) => c.value !== null || c.key === 'elevation' || c.key === 'slope').map((c) => <span key={c.key} title={c.reason ?? c.source}>{chipText(c, t(CHIP_LABEL[c.key] ?? 'farmMap.farm.elevation'))}</span>)}
+        {nearby.map((c) => <span key={c.key}>{awayText(c)}</span>)}
         {hood.status === 'partial' ? <span>{t('farmMap.farmView.partial')}</span> : null}
-        <span>{t('farmMap.replica.flat')}</span>
-        {hood.data ? <span>{OMT_ATTRIBUTION}</span> : null}
-        {ground.status === 'flat' ? <span>{t('farmMap.farmView.terrainFailed')}</span> : <span>{RELIEF_ATTRIBUTION}</span>}
-        {ground.imageryFailed && ready ? <span>{t('farmMap.replica.imageryFailed')}</span> : <span>{SAT_ATTRIBUTION}</span>}
+        {ground.status === 'flat' ? <span>{t('farmMap.farmView.terrainFailed')}</span> : null}
+        {ground.imageryFailed && ready ? <span>{t('farmMap.replica.imageryFailed')}</span> : null}
         {lost ? <span>{t('farmMap.replica.paused')}</span> : null}
+        <details>
+          <summary><Info size={13} aria-hidden="true" /> {t('farmMap.farmView.about')}</summary>
+          <div>
+            {profile.chips.map((c) => <span key={c.key}>{chipText(c, t(CHIP_LABEL[c.key] ?? 'farmMap.farm.elevation'))} · {c.reason ?? c.source}</span>)}
+            {plan && row ? <span>{t('farmMap.replica.design', { bund: plan.bund_height_cm })}</span> : null}
+            {plan && row ? <span>{t('farmMap.replica.plantSize')}</span> : null}
+            <span>{t('farmMap.replica.flat')}</span>
+          </div>
+        </details>
       </div>
+      <div className="aq-fm-replica-credits">
+        {hood.data ? <span>{OMT_ATTRIBUTION}</span> : null}
+        {ground.status !== 'flat' ? <span>{RELIEF_ATTRIBUTION}</span> : null}
+        {!ground.imageryFailed || !ready ? <span>{SAT_ATTRIBUTION}</span> : null}
+      </div>
+      {guideOpen ? <FarmViewGuide onClose={closeGuide} /> : null}
     </div>
   );
 };

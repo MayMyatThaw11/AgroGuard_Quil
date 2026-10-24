@@ -12,6 +12,7 @@ const SIZES = [
   { name: '1440', width: 1440, height: 900 },
   { name: '375', width: 375, height: 812 },
 ];
+const GUIDE_KEY = 'aq-farmview-guide-seen';
 const THEMES = (process.env.THEMES ?? 'light,dark').split(',');
 const CHROME = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find((p) => p && existsSync(p));
 
@@ -46,12 +47,12 @@ for (const size of SIZES) {
     for (const farm of FARMS) {
       const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, colorScheme: theme });
       const page = await context.newPage();
-      await page.addInitScript((t) => {
+      await page.addInitScript(([t, key]) => {
         try {
-          localStorage.setItem('theme', t);
-          document.documentElement.dataset.theme = t;
+          localStorage.setItem(key, '1');
+          localStorage.setItem('agriquill.theme', t);
         } catch {}
-      }, theme);
+      }, [theme, GUIDE_KEY]);
       page.on('pageerror', (e) => console.log(`${farm} ${size.name} ${theme} pageerror:`, String(e).slice(0, 200)));
       await open(page, farm);
       const file = join(OUT, `${farm}-${size.name}-${theme}.png`);

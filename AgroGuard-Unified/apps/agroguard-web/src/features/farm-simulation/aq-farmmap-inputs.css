@@ -207,6 +207,7 @@
 .aq-dial-canopy { fill: var(--aq-leaf-500); opacity: 0.32; }
 .aq-dial-well { fill: var(--aq-surface-card); stroke: var(--aq-border-default); stroke-width: 1; }
 
+.aq-dial-caption { fill: var(--aq-text-muted); font: 600 10px/1 var(--aq-font-sans); text-anchor: middle; }
 .aq-dial-big { fill: var(--aq-text-strong); font: 700 30px/1 var(--aq-font-sans); text-anchor: middle; }
 .aq-dial-date { fill: var(--aq-text-body); font: 500 11px/1 var(--aq-font-mono); text-anchor: middle; }
 .aq-dial-stage-name { fill: var(--aq-text-muted); font: 600 10px/1 var(--aq-font-sans); text-anchor: middle; }
@@ -260,3 +261,8 @@
 @media (max-width: 639px) {
   .aq-dial { width: 148px; }
 }
+
+.aq-roll-zone { font-weight: 600; }
+.aq-roll-field[data-zone='above'] .aq-roll-zone { color: var(--aq-clay-700); }
+.aq-roll-field[data-zone='below'] .aq-roll-zone { color: var(--aq-water-600); }
+.aq-roll-field[data-zone='in'] .aq-roll-zone { color: var(--aq-leaf-700); }

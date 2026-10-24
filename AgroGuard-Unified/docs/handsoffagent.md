@@ -32,8 +32,8 @@ Update this file at every later commit that changes status.
 | 3 FarmView plus the click flow from the map | done | ac2511d |
 | 3b Visual inputs (dial, wheels, tiles, month picker) | done | 2e4bc9a |
 | 4 Neighbourhood capture and 6 environment profile | done | b40eee7 |
-| Hand-off file and screenshot script | this commit | |
-| Plain-language HUD and first-use guide (req 12, 13) | not started | |
+| Hand-off file and screenshot script | done | 702678d |
+| Plain-language HUD and first-use guide (req 12, 13) | done except the water what-if step (added with flood) | see git log |
 | Flood and sea level in the view (req 14) | not started | |
 | 7 Weather components and map overlay | not started | |
 | 3c Effects catalogue and its test (req 10) | not started | |
@@ -69,15 +69,12 @@ Use throwaway data. Never touch the real data folder.
 - Light: minimum sun elevation of 28 degrees and a `flat` canvas, or dusk scenes go black.
 - The hover tooltip must stay hidden while the 3D view is open.
 - Motion: tokens `--aq-ease`, `--aq-dur-fast|base|slow` in `paddy-tokens.css`; spacing base 2 px; colours from `--aq-*` variables. Compositor-only properties for CSS effects; one rAF loop for canvas effects; pause on `visibilitychange`.
-- Theme switches through `document.documentElement.dataset.theme`, mirrored from localStorage key `theme` by `lib/useTheme.ts`.
+- Theme switches through `document.documentElement.dataset.theme`, mirrored from localStorage key `agriquill.theme` by `lib/useTheme.ts`. In Playwright init scripts write the localStorage keys only; `document.documentElement` is null there and throws.
+- The guide shows once per browser (key `aq-farmview-guide-seen`). Screenshot scripts set it to skip the guide.
 
 ## Pending work, in order
 
-1. Plain-language HUD and first-use guide.
-   - Terrain words: Flat, Gently rolling, Hilly, Mountain. Lines like "{label} - {km} km away". Technical detail behind an "About this view" disclosure.
-   - Rename `farmMap.replica.eye` to "Look from the field" and `farmMap.replica.overview` to "Look from above" in all locales.
-   - Zone notes `farmMap.input.zoneBelow|zoneIn|zoneAbove` beside every heat and frost effect. Hint `farmMap.input.howTo` above the first wheel. "Day" caption in the dial centre.
-   - New `FarmViewGuide.tsx`: four steps (look around, see the land around it, try the water what-if, go back anytime), Next/Back/Skip/Got it, step counter, shown once (localStorage, wrapped in try/catch), help button reopens it. Esc closes the guide before the view.
+1. (done) Plain-language HUD and first-use guide: `lib/farmview/plainHud.ts` (terrain words, height line, distance words), `guideSeen.ts`, `FarmViewGuide.tsx` (3 steps now), zone notes in `RollerPicker`, `Day` dial caption, how-to hint in the plan. When the flood what-if lands, add a fourth guide step (water what-if) in all 7 locales. Esc closes the guide before the view. Guide CSS classes use the `aq-fv-guide` prefix because `aq-fm-guide` already belongs to `GuideHud`.
 2. Flood and sea level (req 14).
    - Plain height line: "{m} m above sea level", "below sea level" (new key) or near sea level; reuse `farmMap.own.aboveSea` and `farmMap.own.nearSea`.
    - Own farms: call `getRisk(target.id)` (`/contracts/{id}/risk`) and show "Modelled flood risk, next 30 days: {level}" using `FLOOD_WORD`, plus `within_dem_error` and the nearest river. Example farms: no flood risk, only measured elevation facts.

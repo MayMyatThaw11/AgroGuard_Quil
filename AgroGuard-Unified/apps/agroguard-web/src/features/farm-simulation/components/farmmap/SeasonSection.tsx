@@ -243,6 +243,7 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
             <ChoiceTiles label={t('farmMap.sim.parcel')} value={parcel.id} options={parcels.map((p) => ({ value: p.id, label: p.id }))} onChange={setParcelId} />
           </div>
         ) : null}
+        <p className="aq-fm-note">{t('farmMap.input.howTo')}</p>
         <SeasonDayPicker label={t('farmMap.sim.transplant')} value={draft.transplant_date} onChange={(date) => set({ transplant_date: date })} spanDays={draft.duration_days} />
         <NumberField label={t('farmMap.sim.duration')} value={draft.duration_days} onChange={(v) => set({ duration_days: v })} min={60} max={200} unit="d" big={10} />
         <NumberField label={t('farmMap.sim.nursery')} value={draft.seedbed_days} onChange={(v) => set({ seedbed_days: v })} max={60} unit="d" />
