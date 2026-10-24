@@ -137,3 +137,34 @@ def test_site_inputs_without_boundary_uses_farm_location(monkeypatch):
     assert out["location_basis"] == "farm location: no parcel boundary drawn"
     assert seen["daily"][2:] == (date(2025, 7, 1), date(2025, 10, 29))
     assert out["hydraulics"]["theta_fc"] > 0
+
+
+def stub_site(monkeypatch: pytest.MonkeyPatch, soil_reply: dict) -> None:
+    live.register("farm_n", NO_BOUNDARY, "Ann")
+
+    async def soil(lat, lon):
+        return soil_reply
+
+    monkeypatch.setattr(season_inputs, "fetch_soil", soil)
+    monkeypatch.setattr(
+        season_inputs.weather,
+        "fetch_archive_daily",
+        lambda *a, **k: {"days": [], "missing": [], "source": None},
+    )
+    monkeypatch.setattr(
+        season_inputs.weather,
+        "fetch_archive_hourly",
+        lambda *a, **k: {"hourly": None, "missing": [], "source": None},
+    )
+
+
+def test_a_borrowed_soil_cell_is_named_in_the_inputs(monkeypatch):
+    note = {"distance_m": 250, "latitude": 16.7, "longitude": 94.8, "basis": "x"}
+    stub_site(monkeypatch, {"provider": "test", "layers": [], "substituted": note})
+    out = season_inputs.site_inputs("farm_n", "P1", date(2025, 7, 1), 120)
+    assert "250 m" in out["soil_note"] and "TO VERIFY" in out["soil_note"]
+
+
+def test_a_soil_cell_at_the_point_has_no_note(monkeypatch):
+    stub_site(monkeypatch, {"provider": "test", "layers": []})
+    assert season_inputs.site_inputs("farm_n", "P1", date(2025, 7, 1), 120)["soil_note"] is None

@@ -167,6 +167,7 @@ def run(farm_id: str, parcel_id: str, plan: dict[str, Any]) -> dict[str, Any]:
                 "lat": inputs.get("lat"),
                 "lon": inputs.get("lon"),
                 "location_basis": inputs.get("location_basis"),
+                "soil_note": inputs.get("soil_note"),
                 "inputs_source": {
                     "weather": (inputs.get("weather") or {}).get("source"),
                     "soil": (inputs.get("soil") or {}).get("provider"),

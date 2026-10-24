@@ -1226,6 +1226,7 @@ export interface SeasonYear {
   lat: number | null;
   lon: number | null;
   location_basis: string | null;
+  soil_note?: string | null;
   inputs_source: { weather: { provider: string; url: string; retrieved_at: string; sha256: string } | null; soil: string | null; hydraulics: string | null };
   missing: { field: string; reason: string }[];
   plan: SeasonPlan;

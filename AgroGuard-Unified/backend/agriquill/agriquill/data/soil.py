@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import math
 from typing import Any
 
 import httpx
@@ -7,9 +9,24 @@ import httpx
 from .. import obs
 from ..cache import TTLCache
 from ..config import get_settings
+from ..store import RecordCache, sha256
 
 SOIL_DEPTHS = ["0-5cm", "5-15cm", "15-30cm", "30-60cm", "60-100cm", "100-200cm"]
 _CACHE = TTLCache("soilgrids")
+_STORE = RecordCache()
+STORED = "soilgrids_profile_v1"
+# Our rule, not a standard: how far to look for a neighbouring cell when a point is masked.
+SEARCH_RINGS_M = (250, 500, 750)
+BEARINGS_DEG = (0, 90, 180, 270, 45, 135, 225, 315)
+SEARCH_BASIS = (
+    "nearest SoilGrids cell with data within {limit} m, a different soil patch than the field's "
+    "own point; TO VERIFY with a sample from the field"
+)
+
+
+class NoValue(ValueError):
+    pass
+
 
 _UNIT_FACTOR: dict[str, float] = {
     "g/kg": 0.1,
@@ -37,7 +54,7 @@ def _mean(layer: dict[str, Any], prop: str) -> list[float]:
                     )
                 mean = d["values"]["mean"]
                 if mean is None:
-                    raise ValueError("no value at this point (water, built-up land or no data)")
+                    raise NoValue("no value at this point (water, built-up land or no data)")
                 out.append(float(mean))
             return out
     raise ValueError(f"missing property {prop}")
@@ -89,12 +106,19 @@ def parse_soil(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def fetch_soil(lat: float, lon: float) -> dict[str, Any]:
+def _point(lat: float, lon: float) -> str:
+    return f"{round(lat, 5)}|{round(lon, 5)}"
+
+
+def _stored(lat: float, lon: float) -> dict[str, Any] | None:
+    found = _STORE.get(STORED, _point(lat, lon))
+    if found is None:
+        return None
+    return {**found["payload"], "from_store": True, "retrieved_at": found["retrieved_at"]}
+
+
+async def _query(client: httpx.AsyncClient, lat: float, lon: float) -> dict[str, Any]:
     s = get_settings()
-    key = ("soil", round(lat, 5), round(lon, 5))
-    cached = _CACHE.get(key)
-    if cached is not None:
-        return cached
     params: list[tuple[str, str | int | float | bool | None]] = [
         ("lat", str(lat)),
         ("lon", str(lon)),
@@ -104,17 +128,78 @@ async def fetch_soil(lat: float, lon: float) -> dict[str, Any]:
         params.append(("property", prop))
     for d in SOIL_DEPTHS:
         params.append(("depth", d))
+    r = await client.get(s.soilgrids_endpoint, params=params)
+    r.raise_for_status()
+    return parse_soil(r.json())
+
+
+def _around(lat: float, lon: float, metres: float) -> list[tuple[float, float]]:
+    return [
+        (
+            lat + metres * math.cos(math.radians(b)) / 110574.0,
+            lon + metres * math.sin(math.radians(b)) / (111320.0 * math.cos(math.radians(lat))),
+        )
+        for b in BEARINGS_DEG
+    ]
+
+
+async def _nearest_valid(
+    client: httpx.AsyncClient, lat: float, lon: float
+) -> dict[str, Any] | None:
+    for metres in SEARCH_RINGS_M:
+        points = _around(lat, lon, metres)
+        found = await asyncio.gather(
+            *(_query(client, a, b) for a, b in points), return_exceptions=True
+        )
+        for (a, b), result in zip(points, found, strict=True):
+            if isinstance(result, dict):
+                note = {
+                    "distance_m": metres,
+                    "latitude": round(a, 6),
+                    "longitude": round(b, 6),
+                    "basis": SEARCH_BASIS.format(limit=SEARCH_RINGS_M[-1]),
+                }
+                return {**result, "substituted": note}
+    return None
+
+
+async def fetch_soil(lat: float, lon: float) -> dict[str, Any]:
+    s = get_settings()
+    key = ("soil", round(lat, 5), round(lon, 5))
+    cached = _CACHE.get(key)
+    if cached is not None:
+        return cached
+    kept = _stored(lat, lon)
+    if kept is not None:
+        _CACHE.set(key, kept, s.soil_cache_ttl_s)
+        return kept
     try:
         async with httpx.AsyncClient(
             timeout=s.http_timeout_s, transport=obs.TimedAsyncTransport("soilgrids")
         ) as client:
-            r = await client.get(s.soilgrids_endpoint, params=params)
-            r.raise_for_status()
-        profile = parse_soil(r.json())
+            try:
+                profile = await _query(client, lat, lon)
+            except NoValue as exc:
+                borrowed = await _nearest_valid(client, lat, lon)
+                if borrowed is None:
+                    return unavailable(
+                        lat,
+                        lon,
+                        f"SoilGrids: {exc}; no cell with data within {SEARCH_RINGS_M[-1]} m",
+                    )
+                profile = borrowed
     except ValueError as exc:
         return unavailable(lat, lon, f"SoilGrids: {exc}")
     except (httpx.HTTPError, KeyError) as exc:
         return unavailable(lat, lon, f"SoilGrids unavailable: {type(exc).__name__}")
+    _STORE.put(
+        STORED,
+        _point(lat, lon),
+        profile,
+        s.soilgrids_endpoint,
+        sha256(repr(profile).encode()),
+        None,
+    )
     _CACHE.set(key, profile, s.soil_cache_ttl_s)
     return profile
 

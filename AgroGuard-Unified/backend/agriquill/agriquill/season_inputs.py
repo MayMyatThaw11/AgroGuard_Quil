@@ -102,6 +102,16 @@ def _location(spec: Mapping[str, Any], parcel_id: str) -> tuple[float, float, st
     return float(location[0]), float(location[1]), "farm location: no parcel boundary drawn"
 
 
+def _soil_note(soil: dict[str, Any]) -> str | None:
+    borrowed = soil.get("substituted")
+    if not borrowed:
+        return None
+    return (
+        f"soil taken from a cell {borrowed['distance_m']} m from the field because the field's own "
+        "cell has no data; TO VERIFY with a soil sample"
+    )
+
+
 def site_inputs(farm_id: str, parcel_id: str, start: date, days: int) -> dict[str, Any]:
     loaded = live.load(farm_id)
     spec = loaded[1]["contract"] if loaded else None
@@ -130,6 +140,7 @@ def site_inputs(farm_id: str, parcel_id: str, start: date, days: int) -> dict[st
         "weather": daily,
         "hourly": hourly.get("hourly"),
         "soil": soil,
+        "soil_note": _soil_note(soil),
         "hydraulics": water,
         "missing": gaps,
     }

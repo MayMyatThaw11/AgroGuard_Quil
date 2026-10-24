@@ -158,6 +158,7 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
               <p key={name} className="aq-fm-note">{t('farmMap.sim.spread', { engine: ENGINE_LABEL[name] ?? name, low: t1(s.yield_kg_ha.min), high: t1(s.yield_kg_ha.max), n: Object.keys(s.yield_kg_ha.years).length })}</p>
             ))}
             <p className="aq-fm-note">{t('farmMap.sim.location', { basis: first.location_basis ?? '—' })}</p>
+            {first.soil_note ? <p className="aq-fm-note">{first.soil_note}</p> : null}
             {first.missing.map((m) => <p key={`${m.field}-${m.reason}`} className="aq-fm-note">{m.reason}</p>)}
             {Object.entries(score?.engines ?? {}).filter(([, s]) => s.pairs > 0).map(([name, s]) => (
               <p key={`m-${name}`} className="aq-fm-note">{t('farmMap.harvest.season.measured', { engine: ENGINE_LABEL[name] ?? name, abs: s.mean_abs_pct_error ?? '—', n: s.pairs })}</p>
