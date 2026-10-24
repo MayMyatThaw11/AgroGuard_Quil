@@ -27,6 +27,7 @@ import { AgronomyView } from './components/agronomy/AgronomyView';
 const FarmMapView = lazy(() => import('./components/farmmap/FarmMapView').then((module) => ({ default: module.FarmMapView })));
 const TwinWorkspace = lazy(() => import('./components/twin/TwinWorkspace').then((module) => ({ default: module.TwinWorkspace })));
 import { REAL_WORLD_EARTH_PARCELS } from './lib/googleEarth';
+import { readView, writeView } from './lib/viewMemory';
 import { DEMO_FARM_ID, INITIAL_AI_AGENTS } from './lib/agents/agentSystem';
 import { deriveReplayMetrics, SEASON_DAYS } from './lib/metrics';
 import { buildRecordHash } from './lib/hash';
@@ -36,12 +37,21 @@ import { notifyParent, planToken, runBlock, type RunBlock } from './lib/quota';
 import { RunLocked } from './components/RunLocked';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
+function tabStorage() {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 export const App: React.FC = () => {
   const { theme, toggle: toggleTheme } = useTheme();
   const [activePreset, setActivePreset] = useState<AseanPreset>(ASEAN_PRESETS[0]);
   // Farm Simulation opens on the 3D farm model; every other view is one click away.
-  const [activeDestination, setActiveDestination] = useState<ActivityDestination>('spatial');
-  const [activeView, setActiveView] = useState<string>('spatial');
+  const [remembered] = useState(() => readView(tabStorage()));
+  const [activeDestination, setActiveDestination] = useState<ActivityDestination>(remembered.destination);
+  const [activeView, setActiveView] = useState<string>(remembered.view);
   const [activeFile, setActiveFile] = useState<string>('field_01_paddy.agri');
   const [currentDay, setCurrentDay] = useState<number>(42);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
@@ -82,6 +92,10 @@ export const App: React.FC = () => {
   const [codeText, setCodeText] = useState<string>(generateAgriCode(ASEAN_PRESETS[0], true));
   const [connection, setConnection] = useState<'offline' | 'connecting' | 'online'>('connecting');
   const [dataFreshness, setDataFreshness] = useState<string | null>(null);
+
+  useEffect(() => {
+    writeView(tabStorage(), { view: activeView, destination: activeDestination });
+  }, [activeView, activeDestination]);
 
   useEffect(() => {
     let alive = true;
