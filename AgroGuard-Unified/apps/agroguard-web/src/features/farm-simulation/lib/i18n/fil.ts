@@ -1060,4 +1060,12 @@ export const FIL: Dictionary = {
   'farmMap.replica.flat': 'Patag ang iginuhit na lupa: mas magaspang ang datos ng taas kaysa sa pilapil',
   'farmMap.replica.imageryFailed': 'Walang satellite na larawan; payak na lupa ang ipinapakita',
   'farmMap.replica.paused': 'Naka-pause ang 3D habang bumabawi ang graphics',
+  'farmMap.sim.pid': 'PID controller: panatilihin ang lebel ng tubig',
+  'farmMap.sim.pidSetpoint': 'Panatilihin ang tubig sa (cm sa ibabaw ng lupa)',
+  'farmMap.sim.pidMax': 'Limitasyon ng bomba (mm ng tubig bawat araw)',
+  'farmMap.sim.pidGains': 'Mga gain ng controller',
+  'farmMap.sim.pidHint': 'Ginagawang dami ng patubig ng PID loop ang araw-araw na agwat ng target at tunay na lebel ng tubig, na may limitasyon ng bomba. Naayos ang mga gain na ito sa simuladong palayan: kailangang patunayan sa bomba mo.',
+  'farmMap.sim.err.pidSetpoint': 'Maglagay ng lebel ng tubig na papanatilihin, 1 hanggang 30 cm.',
+  'farmMap.sim.err.pidMax': 'Ilagay ang limitasyon ng bomba sa mm bawat araw.',
+  'farmMap.sim.err.pidAbove': 'Dapat mas mababa ang lebel ng tubig kaysa sa pilapil.',
 };

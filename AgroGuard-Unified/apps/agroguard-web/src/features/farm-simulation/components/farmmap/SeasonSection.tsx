@@ -196,9 +196,22 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
             <select className="aq-input" value={draft.regime} onChange={(e) => set({ regime: e.target.value as SeasonDraft['regime'] })}>
               <option value="continuous">{t('farmMap.sim.continuous')}</option>
               <option value="awd">{t('farmMap.sim.awd')}</option>
+              <option value="pid">{t('farmMap.sim.pid')}</option>
             </select>
           </span>
         </label>
+        {draft.regime === 'pid' ? (
+          <>
+            <NumberField label={t('farmMap.sim.pidSetpoint')} value={draft.pid_setpoint_cm} onChange={(v) => set({ pid_setpoint_cm: v })} />
+            <NumberField label={t('farmMap.sim.pidMax')} value={draft.pid_max_mm_day} onChange={(v) => set({ pid_max_mm_day: v })} />
+            <More label={t('farmMap.sim.pidGains')}>
+              <NumberField label="Kp" value={draft.pid_kp} onChange={(v) => set({ pid_kp: v ?? 0 })} step={0.05} />
+              <NumberField label="Ki" value={draft.pid_ki} onChange={(v) => set({ pid_ki: v ?? 0 })} step={0.01} />
+              <NumberField label="Kd" value={draft.pid_kd} onChange={(v) => set({ pid_kd: v ?? 0 })} step={0.05} />
+              <p className="aq-fm-note">{t('farmMap.sim.pidHint')}</p>
+            </More>
+          </>
+        ) : null}
         {draft.regime === 'awd' ? <NumberField label={t('farmMap.sim.awdThreshold')} value={draft.awd_threshold_cm} onChange={(v) => set({ awd_threshold_cm: v })} /> : null}
         <NumberField label={t('farmMap.sim.reflood')} value={draft.reflood_cm} onChange={(v) => set({ reflood_cm: v })} />
         <NumberField label={t('farmMap.sim.bund')} value={draft.bund_height_cm} onChange={(v) => set({ bund_height_cm: v })} hint={t('farmMap.sim.bundHint', { min: FAO_HINTS.bundMinCm, rec: FAO_HINTS.bundRecommendedCm })} />

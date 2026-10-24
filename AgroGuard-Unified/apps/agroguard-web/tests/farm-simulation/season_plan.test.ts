@@ -43,7 +43,42 @@ test('a valid draft becomes the API plan', () => {
   const d = { ...defaultDraft(parcel, TODAY), duration_days: 120, bund_height_cm: 30, hills_per_m2: 25, plants_per_hill: 3 };
   const plan = toPlan(d);
   assert.equal(plan.bund_height_cm, 30);
-  assert.deepEqual(plan.water, { regime: 'continuous', awd_threshold_cm: null, reflood_cm: null });
+  assert.deepEqual(plan.water, { regime: 'continuous', awd_threshold_cm: null, reflood_cm: null, pid: null });
   assert.equal(FAO_HINTS.bundMinCm, 25);
   assert.equal(FAO_HINTS.bundRecommendedCm, 60);
+});
+
+import { PID_DEFAULTS } from '../../src/features/farm-simulation/lib/farmmap/seasonPlan.ts';
+
+const pidDraft = () => ({ ...defaultDraft(parcel, TODAY), duration_days: 120, bund_height_cm: 20, regime: 'pid' as const });
+
+test('the PID regime starts with tuned gains but no setpoint or pump rate', () => {
+  const d = pidDraft();
+  assert.equal(d.pid_kp, PID_DEFAULTS.kp);
+  assert.equal(d.pid_setpoint_cm, null);
+  assert.equal(d.pid_max_mm_day, null);
+});
+
+test('a PID plan without a setpoint or a pump rate is refused', () => {
+  const errors = planErrors(pidDraft(), TODAY);
+  assert.ok(errors.includes('farmMap.sim.err.pidSetpoint'));
+  assert.ok(errors.includes('farmMap.sim.err.pidMax'));
+});
+
+test('the PID setpoint must sit below the bund', () => {
+  const d = { ...pidDraft(), pid_setpoint_cm: 25, pid_max_mm_day: 40 };
+  assert.deepEqual(planErrors(d, TODAY), ['farmMap.sim.err.pidAbove']);
+});
+
+test('a complete PID draft becomes the API plan with its settings', () => {
+  const d = { ...pidDraft(), pid_setpoint_cm: 8, pid_max_mm_day: 40 };
+  assert.deepEqual(planErrors(d, TODAY), []);
+  const plan = toPlan(d);
+  assert.deepEqual(plan.water.pid, { setpoint_cm: 8, kp: PID_DEFAULTS.kp, ki: PID_DEFAULTS.ki, kd: PID_DEFAULTS.kd, max_mm_day: 40 });
+  assert.equal(plan.water.regime, 'pid');
+});
+
+test('other regimes send no PID settings', () => {
+  const d = { ...defaultDraft(parcel, TODAY), duration_days: 120, bund_height_cm: 30 };
+  assert.equal(toPlan(d).water.pid, null);
 });

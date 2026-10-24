@@ -188,5 +188,9 @@ def run(farm_id: str, parcel_id: str, plan: dict[str, Any]) -> dict[str, Any]:
         "comparison": COMPARISON,
         "cached": False,
     }
-    _STORE.put("season_run", cache_key, out, f"agriquill:season-run/{farm_id}", key, CACHE_TTL_S)
+    complete = all("days" in r for y in years for r in y["engines"].values())
+    if complete:
+        _STORE.put(
+            "season_run", cache_key, out, f"agriquill:season-run/{farm_id}", key, CACHE_TTL_S
+        )
     return out

@@ -22,6 +22,7 @@ from .flows import (
     taw_mm,
     u2_from_u10,
 )
+from .pid import Pid
 from .sitecontext import HEAT_C, HEAT_SOURCE
 
 __all__ = ["EF1_FLOODED_RICE", "FRAC_GAS", "FRAC_LEACH_WET", "run"]
@@ -36,6 +37,7 @@ KINIRY = (
 )
 COUSENS = "Cousens 1985, J. Agric. Sci. 105:513-521: YL = I d / (1 + I d / A)"
 STATUS = "uncalibrated"
+PID_BASIS = "on the ponded depth at the start of each day"
 
 # ORYZA2000 IR72 crop file. Local varieties need their own development rates (TO VERIFY).
 TBD, TOD, TMD, TBLV = 8.0, 30.0, 42.0, 8.0
@@ -120,6 +122,7 @@ VAR_UNITS = {
     "tube_cm": "cm",
     "runoff_mm": "mm",
     "irrigation_mm": "mm",
+    "pid_error_mm": "mm",
     "soil_water_ks": "-",
     "soil_n_kg_ha": "kg N/ha",
     "n_uptake_kg_ha": "kg N/ha",
@@ -188,7 +191,14 @@ def run(plan: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
     anlv = anst = uptake_total = 0.0
     pool = float(soil_n) if soil_n is not None else None
     nf = 1.0
-    storage = float(reflood_mm or 0.0)
+    settings = water.get("pid") or {}
+    controller = (
+        Pid(settings["kp"], settings["ki"], settings["kd"], 0.0, float(settings["max_mm_day"]))
+        if regime == "pid" and settings
+        else None
+    )
+    setpoint_mm = float(settings["setpoint_cm"]) * 10 if controller else 0.0
+    storage = setpoint_mm if controller else float(reflood_mm or 0.0)
     cohorts: list[dict[str, Any]] = []
     residue: dict[str, float] = {}
     decay = {e["product"]: math.log(2) / float(e["dt50_days"]) for e in sprays}
@@ -268,6 +278,10 @@ def run(plan: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
             )
         ):
             irrigation += reflood_mm - storage
+        pid_error = None
+        if controller is not None:
+            pid_error = setpoint_mm - storage
+            irrigation += controller.step(setpoint_mm, storage, 1.0)
         coeff = dual_kc(_kcb(dvs), u2_from_u10(w["wind_ms"]), w["rh_min_pct"], RICE_HEIGHT_M)
         drained = gravity is not None and storage < -gravity
         stress = 1.0
@@ -302,6 +316,11 @@ def run(plan: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
         )
         vars_["runoff_mm"] = _val(runoff, "mm", **bound)
         vars_["irrigation_mm"] = _val(irrigation, "mm")
+        vars_["pid_error_mm"] = (
+            _val(pid_error, "mm", bound=f"setpoint {setpoint_mm / 10:g} cm, PID {PID_BASIS}")
+            if pid_error is not None
+            else _null("this plan does not use the PID water regime")
+        )
         vars_["soil_water_ks"] = (
             _val(stress, "-")
             if hydro
@@ -453,6 +472,14 @@ def run(plan: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
             "net of IPCC Tier 1 seasonal losses on the application day (approximation)",
             "weeds": COUSENS + "; multispecies: densities weighted by each I, A the largest",
             "residue": "first-order decay with the label DT50",
+            "pid": (
+                f"discrete PID on the ponded depth, setpoint {settings['setpoint_cm']:g} cm, "
+                f"Kp {settings['kp']:g}, Ki {settings['ki']:g}, Kd {settings['kd']:g}, pump limit "
+                f"{settings['max_mm_day']:g} mm/day; adds water only, so rain above the setpoint "
+                "is not drained; conditional-integration anti-windup"
+                if controller is not None
+                else None
+            ),
             "not_modelled": [
                 "N translocation to grain after flowering",
                 "spikelet sterility from heat or cold",

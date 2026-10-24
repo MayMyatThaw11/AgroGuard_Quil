@@ -1812,10 +1812,19 @@ async def contracts_seasons(farm_id: str, caller: Caller | None = _READER) -> di
     return await asyncio.to_thread(_live_call, _seasons, farm_id)
 
 
+class PidSettings(BaseModel):
+    setpoint_cm: float = Field(ge=1, le=30)
+    kp: float = Field(ge=0, le=5)
+    ki: float = Field(ge=0, le=1)
+    kd: float = Field(ge=0, le=5)
+    max_mm_day: float = Field(gt=0, le=300)
+
+
 class SeasonWater(BaseModel):
-    regime: Literal["continuous", "awd"] = "continuous"
+    regime: Literal["continuous", "awd", "pid"] = "continuous"
     awd_threshold_cm: float | None = Field(default=None, ge=-40, le=0)
     reflood_cm: float | None = Field(default=None, ge=0, le=30)
+    pid: PidSettings | None = None
 
 
 class SeasonTrench(BaseModel):
@@ -1887,6 +1896,11 @@ class SeasonPlanReq(BaseModel):
         reflood = self.water.reflood_cm
         if reflood is not None and self.bund_height_cm <= reflood:
             raise ValueError("bund_height_cm must exceed reflood_cm")
+        if self.water.regime == "pid":
+            if self.water.pid is None:
+                raise ValueError("the pid water regime needs the pid settings")
+            if self.water.pid.setpoint_cm >= self.bund_height_cm:
+                raise ValueError("setpoint_cm must be below bund_height_cm")
         first = self.transplant_date - timedelta(days=self.seedbed_days)
         last = self.transplant_date + timedelta(days=self.duration_days)
         for e in self.events:

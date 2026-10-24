@@ -1060,4 +1060,12 @@ export const VI: Dictionary = {
   'farmMap.replica.flat': 'Mặt đất vẽ phẳng: dữ liệu độ cao thô hơn bờ ruộng',
   'farmMap.replica.imageryFailed': 'Không có ảnh vệ tinh; hiển thị nền trơn',
   'farmMap.replica.paused': '3D tạm dừng trong khi đồ họa phục hồi',
+  'farmMap.sim.pid': 'Bộ điều khiển PID: giữ mức nước',
+  'farmMap.sim.pidSetpoint': 'Giữ nước ở (cm trên mặt đất)',
+  'farmMap.sim.pidMax': 'Giới hạn máy bơm (mm nước mỗi ngày)',
+  'farmMap.sim.pidGains': 'Hệ số bộ điều khiển',
+  'farmMap.sim.pidHint': 'Vòng PID biến chênh lệch hằng ngày giữa mức nước mục tiêu và mức nước thực thành lượng tưới, bị chặn bởi giới hạn máy bơm. Các hệ số này được chỉnh trên ruộng mô phỏng: cần kiểm chứng với máy bơm của bạn.',
+  'farmMap.sim.err.pidSetpoint': 'Nhập mức nước cần giữ, từ 1 đến 30 cm.',
+  'farmMap.sim.err.pidMax': 'Nhập giới hạn máy bơm theo mm mỗi ngày.',
+  'farmMap.sim.err.pidAbove': 'Mức nước cần giữ phải thấp hơn bờ ruộng.',
 };

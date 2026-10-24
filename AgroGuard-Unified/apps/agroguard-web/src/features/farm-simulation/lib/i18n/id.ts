@@ -1060,4 +1060,12 @@ export const ID: Dictionary = {
   'farmMap.replica.flat': 'Tanah digambar datar: data ketinggian lebih kasar dari pematang',
   'farmMap.replica.imageryFailed': 'Citra satelit tidak tersedia; tanah polos ditampilkan',
   'farmMap.replica.paused': '3D dijeda saat grafis pulih',
+  'farmMap.sim.pid': 'Pengendali PID: jaga tinggi air',
+  'farmMap.sim.pidSetpoint': 'Jaga air pada (cm di atas tanah)',
+  'farmMap.sim.pidMax': 'Batas pompa (mm air per hari)',
+  'farmMap.sim.pidGains': 'Penguatan pengendali',
+  'farmMap.sim.pidHint': 'Loop PID mengubah selisih harian antara target dan tinggi air nyata menjadi jumlah pengairan, dibatasi oleh batas pompa. Penguatan ini disetel pada sawah simulasi: perlu diverifikasi dengan pompa Anda.',
+  'farmMap.sim.err.pidSetpoint': 'Isi tinggi air yang dijaga, 1 sampai 30 cm.',
+  'farmMap.sim.err.pidMax': 'Isi batas pompa dalam mm per hari.',
+  'farmMap.sim.err.pidAbove': 'Tinggi air yang dijaga harus lebih rendah dari pematang.',
 };

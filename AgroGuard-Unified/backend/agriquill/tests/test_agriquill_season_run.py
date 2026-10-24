@@ -154,3 +154,37 @@ def test_unknown_parcel_is_404():
         "/api/v1/agriquill/farms/farm_r/parcels/NOPE/season-run", json=body(), headers=ANN
     )
     assert r.status_code == 404
+
+
+def pid(**kw):
+    return {"setpoint_cm": 8, "kp": 0.5, "ki": 0.05, "kd": 0, "max_mm_day": 60, **kw}
+
+
+def test_pid_regime_needs_its_settings():
+    r = client.post(URL, json=body(water={"regime": "pid", "reflood_cm": None}), headers=ANN)
+    assert r.status_code == 422 and "pid" in r.text
+
+
+def test_pid_setpoint_must_sit_below_the_bund():
+    water = {"regime": "pid", "reflood_cm": None, "pid": pid(setpoint_cm=25)}
+    r = client.post(URL, json=body(water=water, bund_height_cm=20), headers=ANN)
+    assert r.status_code == 422 and "setpoint_cm must be below bund_height_cm" in r.text
+
+
+def test_pid_plan_runs_through_the_route():
+    water = {"regime": "pid", "reflood_cm": None, "pid": pid()}
+    r = client.post(URL, json=body(water=water, bund_height_cm=20), headers=ANN)
+    assert r.status_code == 200, r.text
+    assert r.json()["years"][0]["plan"]["water"]["pid"]["setpoint_cm"] == 8
+
+
+def test_a_run_with_a_failed_engine_is_not_cached(isolated, monkeypatch):
+    def boom(plan, inputs):
+        raise RuntimeError("soil service down")
+
+    monkeypatch.setitem(season_run.ENGINES, "broken", boom)
+    first = season_run.run("farm_r", "P1", body())
+    second = season_run.run("farm_r", "P1", body())
+    assert first["years"][0]["engines"]["broken"]["status"] == "failed"
+    assert second["cached"] is False
+    assert len(isolated) == 2

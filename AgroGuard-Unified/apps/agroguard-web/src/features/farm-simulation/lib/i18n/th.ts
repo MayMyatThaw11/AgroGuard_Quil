@@ -1060,4 +1060,12 @@ export const TH: Dictionary = {
   'farmMap.replica.flat': 'วาดพื้นราบ: ข้อมูลความสูงหยาบกว่าคันนา',
   'farmMap.replica.imageryFailed': 'ไม่มีภาพดาวเทียม แสดงพื้นเรียบแทน',
   'farmMap.replica.paused': 'หยุด 3 มิติชั่วคราวระหว่างกู้คืนกราฟิก',
+  'farmMap.sim.pid': 'ตัวควบคุม PID: คงระดับน้ำ',
+  'farmMap.sim.pidSetpoint': 'คงระดับน้ำที่ (ซม. เหนือดิน)',
+  'farmMap.sim.pidMax': 'ขีดจำกัดปั๊ม (มม. ต่อวัน)',
+  'farmMap.sim.pidGains': 'ค่าอัตราขยายของตัวควบคุม',
+  'farmMap.sim.pidHint': 'วงจร PID แปลงส่วนต่างรายวันระหว่างเป้าหมายกับระดับน้ำจริงเป็นปริมาณการให้น้ำ โดยจำกัดตามขีดจำกัดปั๊ม ค่าเหล่านี้ปรับจากแปลงจำลอง: ต้องตรวจสอบกับปั๊มของคุณ',
+  'farmMap.sim.err.pidSetpoint': 'ใส่ระดับน้ำที่จะคงไว้ 1 ถึง 30 ซม.',
+  'farmMap.sim.err.pidMax': 'ใส่ขีดจำกัดปั๊มเป็นมม. ต่อวัน',
+  'farmMap.sim.err.pidAbove': 'ระดับน้ำที่คงไว้ต้องต่ำกว่าคันนา',
 };

@@ -1032,6 +1032,14 @@ export type SeasonEvent =
   | { kind: 'weed'; date: string; method: 'hand' | 'mechanical' | 'herbicide' | 'other'; removed_pct: number }
   | { kind: 'weed_emergence'; date: string; density_m2: number; cousens_i: number | null; cousens_a: number | null };
 
+export interface PidSettings {
+  setpoint_cm: number;
+  kp: number;
+  ki: number;
+  kd: number;
+  max_mm_day: number;
+}
+
 export interface SeasonTrench {
   depth_cm: number;
   width_cm: number;
@@ -1044,7 +1052,7 @@ export interface SeasonPlan {
   seedbed_days: number;
   hills_per_m2: number | null;
   plants_per_hill: number | null;
-  water: { regime: 'continuous' | 'awd'; awd_threshold_cm: number | null; reflood_cm: number | null };
+  water: { regime: 'continuous' | 'awd' | 'pid'; awd_threshold_cm: number | null; reflood_cm: number | null; pid?: PidSettings | null };
   bund_height_cm: number;
   trench: SeasonTrench | null;
   fish: boolean;

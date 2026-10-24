@@ -248,3 +248,45 @@ def test_canopy_does_not_fall_back_into_exponential_growth():
     lais = [v(r, "lai") for r in field]
     first = next(i for i, x in enumerate(lais) if x >= 1.0)
     assert min(lais[first:]) >= 1.0, "LAI dropped back below 1 after the linear phase began"
+
+
+def pid_water(setpoint_cm=8.0, max_mm=60.0, kp=0.5, ki=0.05, kd=0.0):
+    return {
+        "regime": "pid",
+        "awd_threshold_cm": None,
+        "reflood_cm": None,
+        "pid": {"setpoint_cm": setpoint_cm, "kp": kp, "ki": ki, "kd": kd, "max_mm_day": max_mm},
+    }
+
+
+def test_pid_regime_holds_the_ponded_depth_on_its_setpoint():
+    out = season.run(plan(water=pid_water(), bund_height_cm=20.0), inputs())
+    ponded = [v(r, "ponded_mm") for r in out["days"]]
+    assert all(abs(p - 80.0) <= 8.0 for p in ponded[10:]), ponded[10:20]
+
+
+def test_pid_never_pumps_more_than_the_pump_rate():
+    out = season.run(plan(water=pid_water(max_mm=15.0), bund_height_cm=20.0), inputs())
+    assert max(v(r, "irrigation_mm") for r in out["days"]) <= 15.0 + 1e-9
+
+
+def test_pid_stays_off_while_rain_keeps_the_field_above_the_setpoint():
+    out = season.run(plan(water=pid_water(), bund_height_cm=20.0), inputs(rain={20: 120}))
+    after = [v(r, "irrigation_mm") for r in out["days"][21:23]]
+    assert after == [0.0, 0.0]
+    assert max(v(r, "ponded_mm") for r in out["days"]) <= 200.0
+
+
+def test_pid_reports_its_error_and_other_regimes_do_not():
+    pid = season.run(plan(water=pid_water()), inputs())
+    assert v(pid["days"][30], "pid_error_mm") is not None
+    flooded = season.run(plan(), inputs())
+    assert flooded["days"][30]["vars"]["pid_error_mm"]["value"] is None
+
+
+def test_pid_water_balance_still_closes():
+    out = season.run(plan(water=pid_water(), bund_height_cm=20.0), inputs(rain={10: 60}))
+    for prev, row in pairwise(out["days"]):
+        b = row["balance"]
+        change = b["storage_mm"] - prev["balance"]["storage_mm"]
+        assert abs(b["in_mm"] - b["out_mm"] - v(row, "runoff_mm") - change) <= 0.1

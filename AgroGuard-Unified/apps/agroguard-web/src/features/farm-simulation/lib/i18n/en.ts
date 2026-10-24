@@ -1059,6 +1059,14 @@ export const EN = {
   'farmMap.replica.flat': 'Ground drawn flat: elevation data is coarser than a bund',
   'farmMap.replica.imageryFailed': 'Satellite image unavailable; plain ground shown',
   'farmMap.replica.paused': '3D paused while the graphics context recovers',
+  'farmMap.sim.pid': 'PID controller: hold a water level',
+  'farmMap.sim.pidSetpoint': 'Hold the water at (cm above the soil)',
+  'farmMap.sim.pidMax': 'Pump limit (mm of water per day)',
+  'farmMap.sim.pidGains': 'Controller gains',
+  'farmMap.sim.pidHint': 'A PID loop turns the daily gap between the target and the real water level into an irrigation amount, capped by the pump limit. These gains were tuned on the simulated paddy: TO VERIFY with your pump before relying on them.',
+  'farmMap.sim.err.pidSetpoint': 'Enter a water level to hold, 1 to 30 cm.',
+  'farmMap.sim.err.pidMax': 'Enter the pump limit in mm per day.',
+  'farmMap.sim.err.pidAbove': 'The water level to hold must be lower than the bund.',
 } as const;
 
 export type Key = keyof typeof EN;
