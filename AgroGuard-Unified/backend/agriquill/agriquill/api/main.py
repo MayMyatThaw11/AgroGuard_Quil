@@ -1919,7 +1919,7 @@ class SeasonPlanReq(BaseModel):
 
 @router.post("/farms/{farm_id}/parcels/{parcel_id}/season-run")
 async def parcel_season_run(
-    farm_id: str, parcel_id: str, req: SeasonPlanReq, caller: Caller | None = _READER
+    farm_id: str, parcel_id: str, req: SeasonPlanReq, caller: Caller = _CALLER
 ) -> dict[str, Any]:
     _see(caller, farm_id)
     plan = req.model_dump(mode="json")

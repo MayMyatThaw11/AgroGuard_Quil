@@ -188,3 +188,7 @@ def test_a_run_with_a_failed_engine_is_not_cached(isolated, monkeypatch):
     assert first["years"][0]["engines"]["broken"]["status"] == "failed"
     assert second["cached"] is False
     assert len(isolated) == 2
+
+
+def test_a_season_run_needs_the_write_token():
+    assert client.post(URL, json=body()).status_code in (401, 403)

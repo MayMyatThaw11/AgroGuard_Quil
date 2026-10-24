@@ -196,12 +196,19 @@ Built and pushed on `farm-simulation` (spec `docs/superpowers/specs/2026-10-23-s
 - Farm panel season section, timeline bar, map tint and water slab, charts; Blender-built models in `public/models/farmmap` (source `assets-src/farmmap/build_models.py`); 3D replica dialog.
 - Live check, PD-01 replayed on 2023 and 2024 weather (t DM/ha): own 1.98/1.99, WOFOST 4.23/4.36, AquaCrop 7.47/7.51. The own engine is below the FAOSTAT Myanmar national mean; uncalibrated.
 
-### Next session (about 5 hours, in order)
-1. Replica: the background renders black instead of the sky colour, and the satellite tiles do not appear (check the Esri tile CORS and the canvas texture). Plants are hard to see under 300 mm of water; scale them to the engine's stage height.
-2. Replica screenshots at 375 px and in Burmese; measure frame time in a headed browser and record it here ("this laptop only").
-3. Plan Task 12: final whole-branch review with a fresh reviewer, a fix pass for Critical and Important findings, then this handoff.
-4. Investor entry paths (new request): paste a Google Maps link (parse `@lat,lon` and `q=lat,lon`), Google Earth KML/KMZ (exists), typed lat/lon (exists in search), a phone photo's location tag (read the EXIF GPS in the browser), and tracing (exists). Each path then goes through onboarding and a season run. Then audit the whole investor flow with the reverse-engineer-anything skill and fix what it finds.
-5. Own engine: compare its yield with FAOSTAT national yields over several years and report the error. Do not tune without a held-out check.
-6. Native-speaker review of the new `farmMap.site`, `farmMap.sim` and `farmMap.replica` strings in my, vi, th, fil, id, km.
-7. TO VERIFY items still open: ORYZA IR72 rates for local varieties; the Kiniry RUE for tropical rice; the SOC-to-OM factor 1.724; WOFOST CRAIRC, K0 and CO2; the 35 °C heat line; blast thresholds.
-8. Blender MCP: reload the VS Code window so the Blender tools load, if interactive modelling is wanted. The models are currently built headless by script.
+### Done after that list (2026-10-24)
+- 3D replica: the black ground and missing satellite image are fixed. Cause 1: React reused one mesh for the plain and the imagery ground and the removed colour prop reset to black. Cause 2: Esri has no zoom 19 imagery near PD-01 and answers with a grey "Map data not yet available" tile; the replica now detects that and steps down to the highest zoom with real imagery (18 here). Checked at 1440 and 375 px.
+- PID control: `agriquill/pid.py` (discrete PID, conditional-integration anti-windup, derivative on the measurement) drives a new `pid` water regime in the season plan; default gains Kp 0.8, Ki 0.1, Kd 0 were tuned on the modelled paddy and are TO VERIFY with a real pump. It adds water only: in the monsoon the rain keeps the field above the setpoint, so the pump stays off, and excess water is not drained (a drain actuator is the next step if wanted). Editor, validation, 7 languages.
+- Fix: a season run in which any engine failed (for example SoilGrids down) is no longer cached for 7 days.
+- Investor entry paths: Google Maps links (pin, viewport, q, ll, query), degrees-minutes-seconds as Google Earth shows them, plain latitude and longitude, a JPEG's GPS tag, KML/KMZ and tracing (existing). Short maps.app.goo.gl links cannot be expanded in the browser and say so. Coordinates now fly to zoom 15.
+- The season run route needs the write token, like /ops/plan.
+- REA skill: it targets shipped binaries and runtime evidence without source; no REA tools are connected here and we own the full source, so the investor flow was audited with the Playwright scripts instead (link, short link, DMS, GPS photo, 1440 px, no console errors).
+
+### Still open
+1. Final whole-branch review by a fresh reviewer (not run; self-review only), then a fix pass.
+2. Replica: measure frame time in a headed browser ("this laptop only"); plants are small from the default camera; check Burmese.
+3. Own engine: compare yields with FAOSTAT national yields over several years and report the error before any tuning.
+4. Native-speaker review of `farmMap.site`, `farmMap.sim`, `farmMap.replica`, `farmMap.photo` strings in my, vi, th, fil, id, km.
+5. TO VERIFY: ORYZA IR72 rates for local varieties; Kiniry RUE for tropical rice; SOC-to-OM 1.724; WOFOST CRAIRC, K0, CO2; 35 C heat line; blast thresholds; PID gains on a real pump; Cousens I and A (no defaults).
+6. Blender MCP tools are loaded now (reload done): optional interactive polish of the models; the headless script remains the source.
+7. A drain actuator for the PID regime; a photo/aerial boundary segmentation model (needs approval of model, weights, dependency).
