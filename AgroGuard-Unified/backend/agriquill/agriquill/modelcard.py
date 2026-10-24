@@ -5,7 +5,7 @@ import io
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from . import contract, cropvalue, forecast, live, ml, onboard, telemetry
+from . import contract, cropvalue, forecast, harvest_score, live, ml, onboard, telemetry
 from .data import weather
 from .store import now_iso
 
@@ -333,6 +333,42 @@ def _yield_rows(spec: dict[str, Any]) -> list[dict[str, Any]]:
     return list(rows.values())
 
 
+def _harvest_rows(farm_id: str) -> list[dict[str, Any]]:
+    saved = harvest_score.saved(farm_id)
+    predicts = "grain dry matter (kg DM/ha) of a recorded season"
+    baseline = "FAOSTAT national yield, latest year"
+    source = "agriquill/harvest_score.py score() over the farm's recorded harvests"
+    if saved is None:
+        return [
+            _row(
+                "season engines",
+                predicts,
+                baseline,
+                "mean absolute % error",
+                source,
+                reason="no recorded harvest has been scored yet",
+            )
+        ]
+    rule = "uncalibrated: nothing is tuned on these seasons"
+    return [
+        _row(
+            f"season engine {name}",
+            predicts,
+            baseline,
+            "mean absolute % error",
+            source,
+            value=found["mean_abs_pct_error"],
+            baseline_value=saved["baseline"]["mean_abs_pct_error"],
+            pairs=found["pairs"],
+            status="shadow" if found["pairs"] >= saved["min_pairs"] else "not run",
+            reason=None if found["pairs"] >= saved["min_pairs"] else found["status"],
+            rule=rule,
+            scored_at=saved["scored_at"],
+        )
+        for name, found in saved["engines"].items()
+    ]
+
+
 def _crop_row() -> dict[str, Any]:
     return _row(
         "B-ML-1 crop classifier",
@@ -367,6 +403,7 @@ def build(farm_id: str, client: Any = None) -> dict[str, Any]:
             _next_reading_row(farm_id, client),
             _decision_row(farm_id),
             *_yield_rows(spec),
+            *_harvest_rows(farm_id),
             _crop_row(),
         ],
         "note": NOTE,

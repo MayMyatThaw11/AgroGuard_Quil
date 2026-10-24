@@ -39,6 +39,7 @@ from .. import (
     fleet,
     flows,
     fumigation,
+    harvest_score,
     harvests,
     jobs,
     knowledge,
@@ -1996,6 +1997,12 @@ async def farms_harvests(
         "offset": offset,
         "limit": limit,
     }
+
+
+@router.get("/farms/{farm_id}/harvests/score")
+async def farms_harvest_score(farm_id: str, caller: Caller | None = _READER) -> dict[str, Any]:
+    _see(caller, farm_id)
+    return await asyncio.to_thread(_record_call, harvest_score.score, farm_id)
 
 
 @router.post("/farms/{farm_id}/harvests")
