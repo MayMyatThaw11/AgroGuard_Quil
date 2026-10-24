@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Box, ChevronRight, Route, ScanLine, ShieldCheck, Tractor } from 'lucide-react';
 import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
+import { decide } from '../../lib/farmmap/farmDecisions.ts';
 import { fieldsOf } from '../../lib/farmmap/farmMapGeometry.ts';
 import { nearestPoi } from '../../lib/farmmap/farmMapSearch.ts';
 import { CROPS, SOILS } from '../../lib/farmmap/farmMapTheme.ts';
@@ -17,6 +18,7 @@ import { formatNumber } from '../aq/format.ts';
 import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
 import { AqProgress, AqSectionLabel, AqStatTile } from '../aq/aqLayout.tsx';
 import { TechniqueFit } from '../site/TechniqueFit.tsx';
+import { FarmDecisions } from './FarmDecisions.tsx';
 import { BarRow, DetailSection, KV, UpdatedLine } from './detailParts.tsx';
 import { Glyph } from './Glyph.tsx';
 import { tintStyle } from './tint.ts';
@@ -122,6 +124,17 @@ export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, on
   const water = farm.water;
   const weather = useFarmWeather(farm.lat, farm.lon);
   const benchmark = useBenchmark(farm.crop, farm.country);
+  const forecastReady = weather.status === 'ready';
+  const marketKm = nearby.find(({ poi }) => poi.type === 'market')?.km ?? null;
+  const decisions = useMemo(
+    () => decide({
+      crop: farm.crop, status: farm.status, stageI: farm.stageI, water: farm.water, safeDepthCm, moisture: farm.moisture, ndvi: farm.ndvi,
+      areaHa: farm.area, yieldPerHa: farm.yieldF, yieldUnit: crop.unit,
+      rainDays: weather.status === 'ready' ? weather.value.days.map((day) => ({ date: day.date, mm: day.mm })) : null,
+      marketKm,
+    }),
+    [farm, safeDepthCm, crop.unit, weather, marketKm],
+  );
 
   return (
     <>
@@ -153,6 +166,7 @@ export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, on
           <p className="aq-fm-note">{t('farmMap.farm.notRice', { crop: cropName.toLocaleLowerCase(activeLocale()) })}</p>
         )}
       </DetailSection>
+      <FarmDecisions decisions={decisions} forecastReady={forecastReady} />
       {picked ? (
         <DetailSection className="is-picked">
           <AqSectionLabel aside={t('farmMap.farm.selected')}>{t('farmMap.farm.field', { id: picked.id.split('-').pop() ?? '' })}</AqSectionLabel>

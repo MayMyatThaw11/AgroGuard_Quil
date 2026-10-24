@@ -110,3 +110,12 @@ Under `apps/agroguard-web/src/features/farm-simulation/`:
 - Assets: `public/models/farmmap/` (generated), sources in `assets-src/farmmap/`.
 - Tests: `tests/farm-simulation/farm_view.test.ts`, `inputs.test.ts`, `models.test.ts`.
 - Backend: `backend/agriquill/agriquill/data/weather.py` (`fetch_current`), `sitecontext.py`, `config.py` (`weather_now_ttl_s`), `api/main.py` (`/weather/now`, `/volcano/nearest`), test `tests/test_agriquill_weather_now.py`.
+
+## 25 Oct: map highlight, shared selected style, decision card
+- Selected state: one rule set in `aq-selected.css` (tokens `--aq-sel-bg`, `--aq-sel-edge`, `--aq-sel-ink`). Choices get a tint, a 2 px outline and bold text; list rows get a tint and a 3 px left bar. The old per-component selected rules were removed.
+- Fonts: Segoe UI and system stack for text, JetBrains Mono for numbers, set in `paddy-tokens.css` and `tokens.css`. Plus Jakarta Sans is no longer loaded by the farm map. Smallest text is 11 px.
+- Map: every farm has a status-coloured halo from zoom 5.4, a boundary glow, casing and fill from zoom 7.5, and field outlines from zoom 10 (`dataLayersTheme.ts`). Satellite no longer dims the fields.
+- Decision card: `lib/farmmap/farmDecisions.ts` (pure rules, tested in `farm_decisions.test.ts`), `components/farmmap/FarmDecisions.tsx`, strings `farmMap.decide.*` in 7 locales. Screening lines (soil moisture 20 %, NDVI 0.5) are labelled TO VERIFY. No revenue is computed: the benchmark price is for a traded grade, not the farm-gate price.
+- Card animations: 15 effects in `aq-farmmap-card-fx.css`, listed in the catalogue group `card`, covered by tests for reduced motion and the flash cap.
+- Phone: the floating farm bar is hidden while the panel sheet is open, and toasts sit under the top bar.
+- Not checked: frame times on real devices, native review of the new translations, the shell header clipping at 375 px.

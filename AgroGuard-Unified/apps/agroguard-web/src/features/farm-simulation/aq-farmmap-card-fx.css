@@ -1,0 +1,164 @@
+@keyframes aq-card-rise { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes aq-card-ring { 0% { opacity: 0.7; transform: scale(1); } 100% { opacity: 0; transform: scale(1.75); } }
+@keyframes aq-card-glow { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.95; } }
+@keyframes aq-card-nudge { 0%, 84%, 100% { transform: rotate(0); } 88% { transform: rotate(-12deg); } 92% { transform: rotate(10deg); } 96% { transform: rotate(-5deg); } }
+@keyframes aq-card-blink { 0%, 90%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.12); } }
+@keyframes aq-card-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes aq-card-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes aq-card-sheen { 0%, 55% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
+@keyframes aq-card-chips { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+@keyframes aq-card-rain { to { transform: translate(-5px, 30px); } }
+@keyframes aq-card-rays { to { transform: rotate(360deg); } }
+@keyframes aq-card-wave { to { transform: translateX(60px); } }
+@keyframes aq-card-sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+@keyframes aq-card-grow { 0%, 100% { transform: scale(0.9); } 50% { transform: scale(1.14); } }
+@keyframes aq-card-tilt { 0% { transform: rotate(0) scale(1); } 40% { transform: rotate(-9deg) scale(1.1); } 100% { transform: rotate(0) scale(1); } }
+
+.aq-fm-decision {
+  animation: aq-card-rise 520ms var(--aq-ease) backwards;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+.aq-fm-decision.is-act .aq-fm-decision-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--decision-tone);
+  border-radius: inherit;
+  animation: aq-card-ring 2.4s ease-out infinite;
+}
+
+.aq-fm-decision.is-act::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--decision-tone) 24%, transparent), transparent 62%);
+  pointer-events: none;
+  animation: aq-card-glow 3.2s ease-in-out infinite;
+}
+
+.aq-fm-decision.is-act .aq-fm-decision-icon svg {
+  transform-origin: 50% 85%;
+  animation: aq-card-nudge 5s ease-in-out infinite;
+}
+
+.aq-fm-decision.is-watch .aq-fm-decision-icon svg {
+  animation: aq-card-blink 4.8s ease-in-out infinite;
+}
+
+.aq-fm-decision.is-ok .aq-fm-decision-icon {
+  animation: aq-card-pop 640ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 80ms + 240ms);
+}
+
+.aq-fm-decision.is-info .aq-fm-decision-icon {
+  animation: aq-card-float 4.2s ease-in-out infinite;
+}
+
+.aq-fm-fact.is-verify::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
+  pointer-events: none;
+  animation: aq-card-sheen 4s ease-in-out infinite;
+}
+
+.aq-fm-fact {
+  animation: aq-card-chips 420ms var(--aq-ease) backwards;
+  animation-delay: calc(var(--i, 0) * 80ms + 220ms + var(--j, 0) * 70ms);
+}
+
+.fx-decision-rain-hold::before {
+  content: '';
+  position: absolute;
+  inset: -30px;
+  z-index: 0;
+  background: repeating-linear-gradient(100deg, transparent 0 18px, color-mix(in srgb, var(--aq-water-500) 26%, transparent) 18px 19px);
+  pointer-events: none;
+  animation: aq-card-rain 1.8s linear infinite;
+}
+
+.fx-decision-rain-clear .aq-fm-decision-icon::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 18%, color-mix(in srgb, var(--decision-tone) 60%, transparent) 25%, transparent 32% 68%, color-mix(in srgb, var(--decision-tone) 60%, transparent) 75%, transparent 82%);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  pointer-events: none;
+  animation: aq-card-rays 6s linear infinite;
+}
+
+.fx-decision-water-keep::before,
+.fx-decision-water-drying::before {
+  content: '';
+  position: absolute;
+  right: -60px;
+  bottom: 0;
+  left: -60px;
+  z-index: 0;
+  height: 22px;
+  background: radial-gradient(60px 14px at 30px 22px, color-mix(in srgb, var(--aq-water-500) 20%, transparent) 99%, transparent) 0 0 / 60px 22px repeat-x;
+  pointer-events: none;
+  animation: aq-card-wave 5s linear infinite;
+}
+
+.fx-decision-water-refill::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 40%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--decision-tone), transparent);
+  pointer-events: none;
+  animation: aq-card-sweep 2.6s ease-in-out infinite;
+}
+
+.fx-decision-stage .aq-fm-decision-icon svg {
+  transform-origin: 50% 100%;
+  animation: aq-card-grow 3.6s ease-in-out infinite;
+}
+
+.aq-fm-decision:hover .aq-fm-decision-icon {
+  animation: aq-card-tilt 480ms var(--aq-ease);
+}
+
+@media (max-width: 639px) {
+  .aq-fm-decision.is-act::after,
+  .fx-decision-rain-clear .aq-fm-decision-icon::before { animation: none; }
+
+  .fx-decision-rain-hold::before,
+  .fx-decision-water-keep::before,
+  .fx-decision-water-drying::before { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aq-fm-decision,
+  .aq-fm-fact,
+  .aq-fm-decision.is-act .aq-fm-decision-icon::before,
+  .aq-fm-decision.is-act::after,
+  .aq-fm-decision.is-act .aq-fm-decision-icon svg,
+  .aq-fm-decision.is-watch .aq-fm-decision-icon svg,
+  .aq-fm-decision.is-ok .aq-fm-decision-icon,
+  .aq-fm-decision.is-info .aq-fm-decision-icon,
+  .aq-fm-fact.is-verify::after,
+  .fx-decision-rain-hold::before,
+  .fx-decision-rain-clear .aq-fm-decision-icon::before,
+  .fx-decision-water-keep::before,
+  .fx-decision-water-drying::before,
+  .fx-decision-water-refill::before,
+  .fx-decision-stage .aq-fm-decision-icon svg,
+  .aq-fm-decision:hover .aq-fm-decision-icon { animation: none; }
+
+  .aq-fm-decision { transition: none; }
+  .aq-fm-decision:hover { transform: none; }
+  .aq-fm-decision.is-act .aq-fm-decision-icon::before,
+  .fx-decision-rain-hold::before,
+  .fx-decision-water-keep::before,
+  .fx-decision-water-drying::before,
+  .fx-decision-water-refill::before,
+  .aq-fm-fact.is-verify::after { display: none; }
+}

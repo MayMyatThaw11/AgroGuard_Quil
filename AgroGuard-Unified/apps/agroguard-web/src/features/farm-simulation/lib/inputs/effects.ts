@@ -1,4 +1,4 @@
-export const EFFECT_GROUPS = ['input', 'dial', 'farm', 'weather'] as const;
+export const EFFECT_GROUPS = ['input', 'dial', 'farm', 'weather', 'card'] as const;
 export type EffectGroup = (typeof EFFECT_GROUPS)[number];
 export type LowPower = 'unchanged' | 'simplified' | 'off';
 
@@ -17,6 +17,7 @@ const WHEEL = 'components/inputs/RollerPicker.tsx';
 const DIAL = 'components/inputs/SeasonDial.tsx';
 const VIEW = 'components/fieldsim/FarmView.tsx';
 const FX = 'lib/farmview/weatherFx.ts';
+const CARD = 'aq-farmmap-card-fx.css';
 
 const fx = (id: string, group: EffectGroup, file: string, trigger: string, meaning: string, reducedMotion: string, lowPower: LowPower = 'unchanged', marker = `fx-${id}`): Effect => ({ id, group, trigger, meaning, reducedMotion, lowPower, file, marker });
 
@@ -53,4 +54,19 @@ export const EFFECTS: readonly Effect[] = [
   fx('cloud-drift', 'weather', FX, 'The cloud cover reading is 20 percent or more', 'Clouds appear in proportion to the cover and drift with the wind', 'Clouds are placed and do not drift', 'simplified', 'cloudPlan'),
   fx('fog-haze', 'weather', FX, 'The weather reading says mist or fog', 'The distance fades into haze, thicker in fog', 'Unchanged, haze is not motion', 'unchanged', 'fogScale'),
   fx('storm-dimming', 'weather', FX, 'Heavy cloud, a thunderstorm or night', 'The light dims to match the sky', 'Unchanged, dimming is not motion', 'unchanged', 'lightScale'),
+  fx('card-rise', 'card', CARD, 'The decision list opens or its advice changes', 'Each card rises in turn so you read the most urgent one first', 'Cards appear at once', 'unchanged', 'aq-card-rise'),
+  fx('card-ring', 'card', CARD, 'A decision is at the Do now level', 'A ring spreads from the icon so the urgent card draws the eye', 'No ring, the Do now label and red tint stay', 'unchanged', 'aq-card-ring'),
+  fx('card-glow', 'card', CARD, 'A decision is at the Do now level', 'A soft red wash breathes in the corner of the urgent card', 'Wash stops, the card keeps its tint', 'simplified', 'aq-card-glow'),
+  fx('card-nudge', 'card', CARD, 'A decision is at the Do now level', 'The warning icon gives a short shake every few seconds', 'Icon stays still', 'unchanged', 'aq-card-nudge'),
+  fx('card-blink', 'card', CARD, 'A decision is at the Watch level', 'The eye icon blinks slowly to say keep looking', 'Icon stays open', 'unchanged', 'aq-card-blink'),
+  fx('card-pop', 'card', CARD, 'A decision is at the All good level', 'The icon pops in once to confirm nothing needs doing', 'Icon appears at once', 'unchanged', 'aq-card-pop'),
+  fx('card-float', 'card', CARD, 'A decision is at the Plan ahead level', 'The icon drifts up and down gently to say this is for later', 'Icon stays still', 'unchanged', 'aq-card-float'),
+  fx('card-sheen', 'card', CARD, 'A number on the card is a screening value marked TO VERIFY', 'A light sweep crosses the TO VERIFY tag so it is not missed', 'Sweep hidden, the tag text stays', 'unchanged', 'aq-card-sheen'),
+  fx('card-chips', 'card', CARD, 'A card has measured numbers behind its advice', 'Number chips slide in after the card so you see the evidence', 'Chips appear at once', 'unchanged', 'aq-card-chips'),
+  fx('card-rain', 'card', CARD, 'Rain of 1 mm or more is forecast within 3 days', 'Faint rain streaks fall behind the card', 'Streaks hidden, the rain text stays', 'off', 'aq-card-rain'),
+  fx('card-rays', 'card', CARD, 'No day in the next 3 days is forecast above the wet-day line', 'A ring of light turns around the sun icon', 'Ring stops', 'simplified', 'aq-card-rays'),
+  fx('card-wave', 'card', CARD, 'The rice field holds water or is drying down within its plan', 'A slow wave moves along the bottom of the water card', 'Wave hidden', 'off', 'aq-card-wave'),
+  fx('card-sweep', 'card', CARD, 'The field water is at or below the re-flood line', 'A bright bar runs along the top of the card while the field needs water', 'Bar hidden, the Do now label stays', 'unchanged', 'aq-card-sweep'),
+  fx('card-grow', 'card', CARD, 'The rice crop is in a growth stage with a tip', 'The sprout icon swells and settles like a growing plant', 'Icon stays still', 'unchanged', 'aq-card-grow'),
+  fx('card-tilt', 'card', CARD, 'You point at or focus a decision card', 'The card lifts and its icon tilts to show it is the one you are on', 'No tilt and no lift', 'unchanged', 'aq-card-tilt'),
 ];
