@@ -2,6 +2,15 @@
 
 Owner request (23 Oct): take the farm map to a detailed 3D view that holds thousands of real fields, using Three.js, React Three Fiber, Blender MCP and Spline MCP.
 
+## Status on 24 Oct: single-farm 3D view (branch farm-simulation)
+
+The single-farm 3D view replaces the flat photo view. Hand-off for other agents: `docs/handsoffagent.md`.
+
+- **Built:** world-to-farm flow with the 3D view (relief, imagery, neighbourhood from OpenMapTiles, scenery kit made in Blender, environment profile), visual inputs (dial, wheels, tiles, month picker), plain-language HUD with a four-step guide in 7 languages, flood and sea-level panel with a what-if water plane, weather in the view (live reading with source, labelled preview picker, rain, lightning capped at 3 per second, fog, night, clouds from a Blender model), an effects catalogue of 33 effects each with a trigger, meaning, reduced-motion behaviour and a test that the code exists, and ASEAN-only limits on the map camera, search, photo locate, the 3D view and backend onboarding.
+- **Measured, not claimed:** draw calls and triangles are read from the renderer (`data-draw-calls`, `data-triangles` on the view) by `scripts/farm-view-shots.mjs`, which fails above 120 calls or the triangle budget (1.5M desktop, 0.6M phone). Observed on five test farms: 9 to 44 draw calls, 0.1M to 0.8M triangles on desktop, 0.03M to 0.44M on phone width. These counts do not depend on the device. Frame times were not measured: headless Chrome with a software renderer says nothing about real phones.
+- **Not built:** weather overlay on the map canvas, cloud shadows on the ground, wind sway on crops and trees, Apify data (not authorised), the golden set for own-farm decisions.
+- **To verify:** the `SCREEN` thresholds in `lib/farmview/profile.ts`; the ASEAN boxes (coarse national extents, not borders); the translations by native speakers; Open-Meteo is non-commercial on its free tier.
+
 ## Status on 23 Oct (95550b1)
 - **Built, Phases 1, 2 and part of 4:** with 3D terrain on (the T key), paddies, crop fields and your own parcels rise as `fill-extrusion` layers, and they follow the layer toggles. A water surface appears only on parcels with a Kalman depth above the soil. Extrusion heights are visual only.
 - **Change from the plan:** MapLibre's own `fill-extrusion` replaces the R3F custom layer for fields. It draws each tile in one batch on the GPU, sits on the terrain, and keeps the existing hover and click picking. A three.js layer is still the route for Blender models in Phase 3.

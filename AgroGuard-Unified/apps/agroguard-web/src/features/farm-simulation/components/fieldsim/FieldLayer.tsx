@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import type { FieldLayout } from '../../lib/farmview/fieldLayout.ts';
 import type { XZ } from '../../lib/fieldsim/localFrame.ts';
+import { reducedMotion } from '../../lib/inputs/motion.ts';
 import { riceModel, type RiceStage } from '../../lib/fieldsim/models.ts';
 import { REPLICA_COLOR } from '../../lib/fieldsim/replicaTheme.ts';
 import { DRACO, bundGeometry, meshesOf, shapeOf, BUND_WIDTH_M, type FieldTextures } from './fieldKit.ts';
@@ -69,6 +70,7 @@ const Weeds: React.FC<{ points: readonly XZ[] }> = ({ points }) => {
 
 const Rain: React.FC<{ extent: number; on: boolean }> = ({ extent, on }) => {
   const ref = useRef<THREE.Points>(null);
+  const still = useMemo(() => reducedMotion(), []);
   const positions = useMemo(() => {
     const p = new Float32Array(RAIN_DROPS * 3);
     for (let i = 0; i < RAIN_DROPS; i += 1) {
@@ -80,7 +82,7 @@ const Rain: React.FC<{ extent: number; on: boolean }> = ({ extent, on }) => {
   }, [extent]);
   useFrame((_, dt) => {
     const geometry = ref.current?.geometry;
-    if (!on || !geometry) return;
+    if (!on || still || !geometry) return;
     const a = geometry.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < a.count; i += 1) {
       const y = a.getY(i) - dt * RAIN_FALL_MS;

@@ -4,8 +4,6 @@ import { buildNeighbourhood, type Neighbourhood, type OmtFeature } from '../../l
 import type { Rings } from '../../lib/farmview/terrain.ts';
 import type { LocalFrame } from '../../lib/fieldsim/localFrame.ts';
 
-const MAX_TREES = 8000;
-
 export type Capture = (centre: { lat: number; lon: number }) => Promise<OmtCapture>;
 
 export interface Surroundings {
@@ -16,7 +14,7 @@ export interface Surroundings {
 
 const IDLE: Surroundings = { status: 'idle', data: null, features: [] };
 
-export function useNeighbourhood(capture: Capture | undefined, frame: LocalFrame | null, rings: Rings | null, seed: string): Surroundings {
+export function useNeighbourhood(capture: Capture | undefined, frame: LocalFrame | null, rings: Rings | null, seed: string, maxTrees: number): Surroundings {
   const [state, setState] = useState<Surroundings>(IDLE);
   const key = frame && rings ? `${seed}:${frame.origin.lat}:${frame.origin.lon}` : '';
   useEffect(() => {
@@ -29,7 +27,7 @@ export function useNeighbourhood(capture: Capture | undefined, frame: LocalFrame
     capture(frame.origin)
       .then((result) => {
         if (!alive) return;
-        const data = buildNeighbourhood(result.features, frame.toLocal, seed, rings.neighbourhood, { maxTrees: MAX_TREES });
+        const data = buildNeighbourhood(result.features, frame.toLocal, seed, rings.neighbourhood, { maxTrees });
         setState({ status: result.partial ? 'partial' : 'ready', data, features: result.features });
       })
       .catch(() => {

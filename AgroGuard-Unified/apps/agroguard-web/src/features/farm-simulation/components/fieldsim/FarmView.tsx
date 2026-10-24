@@ -35,12 +35,10 @@ import { useNeighbourhood, type Capture } from './useNeighbourhood.ts';
 import { useRisk, useVolcano, useWeatherNow } from './useFarmFacts.ts';
 import { Weather } from './Weather.tsx';
 import { WeatherPanel, type WeatherChoice } from './WeatherPanel.tsx';
+import { budgetFor } from '../../lib/farmview/budget.ts';
 import { reducedMotion } from '../../lib/inputs/motion.ts';
 import { effectsFor, fogScale, lightScale, previewWeather, toWeatherNow, weatherKey } from '../../lib/farmview/weatherFx.ts';
 
-const MAX_PLANTS = 4000;
-const MAX_PLANTS_OTHER = 400;
-const MAX_WEEDS = 1200;
 const LOD1_ABOVE = 2500;
 const EYE_HEIGHT_M = 1.6;
 const STATIC_BUND_M = 0.4;
@@ -54,6 +52,7 @@ const OVERVIEW_BACK = 1.1;
 const OVERVIEW_CLEARANCE = 0.3;
 const SIGHT_MARGIN_M = 8;
 const NIGHT_SUN_DEG = -18;
+const STATS_EVERY_FRAMES = 10;
 const PREVIEW_SUN_DEG = 55;
 
 export interface FarmViewSeason {
@@ -145,6 +144,20 @@ const CameraLimits: React.FC<{ eye: boolean; groundAt: (x: number, z: number) =>
   return null;
 };
 
+const DrawStats: React.FC = () => {
+  const gl = useThree((state) => state.gl);
+  const frames = useRef(0);
+  useFrame(() => {
+    frames.current += 1;
+    if (frames.current % STATS_EVERY_FRAMES) return;
+    const root = gl.domElement.closest<HTMLElement>('.aq-fm-replica');
+    if (!root) return;
+    root.dataset.drawCalls = String(gl.info.render.calls);
+    root.dataset.triangles = String(gl.info.render.triangles);
+  });
+  return null;
+};
+
 const WaterPlane: React.FC<{ y: number }> = ({ y }) => (
   <mesh position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={6}>
     <planeGeometry args={[NEIGHBOURHOOD_HALF_KM * 2000, NEIGHBOURHOOD_HALF_KM * 2000]} />
@@ -201,12 +214,12 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const rings = useMemo(() => (frame ? ringPlan(target.bbox, frame.origin) : null), [frame, target.bbox]);
   const ground = useGround(frame, rings, useMemo(() => placed.map((p) => p.ring), [placed]), target.kind === 'own');
   const outlined = ground.steep && target.kind !== 'own';
-  const hood = useNeighbourhood(capture, frame, rings, target.id);
+  const budget = useMemo(() => budgetFor(window.innerWidth, navigator.hardwareConcurrency ?? 8), []);
+  const hood = useNeighbourhood(capture, frame, rings, target.id, budget.trees);
   const origin = frame?.origin ?? target.centre;
   const volcano = useVolcano(origin.lat, origin.lon);
   const liveWeather = useWeatherNow(origin.lat, origin.lon);
   const still = useMemo(() => reducedMotion(), []);
-  const lowPower = useMemo(() => window.innerWidth < 640 || (navigator.hardwareConcurrency ?? 8) <= 4, []);
   const wxNow = useMemo(() => (liveWeather.status === 'ready' ? toWeatherNow(liveWeather.value) : null), [liveWeather]);
   const fx = useMemo(() => (wxChoice !== 'now' ? previewWeather(wxChoice, still) : effectsFor(season ? null : wxNow, still)), [wxChoice, wxNow, still, season]);
   const demField = ground.dem.near ?? ground.dem.far;
@@ -249,11 +262,11 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
         bundWidthM: BUND_WIDTH_M,
         trenchWidthCm: seasonal && plan?.trench && plan.fish ? plan.trench.width_cm : null,
         realSpacingM: seasonal && plan?.hills_per_m2 ? 1 / Math.sqrt(plan.hills_per_m2) : null,
-        maxPlants: seasonal ? MAX_PLANTS : p.main ? MAX_PLANTS : MAX_PLANTS_OTHER,
+        maxPlants: seasonal || p.main ? budget.rice : budget.riceOther,
       });
       return { placed: p, layout, seasonal };
     });
-  }, [placed, plan, season?.parcelId]);
+  }, [placed, plan, season?.parcelId, budget]);
 
   const mainLayout = layouts.find((l) => l.placed.main) ?? layouts[0];
   const extent = mainLayout?.layout.extent ?? 40;
@@ -316,14 +329,14 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   return (
     <div className="aq-fm-replica" role="dialog" aria-label={t('farmMap.farmView.title')} data-ready={ready ? 'true' : 'false'} data-terrain={profile.terrain} data-volcanic={profile.volcanic ? 'true' : 'false'}>
       <CanvasErrorBoundary fallback={(reset) => <div className="aq-fm-replica-empty"><p>{t('farmMap.replica.crashed')}</p><button type="button" className="aq-btn aq-btn-secondary" onClick={reset}>{t('farmMap.replica.reload')}</button></div>}>
-        <Canvas aria-hidden="true" flat shadows gl={{ logarithmicDepthBuffer: true }} dpr={[1, 2]} camera={{ position: [framing.centre[0] + framing.span * 0.45, framing.span * OVERVIEW_HEIGHT, framing.centre[1] + framing.span * OVERVIEW_BACK], fov: 42, near: 0.3, far: 40000 }} onCreated={onCreated}>
+        <Canvas aria-hidden="true" flat shadows gl={{ logarithmicDepthBuffer: true }} dpr={[1, budget.dprMax]} camera={{ position: [framing.centre[0] + framing.span * 0.45, framing.span * OVERVIEW_HEIGHT, framing.centre[1] + framing.span * OVERVIEW_BACK], fov: 42, near: 0.3, far: 40000 }} onCreated={onCreated}>
           <fogExp2 attach="fog" args={[fogColor, fogAmount]} />
           <Sky distance={450000} sunPosition={sunPos} turbidity={6 + 12 * fx.cloud} rayleigh={1.6 - 0.8 * fx.cloud} mieCoefficient={0.006} mieDirectionalG={0.8} />
           <hemisphereLight args={[REPLICA_COLOR.hemiSky, REPLICA_COLOR.hemiGround, 0.8 * lightScale(fx)]} />
           <directionalLight position={lightPos} intensity={(sun.elevationDeg > -6 ? 2.2 : 0.5) * lightScale(fx)} color={sun.elevationDeg < 12 ? REPLICA_COLOR.sunLow : REPLICA_COLOR.sunDay} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-framing.span} shadow-camera-right={framing.span} shadow-camera-top={framing.span} shadow-camera-bottom={-framing.span} shadow-camera-far={900} />
           <GroundPatches patches={ground.patches} />
           {hood.data && ground.status !== 'loading' ? <Neighbourhood data={hood.data} groundAt={ground.groundAt} profile={profile} seed={target.id} /> : null}
-          <Weather seed={target.id} fx={fx} lowPower={lowPower} centre={framing.centre} baseY={mainBase} />
+          <Weather seed={target.id} fx={fx} lowPower={budget.weak} centre={framing.centre} baseY={mainBase} />
           {depth > 0 ? <WaterPlane y={waterLevelY(mainBase, depth)} /> : null}
           {outlined ? <OutlineFields rings={placed.map((p) => p.ring)} groundAt={ground.groundAt} /> : null}
           {(outlined ? [] : layouts).map(({ placed: p, layout, seasonal }) => {
@@ -331,7 +344,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
             const flooded = p.field.stage === 'Flooded';
             const waterY = seasonal ? (ponded > 0 ? ponded / 1000 : null) : flooded ? FLOODED_SHEET_M : null;
             const weeds = seasonal && plan ? weedDensity(plan.events, row?.date ?? '') : 0;
-            const weedPoints = weeds > 0 ? layout.points.filter((_, i) => i % Math.max(1, Math.round(layout.points.length / Math.min(MAX_WEEDS, (weeds * layout.area) / 50))) === 0) : [];
+            const weedPoints = weeds > 0 ? layout.points.filter((_, i) => i % Math.max(1, Math.round(layout.points.length / Math.min(budget.weeds, (weeds * layout.area) / 50))) === 0) : [];
             return (
               <FieldLayer
                 key={p.field.id}
@@ -354,6 +367,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           <OrbitControls makeDefault target={[framing.centre[0], mainBase, framing.centre[1]]} maxPolarAngle={eye ? Math.PI / 2 : Math.PI / 2.1} minDistance={eye ? 1 : Math.max(5, ext * 0.1)} maxDistance={MAX_VIEW_DISTANCE_M} />
           <ViewPreset eye={eye} ring={mainLayout?.layout.ring ?? []} framing={framing} baseY={mainBase} ready={ground.status !== 'loading'} groundAt={ground.groundAt} />
           <CameraLimits eye={eye} groundAt={ground.groundAt} />
+          <DrawStats />
         </Canvas>
       </CanvasErrorBoundary>
       <div className="aq-fm-replica-tools">
