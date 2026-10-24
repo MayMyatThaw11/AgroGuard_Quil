@@ -21,6 +21,7 @@
 .aq-fm-sec.is-actions {
   position: sticky;
   bottom: 0;
+  z-index: 3;
   flex-flow: row wrap;
   background: var(--aq-surface-card);
 }
