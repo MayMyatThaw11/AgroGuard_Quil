@@ -4,10 +4,10 @@ import { Canvas, useFrame, type RootState } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
 import { X } from 'lucide-react';
 import type { SeasonEvent, SeasonReplay } from '../../lib/api.ts';
-import { SAT_ATTRIBUTION } from '../../lib/farmmap/basemapTheme.ts';
+import { SAT_ATTRIBUTION, SAT_MAX_ZOOM } from '../../lib/farmmap/basemapTheme.ts';
 import { engineDays } from '../../lib/farmmap/seasonPlayback.ts';
 import { sunAt } from '../../lib/farmmap/sun.ts';
-import { tilesFor, tileUrl } from '../../lib/fieldsim/imagery.ts';
+import { MIN_IMAGERY_ZOOM, isPlaceholderTile, tilesFor, tileUrl } from '../../lib/fieldsim/imagery.ts';
 import { bundStrip, insetRing, localFrame, plantGrid, ringArea, type Band, type XZ } from '../../lib/fieldsim/localFrame.ts';
 import { riceModel, stageForDvs, type RiceStage } from '../../lib/fieldsim/models.ts';
 import { REPLICA_COLOR } from '../../lib/fieldsim/replicaTheme.ts';
@@ -23,6 +23,20 @@ const LOD1_ABOVE = 2500;
 const TEXTURE = { mud: '/models/farmmap/mud_wet.jpg', dry: '/models/farmmap/soil_dry.jpg', clay: '/models/farmmap/bund_clay.jpg' };
 
 const ORIGIN = (): XZ => [0, 0];
+
+function rectangle([nw, se]: [XZ, XZ]): XZ[] {
+  return [nw, [se[0], nw[1]], se, [nw[0], se[1]]];
+}
+
+// Shape UVs are in metres; scale them so the image spans the rectangle exactly.
+function fitToRectangle(texture: THREE.Texture, [nw, se]: [XZ, XZ]): THREE.Texture {
+  const w = se[0] - nw[0];
+  const h = se[1] - nw[1];
+  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(1 / w, 1 / h);
+  texture.offset.set(-nw[0] / w, se[1] / h);
+  return texture;
+}
 const num = (v: unknown): number | null => (typeof v === 'number' ? v : null);
 
 function shapeOf(ring: readonly XZ[], hole?: readonly XZ[]): THREE.Shape {
@@ -49,41 +63,59 @@ function useTexture(url: string, repeat: number): THREE.Texture | null {
   return tex;
 }
 
-function useImagery(boundary: readonly (readonly [number, number])[], toLocal: (lat: number, lon: number) => XZ) {
-  const [state, setState] = useState<{ texture: THREE.Texture; corners: [XZ, XZ] } | 'failed' | null>(null);
-  const key = JSON.stringify(boundary);
-  useEffect(() => {
-    if (!boundary.length) return;
-    const lats = boundary.map((p) => p[0]);
-    const lons = boundary.map((p) => p[1]);
-    const pad = 0.0004;
-    const t = tilesFor({ minLat: Math.min(...lats) - pad, maxLat: Math.max(...lats) + pad, minLon: Math.min(...lons) - pad, maxLon: Math.max(...lons) + pad });
+function loadTile(z: number, x: number, y: number): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = tileUrl(z, x, y);
+  });
+}
+
+function placeholder(img: HTMLImageElement): boolean {
+  const probe = document.createElement('canvas');
+  probe.width = probe.height = 32;
+  const ctx = probe.getContext('2d');
+  if (!ctx) return false;
+  ctx.drawImage(img, 0, 0, 32, 32);
+  return isPlaceholderTile(ctx.getImageData(0, 0, 32, 32).data);
+}
+
+async function stitch(boundary: readonly (readonly [number, number])[], toLocal: (lat: number, lon: number) => XZ) {
+  const lats = boundary.map((p) => p[0]);
+  const lons = boundary.map((p) => p[1]);
+  const pad = 0.0004;
+  const box = { minLat: Math.min(...lats) - pad, maxLat: Math.max(...lats) + pad, minLon: Math.min(...lons) - pad, maxLon: Math.max(...lons) + pad };
+  for (let cap = SAT_MAX_ZOOM; cap >= MIN_IMAGERY_ZOOM; cap--) {
+    const t = tilesFor(box, 16, cap);
+    const middle = t.tiles[Math.floor(t.tiles.length / 2)];
+    if (placeholder(await loadTile(t.z, middle.x, middle.y))) {
+      if (t.z <= MIN_IMAGERY_ZOOM) break;
+      cap = Math.min(cap, t.z);
+      continue;
+    }
     const canvas = document.createElement('canvas');
     canvas.width = t.cols * 256;
     canvas.height = t.rows * 256;
     const ctx = canvas.getContext('2d');
+    await Promise.all(t.tiles.map(async ({ x, y }) => ctx?.drawImage(await loadTile(t.z, x, y), (x - t.x0) * 256, (y - t.y0) * 256)));
+    const texture = await new THREE.TextureLoader().loadAsync(canvas.toDataURL('image/jpeg', 0.9));
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    return { texture, corners: [toLocal(t.north, t.west), toLocal(t.south, t.east)] as [XZ, XZ], zoom: t.z };
+  }
+  return null;
+}
+
+function useImagery(boundary: readonly (readonly [number, number])[], toLocal: (lat: number, lon: number) => XZ) {
+  const [state, setState] = useState<{ texture: THREE.Texture; corners: [XZ, XZ]; zoom: number } | 'failed' | null>(null);
+  const key = JSON.stringify(boundary);
+  useEffect(() => {
+    if (!boundary.length) return;
     let alive = true;
-    Promise.all(
-      t.tiles.map(
-        ({ x, y }) =>
-          new Promise<void>((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-              ctx?.drawImage(img, (x - t.x0) * 256, (y - t.y0) * 256);
-              resolve();
-            };
-            img.onerror = reject;
-            img.src = tileUrl(t.z, x, y);
-          }),
-      ),
-    ).then(
-      () => {
-        if (!alive) return;
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        setState({ texture, corners: [toLocal(t.north, t.west), toLocal(t.south, t.east)] });
-      },
+    stitch(boundary, toLocal).then(
+      (out) => alive && setState(out ?? 'failed'),
       () => alive && setState('failed'),
     );
     return () => {
@@ -251,6 +283,7 @@ export const FieldReplica: React.FC<FieldReplicaProps> = ({ run, year, day, boun
   const plantScale = dvs === null ? 0 : 0.7 + 0.3 * (cover ?? 0.5);
   const ext = layout.extent;
   const onCreated = (state: RootState) => {
+    state.scene.background = new THREE.Color(REPLICA_COLOR.sky);
     detach.current();
     detach.current = attachContextLossRecovery(state.gl.domElement, { onLost: () => setLost(true), onRestored: () => setLost(false) });
   };
@@ -263,12 +296,12 @@ export const FieldReplica: React.FC<FieldReplicaProps> = ({ run, year, day, boun
           <hemisphereLight args={[REPLICA_COLOR.hemiSky, REPLICA_COLOR.hemiGround, 0.8]} />
           <directionalLight position={sunPos} intensity={sun.elevationDeg > 0 ? 2.2 : 0.3} color={sun.elevationDeg < 12 ? REPLICA_COLOR.sunLow : REPLICA_COLOR.sunDay} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-ext} shadow-camera-right={ext} shadow-camera-top={ext} shadow-camera-bottom={-ext} />
           {imagery && imagery !== 'failed' ? (
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(imagery.corners[0][0] + imagery.corners[1][0]) / 2, -0.02, (imagery.corners[0][1] + imagery.corners[1][1]) / 2]} receiveShadow>
-              <planeGeometry args={[imagery.corners[1][0] - imagery.corners[0][0], imagery.corners[1][1] - imagery.corners[0][1]]} />
-              <meshStandardMaterial map={imagery.texture} roughness={1} />
+            <mesh key="ground-imagery" rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
+              <shapeGeometry args={[shapeOf(rectangle(imagery.corners))]} />
+              <meshStandardMaterial color="#ffffff" map={fitToRectangle(imagery.texture, imagery.corners)} roughness={1} />
             </mesh>
           ) : (
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
+            <mesh key="ground-fallback" rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
               <planeGeometry args={[ext * 4, ext * 4]} />
               <meshStandardMaterial color={REPLICA_COLOR.groundFallback} roughness={1} />
             </mesh>

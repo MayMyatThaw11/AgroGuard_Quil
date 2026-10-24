@@ -15,8 +15,8 @@ const tileY = (lat: number, z: number) => {
 export const tileLon = (x: number, z: number) => (x / 2 ** z) * 360 - 180;
 export const tileLat = (y: number, z: number) => (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / 2 ** z))) * 180) / Math.PI;
 
-export function tilesFor(box: BBox, maxTiles = 16) {
-  for (let z = SAT_MAX_ZOOM; z >= 1; z--) {
+export function tilesFor(box: BBox, maxTiles = 16, maxZoom = SAT_MAX_ZOOM) {
+  for (let z = Math.min(maxZoom, SAT_MAX_ZOOM); z >= 1; z--) {
     const x0 = Math.floor(tileX(box.minLon, z));
     const x1 = Math.floor(tileX(box.maxLon, z));
     const y0 = Math.floor(tileY(box.maxLat, z));
@@ -33,3 +33,17 @@ export function tilesFor(box: BBox, maxTiles = 16) {
 }
 
 export const tileUrl = (z: number, x: number, y: number) => SAT_TILES.replace('{z}', String(z)).replace('{x}', String(x)).replace('{y}', String(y));
+
+/** Esri answers "Map data not yet available" with a flat grey tile; real imagery is never that uniform. */
+export function isPlaceholderTile(rgba: ArrayLike<number>): boolean {
+  const counts = new Map<number, number>();
+  const n = Math.floor(rgba.length / 4);
+  for (let i = 0; i < n; i++) {
+    const luma = Math.round((rgba[i * 4] * 299 + rgba[i * 4 + 1] * 587 + rgba[i * 4 + 2] * 114) / 1000 / 4);
+    counts.set(luma, (counts.get(luma) ?? 0) + 1);
+  }
+  const top = Math.max(...counts.values());
+  return n > 0 && top / n > 0.85;
+}
+
+export const MIN_IMAGERY_ZOOM = 14;

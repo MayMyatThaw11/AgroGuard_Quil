@@ -304,4 +304,6 @@
 
 @media (max-width: 639px) {
   .aq-fm-replica { right: 0; border-radius: 0; }
+  .aq-fm-replica-hud { max-width: calc(100% - 72px); font-size: 11px; }
+  .aq-fm-replica-hud span:nth-of-type(n + 3) { display: none; }
 }
