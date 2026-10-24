@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Crosshair, Factory, MapPin, Search, Sprout, Store, Warehouse, X, type LucideIcon } from 'lucide-react';
 import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
-import { mapLinkProblem, parseCoordinates, searchFarmMap } from '../../lib/farmmap/farmMapSearch.ts';
+import { coordinateProblem, mapLinkProblem, parseCoordinates, searchFarmMap } from '../../lib/farmmap/farmMapSearch.ts';
 import { CROPS } from '../../lib/farmmap/farmMapTheme.ts';
 import { useT, type Key } from '../../lib/i18n.ts';
 import type { SearchKind, SearchResult } from '../../lib/farmmap/farmMapViewTypes.ts';
@@ -111,7 +111,7 @@ export const FarmMapSearch: React.FC<FarmMapSearchProps> = ({ inputRef, onPick }
               );
             })
           ) : (
-            <p className="aq-fm-empty">{mapLinkProblem(query) ? t('farmMap.search.shortLink') : t('farmMap.search.empty', { query: query.trim() })}</p>
+            <p className="aq-fm-empty">{mapLinkProblem(query) ? t('farmMap.search.shortLink') : coordinateProblem(query) ? t('farmMap.search.outsideAsean') : t('farmMap.search.empty', { query: query.trim() })}</p>
           )}
           <div className="aq-fm-result-help">
             <span><kbd className="aq-kbd">↑</kbd> <kbd className="aq-kbd">↓</kbd> {t('farmMap.search.move')}</span>

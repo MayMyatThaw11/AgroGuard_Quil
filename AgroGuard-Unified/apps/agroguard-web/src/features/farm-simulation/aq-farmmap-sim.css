@@ -498,7 +498,8 @@
   .aq-fm-sim-body .aq-dial { align-self: center; }
 }
 
-.aq-fm-replica-flood p {
+.aq-fm-replica-flood p,
+.aq-fm-replica-weather p {
   margin: 0;
 }
 
@@ -509,4 +510,18 @@
 
 .aq-fm-note.is-strong[data-level='high'] {
   color: var(--aq-clay-700);
+}
+
+.aq-fm-replica-weather .aq-tiles {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.aq-fm-replica-weather .aq-tile {
+  padding: var(--aq-space-3) var(--aq-space-2);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  .aq-fm-replica-weather .aq-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

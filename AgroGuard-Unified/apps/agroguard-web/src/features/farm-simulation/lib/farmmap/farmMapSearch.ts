@@ -1,4 +1,5 @@
 import type { FarmMap } from './farmMapData.ts';
+import { inAsean } from './aseanLimits.ts';
 import { haversineKm } from './farmMapRandom.ts';
 import { CROPS } from './farmMapTheme.ts';
 import type { Farm, Poi, PoiType } from './farmMapTypes.ts';
@@ -39,14 +40,26 @@ function safeDecode(text: string): string {
   }
 }
 
+function locate(text: string): [number, number] | null {
+  const plain = text.match(COORDINATES);
+  return plain ? [+plain[1], +plain[2]] : /^https?:\/\//i.test(text) ? fromLink(safeDecode(text)) : fromDms(text);
+}
+
+export function coordinateProblem(query: string): 'outside' | null {
+  const text = query.trim();
+  if (mapLinkProblem(text)) return null;
+  const found = locate(text);
+  if (!found || Math.abs(found[0]) > 90 || Math.abs(found[1]) > 180) return null;
+  return inAsean({ lat: found[0], lon: found[1] }) ? null : 'outside';
+}
+
 export function parseCoordinates(query: string): SearchResult[] | null {
   const text = query.trim();
   if (mapLinkProblem(text)) return [];
-  const plain = text.match(COORDINATES);
-  const found: [number, number] | null = plain ? [+plain[1], +plain[2]] : /^https?:\/\//i.test(text) ? fromLink(safeDecode(text)) : fromDms(text);
+  const found = locate(text);
   if (!found) return null;
   const [lat, lon] = found;
-  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return [];
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180 || !inAsean({ lat, lon })) return [];
   return [{ kind: 'coord', id: 'c', title: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, sub: 'Go to coordinates', lat, lon, score: 0 }];
 }
 

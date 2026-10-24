@@ -30,6 +30,7 @@ BUDGET = {
     "rock_b": (300, 40),
     "rock_c": (300, 40),
     "reeds": (400, 80),
+    "cloud": (700, 90),
 }
 BARK = (0.20, 0.13, 0.08)
 CULM = (0.42, 0.50, 0.18)
@@ -302,6 +303,17 @@ def reeds(lod: int) -> None:
     kit.finish("reeds", lod)
 
 
+def cloud(lod: int) -> None:
+    kit = Kit(f"cloud_lod{lod}")
+    shade, top = (0.70, 0.75, 0.82), (1.0, 1.0, 1.0)
+    lobes = [((0, 0, 6), (24, 18, 15), 2, 0.0), ((17, 3, 4), (17, 14, 12), 2, 1.7), ((-17, -2, 4), (18, 15, 12), 2, 3.1), ((5, -7, 12), (15, 12, 12), 2, 4.6), ((-6, 8, 11), (14, 11, 11), 2, 5.9), ((10, 8, 3), (13, 11, 9), 2, 7.2)]
+    if lod == 1:
+        lobes = [((0, 0, 6), (30, 20, 15), 1, 0.0), ((7, 1, 12), (18, 13, 12), 1, 1.7)]
+    for centre, radii, sub, seed in lobes:
+        kit.part(blob(centre, radii, sub, amp=0.22, seed=seed, floor=0.0), gradient(0.0, 26.0, shade, top))
+    kit.finish("cloud", lod)
+
+
 def periodic_noise(size: int, seed: int, smooth: float) -> np.ndarray:
     rng = np.random.default_rng(seed)
     f = np.fft.fftfreq(size)
@@ -368,5 +380,6 @@ for lod in (0, 1):
     for letter in "abc":
         rock(letter, lod)
     reeds(lod)
+    cloud(lod)
 textures()
 print("SCENERY BUILT")

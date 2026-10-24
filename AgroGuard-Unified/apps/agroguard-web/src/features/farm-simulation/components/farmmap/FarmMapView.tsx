@@ -420,7 +420,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                     {!own.error && yours.length === 0 ? <p className="aq-fm-note">{t('farmMap.view.noOwn')}</p> : null}
                     {own.error ? null : <FarmsRollup farms={ownFarms} />}
                     <AqButton onClick={startTrace}><PenLine size={14} aria-hidden="true" />{t('farmMap.trace.title')}</AqButton>
-                    <PhotoLocate onFound={(lat, lon) => pick({ kind: 'coord', lat, lon })} />
+                    <PhotoLocate onFound={(lat, lon) => (inAsean({ lat, lon }) ? pick({ kind: 'coord', lat, lon }) : push({ tone: 'info', title: t('farmMap.search.label'), message: t('farmMap.search.outsideAsean') }))} />
                     <SitesUpload onDone={millSites.reload} />
                     {millSites.sites.map((s) => (
                       <button key={s.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'mill', id: s.id })}>

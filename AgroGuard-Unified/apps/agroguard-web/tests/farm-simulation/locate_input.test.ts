@@ -27,8 +27,9 @@ test('q and ll links give their coordinates', () => {
 test('degrees, minutes and seconds as Google Earth shows them', () => {
   const [lat, lon] = first('17°05\'52.8"N 95°10\'51.6"E');
   assert.ok(Math.abs(lat - 17.098) < 1e-6 && Math.abs(lon - 95.181) < 1e-6);
-  const [slat, wlon] = first('3°10\'0"S 72°30\'0"W');
-  assert.ok(slat === -(3 + 10 / 60) && wlon === -72.5);
+  const [slat, elon] = first('8°30\'0"S 115°15\'0"E');
+  assert.ok(slat === -8.5 && elon === 115.25);
+  assert.deepEqual(parseCoordinates('3°10\'0"S 72°30\'0"W'), []);
 });
 
 test('a short Google link cannot be read and says so', () => {

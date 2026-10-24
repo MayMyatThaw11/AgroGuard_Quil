@@ -1,3 +1,5 @@
+import { hash, rng } from '../farmmap/farmMapRandom.ts';
+
 export interface WeatherNow {
   weather_code: number | null;
   precipitation: number | null;
@@ -123,4 +125,68 @@ export function toWeatherNow(envelope: WeatherEnvelope): WeatherNow | null {
     temperature_2m: reading(c.temperature_2m),
     relative_humidity_2m: reading(c.relative_humidity_2m),
   };
+}
+
+const DROPS: Record<Precip, number> = { none: 0, drizzle: 500, rain: 1600, heavy: 3000, storm: 4200 };
+export const FLASH_CAP_PER_S = 3;
+
+export function dropCount(fx: Fx, lowPower: boolean): number {
+  if (!fx.animate) return 0;
+  return lowPower ? Math.floor(DROPS[fx.precip] / 2) : DROPS[fx.precip];
+}
+
+export function flashAllowed(times: readonly number[], now: number): boolean {
+  return times.filter((t) => now - t < 1).length < FLASH_CAP_PER_S;
+}
+
+export function fogScale(fx: Fx): number {
+  return fx.fog === 'fog' ? 6 : fx.fog === 'mist' ? 2.5 : 1;
+}
+
+const NIGHT_LIGHT = 0.3;
+
+export function lightScale(fx: Fx): number {
+  const cloud = (1 - 0.35 * fx.cloud) * (fx.night ? NIGHT_LIGHT : 1);
+  return fx.precip === 'storm' ? cloud * 0.5 : cloud;
+}
+
+export type WeatherKey = 'farmMap.farmView.wx.clear' | 'farmMap.farmView.wx.drizzle' | 'farmMap.farmView.wx.rain' | 'farmMap.farmView.wx.heavy' | 'farmMap.farmView.wx.storm' | 'farmMap.farmView.wx.fog' | 'farmMap.farmView.wx.mist' | 'farmMap.farmView.wx.night' | 'farmMap.farmView.wx.cloudy';
+
+export function weatherKey(fx: Fx): WeatherKey | null {
+  if (!fx.available) return null;
+  if (fx.precip !== 'none') return `farmMap.farmView.wx.${fx.precip}`;
+  if (fx.fog !== 'none') return `farmMap.farmView.wx.${fx.fog}`;
+  if (fx.night) return 'farmMap.farmView.wx.night';
+  return fx.cloud >= 0.7 ? 'farmMap.farmView.wx.cloudy' : 'farmMap.farmView.wx.clear';
+}
+
+export const CLOUD_BOX_M = 1800;
+export const CLOUD_HEIGHT_M: readonly [number, number] = [250, 450];
+const CLOUD_SCALE: readonly [number, number] = [2.5, 5];
+const CLOUD_MIN_COVER = 0.2;
+const CLOUD_MAX = 10;
+
+export function cloudCount(cover: number, lowPower: boolean): number {
+  if (cover < CLOUD_MIN_COVER) return 0;
+  const n = Math.round(cover * CLOUD_MAX);
+  return lowPower ? Math.floor(n / 2) : n;
+}
+
+export interface CloudPlace {
+  x: number;
+  y: number;
+  z: number;
+  s: number;
+  r: number;
+}
+
+export function cloudPlan(count: number, seed: string): CloudPlace[] {
+  const random = rng(hash(`cloud:${seed}`));
+  return Array.from({ length: count }, () => ({
+    x: (random() * 2 - 1) * CLOUD_BOX_M,
+    y: CLOUD_HEIGHT_M[0] + random() * (CLOUD_HEIGHT_M[1] - CLOUD_HEIGHT_M[0]),
+    z: (random() * 2 - 1) * CLOUD_BOX_M,
+    s: CLOUD_SCALE[0] + random() * (CLOUD_SCALE[1] - CLOUD_SCALE[0]),
+    r: random() * Math.PI * 2,
+  }));
 }

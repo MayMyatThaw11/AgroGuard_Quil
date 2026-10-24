@@ -5,6 +5,8 @@ export const REPLICA_COLOR = {
   trenchFloor: '#3d3226',
   mist: '#e8efe9',
   rain: '#9cc7d6',
+  lightning: '#dfe8ff',
+  rainStreak: '#5d8497',
   hemiSky: '#eef6f4',
   hemiGround: '#5b4a35',
   sunDay: '#fff6e5',

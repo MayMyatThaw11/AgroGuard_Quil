@@ -1,6 +1,6 @@
 import type { ContractSpec } from '../contractFarm.ts';
 import { fieldsOf } from '../farmmap/farmMapGeometry.ts';
-import { ASEAN_BOUNDS } from '../farmmap/farmMapRegions.ts';
+import { inAsean } from '../farmmap/aseanLimits.ts';
 import type { Farm } from '../farmmap/farmMapTypes.ts';
 import type { BBox } from '../fieldsim/imagery.ts';
 import { localFrame, ringArea } from '../fieldsim/localFrame.ts';
@@ -79,6 +79,4 @@ export function mainField(target: FarmTarget): TargetField | null {
   return best;
 }
 
-export function inAsean(point: { lat: number; lon: number }): boolean {
-  return point.lat >= ASEAN_BOUNDS.s && point.lat <= ASEAN_BOUNDS.n && point.lon >= ASEAN_BOUNDS.w && point.lon <= ASEAN_BOUNDS.e;
-}
+export { inAsean };

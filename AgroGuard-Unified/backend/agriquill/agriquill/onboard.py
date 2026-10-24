@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 
-from . import contract, crops, geometry, live, safety, telemetry
+from . import contract, crops, geometry, live, regions, safety, telemetry
 from .agronomy import RICE_KC, RICE_KC_SOURCE, STAGE_KC
 from .config import get_settings
 from .data import soil, weather
@@ -137,6 +137,8 @@ def read_boundaries(path: Path) -> dict[str, list[list[float]]]:
             raise ValueError(f"{path.name}: {name or key} needs at least three corners")
         if not all(-90 <= lat <= 90 and -180 <= lon <= 180 for lat, lon in ring):
             raise ValueError(f"{path.name}: {name or key} has a point outside the globe")
+        if not any(regions.in_asean(lat, lon) for lat, lon in ring):
+            raise ValueError(f"{path.name}: {name or key} is outside ASEAN, {regions.OUTSIDE}")
         problem = geometry.ring_problem(ring)
         if problem:
             raise ValueError(f"{path.name}: {name or key} is not a usable field, {problem}")
@@ -198,6 +200,8 @@ def read_fields(path: Path) -> list[dict[str, Any]]:
             lat is not None and lon is not None and not (-90 <= lat <= 90 and -180 <= lon <= 180)
         ):
             raise ValueError(f"{where}: give both lat and lon, in degrees")
+        if lat is not None and lon is not None and not regions.in_asean(lat, lon):
+            raise ValueError(f"{where}: lat and lon are outside ASEAN, {regions.OUTSIDE}")
         out.append(
             {
                 "id": field_id(name),

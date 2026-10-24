@@ -32,7 +32,11 @@ import { FloodPanel } from './FloodPanel.tsx';
 import { Neighbourhood } from './Neighbourhood.tsx';
 import { OutlineFields } from './OutlineFields.tsx';
 import { useNeighbourhood, type Capture } from './useNeighbourhood.ts';
-import { useRisk, useVolcano } from './useFarmFacts.ts';
+import { useRisk, useVolcano, useWeatherNow } from './useFarmFacts.ts';
+import { Weather } from './Weather.tsx';
+import { WeatherPanel, type WeatherChoice } from './WeatherPanel.tsx';
+import { reducedMotion } from '../../lib/inputs/motion.ts';
+import { effectsFor, fogScale, lightScale, previewWeather, toWeatherNow, weatherKey } from '../../lib/farmview/weatherFx.ts';
 
 const MAX_PLANTS = 4000;
 const MAX_PLANTS_OTHER = 400;
@@ -49,6 +53,8 @@ const OVERVIEW_HEIGHT = 0.3;
 const OVERVIEW_BACK = 1.1;
 const OVERVIEW_CLEARANCE = 0.3;
 const SIGHT_MARGIN_M = 8;
+const NIGHT_SUN_DEG = -18;
+const PREVIEW_SUN_DEG = 55;
 
 export interface FarmViewSeason {
   run: SeasonReplay;
@@ -176,6 +182,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const [lost, setLost] = useState(false);
   const [eye, setEye] = useState(false);
   const [depth, setDepth] = useState(0);
+  const [wxChoice, setWxChoice] = useState<WeatherChoice>('now');
   const [guideOpen, setGuideOpen] = useState(() => !guideSeen(browserStorage()));
   const closeGuide = () => {
     markGuideSeen(browserStorage());
@@ -197,6 +204,11 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const hood = useNeighbourhood(capture, frame, rings, target.id);
   const origin = frame?.origin ?? target.centre;
   const volcano = useVolcano(origin.lat, origin.lon);
+  const liveWeather = useWeatherNow(origin.lat, origin.lon);
+  const still = useMemo(() => reducedMotion(), []);
+  const lowPower = useMemo(() => window.innerWidth < 640 || (navigator.hardwareConcurrency ?? 8) <= 4, []);
+  const wxNow = useMemo(() => (liveWeather.status === 'ready' ? toWeatherNow(liveWeather.value) : null), [liveWeather]);
+  const fx = useMemo(() => (wxChoice !== 'now' ? previewWeather(wxChoice, still) : effectsFor(season ? null : wxNow, still)), [wxChoice, wxNow, still, season]);
   const demField = ground.dem.near ?? ground.dem.far;
   const elevationM = useMemo(() => {
     const elevation = demField ? heightAt(demField, origin.lat, origin.lon) : null;
@@ -255,11 +267,12 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
     if (row && frame) return new Date(Date.parse(`${row.date}T00:00:00Z`) + (12 - frame.origin.lon / 15) * 3_600_000);
     return new Date();
   }, [row, frame]);
-  const sun = frame ? sunAt(frame.origin.lat, frame.origin.lon, when) : { elevationDeg: 45, azimuthDeg: 180 };
+  const clockSun = frame ? sunAt(frame.origin.lat, frame.origin.lon, when) : { elevationDeg: 45, azimuthDeg: 180 };
+  const sun = fx.night === true ? { ...clockSun, elevationDeg: Math.min(clockSun.elevationDeg, NIGHT_SUN_DEG) } : fx.preview ? { ...clockSun, elevationDeg: Math.max(clockSun.elevationDeg, PREVIEW_SUN_DEG) } : clockSun;
   const sunPos = sunPosition(sun, 200);
   const lightPos = sunPosition({ elevationDeg: Math.max(sun.elevationDeg, MIN_LIGHT_ELEVATION_DEG), azimuthDeg: sun.azimuthDeg }, 200);
   const fogColor = REPLICA_COLOR.sky;
-  const fogAmount = fogDensity(FAR_HALF_KM * 1000);
+  const fogAmount = fogDensity(FAR_HALF_KM * 1000) * fogScale(fx);
   const ext = extent;
   const framing = useMemo<Framing>(() => {
     const points = placed.flatMap((p) => p.ring);
@@ -305,11 +318,12 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
       <CanvasErrorBoundary fallback={(reset) => <div className="aq-fm-replica-empty"><p>{t('farmMap.replica.crashed')}</p><button type="button" className="aq-btn aq-btn-secondary" onClick={reset}>{t('farmMap.replica.reload')}</button></div>}>
         <Canvas aria-hidden="true" flat shadows gl={{ logarithmicDepthBuffer: true }} dpr={[1, 2]} camera={{ position: [framing.centre[0] + framing.span * 0.45, framing.span * OVERVIEW_HEIGHT, framing.centre[1] + framing.span * OVERVIEW_BACK], fov: 42, near: 0.3, far: 40000 }} onCreated={onCreated}>
           <fogExp2 attach="fog" args={[fogColor, fogAmount]} />
-          <Sky distance={450000} sunPosition={sunPos} turbidity={6} rayleigh={1.6} mieCoefficient={0.006} mieDirectionalG={0.8} />
-          <hemisphereLight args={[REPLICA_COLOR.hemiSky, REPLICA_COLOR.hemiGround, 0.8]} />
-          <directionalLight position={lightPos} intensity={sun.elevationDeg > -6 ? 2.2 : 0.5} color={sun.elevationDeg < 12 ? REPLICA_COLOR.sunLow : REPLICA_COLOR.sunDay} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-framing.span} shadow-camera-right={framing.span} shadow-camera-top={framing.span} shadow-camera-bottom={-framing.span} shadow-camera-far={900} />
+          <Sky distance={450000} sunPosition={sunPos} turbidity={6 + 12 * fx.cloud} rayleigh={1.6 - 0.8 * fx.cloud} mieCoefficient={0.006} mieDirectionalG={0.8} />
+          <hemisphereLight args={[REPLICA_COLOR.hemiSky, REPLICA_COLOR.hemiGround, 0.8 * lightScale(fx)]} />
+          <directionalLight position={lightPos} intensity={(sun.elevationDeg > -6 ? 2.2 : 0.5) * lightScale(fx)} color={sun.elevationDeg < 12 ? REPLICA_COLOR.sunLow : REPLICA_COLOR.sunDay} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-framing.span} shadow-camera-right={framing.span} shadow-camera-top={framing.span} shadow-camera-bottom={-framing.span} shadow-camera-far={900} />
           <GroundPatches patches={ground.patches} />
           {hood.data && ground.status !== 'loading' ? <Neighbourhood data={hood.data} groundAt={ground.groundAt} profile={profile} seed={target.id} /> : null}
+          <Weather seed={target.id} fx={fx} lowPower={lowPower} centre={framing.centre} baseY={mainBase} />
           {depth > 0 ? <WaterPlane y={waterLevelY(mainBase, depth)} /> : null}
           {outlined ? <OutlineFields rings={placed.map((p) => p.ring)} groundAt={ground.groundAt} /> : null}
           {(outlined ? [] : layouts).map(({ placed: p, layout, seasonal }) => {
@@ -380,6 +394,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
             <span>{t('farmMap.replica.flat')}</span>
           </div>
         </details>
+        <WeatherPanel fx={fx} live={liveWeather} condition={weatherKey(fx)} temperatureC={wxChoice === 'now' && !season ? wxNow?.temperature_2m ?? null : null} choice={wxChoice} onChoice={setWxChoice} />
         <FloodPanel own={target.kind === 'own'} risk={risk} notes={floodNotes} depth={depth} onDepth={setDepth} />
       </div>
       <div className="aq-fm-replica-credits">

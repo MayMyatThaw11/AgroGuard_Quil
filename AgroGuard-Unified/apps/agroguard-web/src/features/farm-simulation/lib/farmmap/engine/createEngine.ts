@@ -4,6 +4,7 @@ import type { FeatureCollection } from 'geojson';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { basemapStyle } from '../basemapTheme.ts';
 import { basemapImage } from '../basemapImagesTheme.ts';
+import { MIN_MAP_ZOOM, clampCenter } from '../aseanLimits.ts';
 import { OVERVIEW_ZOOM, OWN_FILL_COLOR, OWN_WATER_FILTER, PLAIN_SOURCES, buildDataLayers } from '../dataLayersTheme.ts';
 import { DEFAULT_LAYERS } from '../farmMapLayerKeys.ts';
 import { getFarmMap } from '../farmMapData.ts';
@@ -44,7 +45,7 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
   const fctx = fog.getContext('2d');
   if (!fctx) throw new Error('Canvas 2D is not available');
   const map = new MapLibreMap({
-    container, style: basemapStyle(), center: [104, 12], zoom: 1.6, minZoom: 0.6, maxZoom: 18.5, maxPitch: 70,
+    container, style: basemapStyle(), center: [108, 8], zoom: 3.3, minZoom: MIN_MAP_ZOOM, maxZoom: 18.5, maxPitch: 70,
     attributionControl: false, fadeDuration: 0, canvasContextAttributes: { preserveDrawingBuffer: true },
     dragRotate: true, keyboard: true, renderWorldCopies: false,
   });
@@ -96,6 +97,12 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     ctx.state.needFog = true;
   };
   window.addEventListener('resize', onResize);
+
+  map.on('moveend', () => {
+    const c = map.getCenter();
+    const [lon, lat] = clampCenter(c.lng, c.lat);
+    if (lon !== c.lng || lat !== c.lat) map.easeTo({ center: [lon, lat], duration: 500, essential: true });
+  });
 
   map.on('load', async () => {
     clearTimeout(bootTimer);
