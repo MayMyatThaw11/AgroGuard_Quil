@@ -306,6 +306,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                   onUndo={trace.undo}
                   onClear={trace.clear}
                   onCancel={stopTrace}
+                  existing={yours.map((f) => f.id)}
                   onSaved={(farmId) => {
                     const corners = trace.corners;
                     const lat = corners.reduce((s, c) => s + c[0], 0) / corners.length;

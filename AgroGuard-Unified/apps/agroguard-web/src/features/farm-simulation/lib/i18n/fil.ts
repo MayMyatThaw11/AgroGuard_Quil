@@ -1074,4 +1074,6 @@ export const FIL: Dictionary = {
   'farmMap.photo.noGps': 'Walang location tag ang larawang ito. Maraming app ang nag-aalis nito kapag ibinabahagi ang larawan; ipadala ang orihinal, o buksan ang lokasyon para sa kamera.',
   'farmMap.photo.notJpeg': 'JPEG na larawan lang ang may mababasang location tag dito.',
   'farmMap.search.shortLink': 'Hindi mababasa rito ang maiikling link ng Google (maps.app.goo.gl). Buksan ang link, saka kopyahin ang buong address mula sa address bar ng browser.',
+  'farmMap.trace.addField': 'Magdagdag ng bukid sa {farm}',
+  'farmMap.trace.addsTo': 'Umiiral na ang sakahang ito. Idaragdag ang bukid at mananatili ang iba pang bukid.',
 };

@@ -237,3 +237,58 @@ def test_risk_reads_one_site_and_gives_each_parcel_its_own_advice(
     assert parcel["advice"]["action"] in ("harvest_early", "protect")
     assert parcel["planting"]["peak_month"] == 8
     assert client.get(f"{BASE}/contracts/{FARM}/risk").status_code in (401, 403)
+
+
+def geojson(name: str, ring: list[list[float]]) -> dict[str, Any]:
+    import json
+
+    feature = {
+        "type": "Feature",
+        "properties": {"name": name},
+        "geometry": {"type": "Polygon", "coordinates": [ring]},
+    }
+    return {"filename": "traced.geojson", "text": json.dumps(feature)}
+
+
+def shifted_square(dlon: float) -> list[list[float]]:
+    return [[lon + dlon, lat] for lon, lat in SQUARE]
+
+
+def add_parcel(name: str, ring: list[list[float]], headers: dict[str, str] = ANN):
+    payload = {"boundaries": geojson(name, ring), "registered_by": "Ann"}
+    return client.post(f"{BASE}/farms/{FARM}/parcels", json=payload, headers=headers)
+
+
+def test_a_second_traced_field_is_added_and_the_first_keeps_its_date():
+    assert onboard_farm(body()).status_code == 200
+    r = add_parcel("East field", shifted_square(0.002))
+    assert r.status_code == 200, r.text
+    assert r.json()["added"] == ["East-field"]
+    parcels = {p["id"]: p for p in live.load(FARM)[1]["contract"]["parcels"]}
+    assert set(parcels) == {"North-field", "South-plot", "East-field"}
+    assert parcels["North-field"]["planted"] == "2026-08-01"
+    assert parcels["East-field"]["boundary_area_ha"] > 0
+
+
+def test_a_field_with_a_taken_id_is_refused():
+    onboard_farm(body())
+    r = add_parcel("North field", shifted_square(0.002))
+    assert r.status_code == 409 and "North-field" in r.text
+
+
+def test_a_field_on_top_of_another_is_refused_and_a_neighbour_is_not():
+    onboard_farm(body())
+    assert add_parcel("Overlap", shifted_square(0.0004)).status_code == 422
+    assert add_parcel("Neighbour", shifted_square(0.001)).status_code == 200
+
+
+def test_adding_a_field_needs_the_manager_token_and_the_farm():
+    onboard_farm(body())
+    assert add_parcel("East", shifted_square(0.002), CREW).status_code in (401, 403)
+    assert client.post(f"{BASE}/farms/{FARM}/parcels", json={}).status_code in (401, 403, 422)
+    missing = client.post(
+        f"{BASE}/farms/nobody/parcels",
+        json={"boundaries": geojson("X", SQUARE), "registered_by": "Admin"},
+        headers=ADMIN,
+    )
+    assert missing.status_code == 404

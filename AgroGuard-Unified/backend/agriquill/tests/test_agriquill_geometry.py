@@ -81,3 +81,21 @@ def test_upload_with_a_crossing_outline_is_refused(tmp_path: Path):
     bad.write_text(json.dumps({"type": "FeatureCollection", "features": [feature("Bow", BOW_TIE)]}))
     with pytest.raises(ValueError, match="cross"):
         onboard.read_boundaries(bad)
+
+
+def shifted(ring: list[list[float]], dlat: float = 0.0, dlon: float = 0.0) -> list[list[float]]:
+    return [[lat + dlat, lon + dlon] for lat, lon in ring]
+
+
+def test_overlap_finds_a_shared_part_but_not_a_shared_edge():
+    assert geometry.rings_overlap(SQUARE, shifted(SQUARE, 0.0, 0.0005))
+    assert geometry.rings_overlap(SQUARE, SQUARE)
+    assert geometry.rings_overlap(SQUARE, shifted(SQUARE, 0.0002, 0.0002))
+    assert not geometry.rings_overlap(SQUARE, shifted(SQUARE, 0.0, 0.001))
+    assert not geometry.rings_overlap(SQUARE, shifted(SQUARE, 0.01, 0.01))
+
+
+def test_overlap_sees_one_field_inside_another():
+    inner = [[16.0003, 95.0003], [16.0003, 95.0006], [16.0006, 95.0006], [16.0006, 95.0003]]
+    assert geometry.rings_overlap(SQUARE, [*inner, inner[0]])
+    assert geometry.rings_overlap([*inner, inner[0]], SQUARE)

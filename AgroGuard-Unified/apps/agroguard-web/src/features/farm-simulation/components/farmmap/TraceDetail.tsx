@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Crosshair, Eraser, MapPinned, Undo2 } from 'lucide-react';
-import { getAuthMe, onboardFarm, type OnboardResult } from '../../lib/api.ts';
+import { addFarmFields, getAuthMe, onboardFarm } from '../../lib/api.ts';
 import { ApiError } from '../../lib/apiError.ts';
 import { suggestOutline, type OsmOutline } from '../../lib/farmmap/osmOutline.ts';
 import { MIN_CORNERS, TRACE_MIN_ZOOM, ringAreaHa, tracedGeojson, tracedRing, type Corner } from '../../lib/farmmap/trace.ts';
@@ -23,6 +23,12 @@ interface TraceDetailProps {
   onClear: () => void;
   onCancel: () => void;
   onSaved: (farmId: string) => void;
+  existing: readonly string[];
+}
+
+interface Saved {
+  farm_id: string;
+  notes: string[];
 }
 
 const EXPERIMENTAL = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('experimental');
@@ -36,7 +42,7 @@ const Field: React.FC<{ label: string; value: string; placeholder?: string; maxL
   </label>
 );
 
-export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomIn, onAddCentre, crosshair, onReplace, onUndo, onClear, onCancel, onSaved }) => {
+export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomIn, onAddCentre, crosshair, onReplace, onUndo, onClear, onCancel, onSaved, existing }) => {
   const t = useT();
   const [field, setField] = useState(() => t('farmMap.trace.defaultField'));
   const [farmId, setFarmId] = useState('');
@@ -44,7 +50,7 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
   const [country, setCountry] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<OnboardResult | null>(null);
+  const [result, setResult] = useState<Saved | null>(null);
   const registeredBy = activeSession()?.name ?? '';
   const heading = useRef<HTMLHeadingElement>(null);
   const [osm, setOsm] = useState<OsmOutline | null>(null);
@@ -78,7 +84,8 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
     inputsCsv: '',
     assets: [],
   };
-  const problems = geojson ? farmProblems(draft) : [];
+  const adding = existing.includes(draft.farmId);
+  const problems = geojson ? farmProblems(adding ? { ...draft, name: draft.farmId, country: 'MM' } : draft) : [];
 
   const suggest = async () => {
     const point = crosshair();
@@ -98,7 +105,12 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
     setBusy(true);
     setError('');
     try {
-      setResult(await onboardFarm(draft.farmId, onboardBody(draft)));
+      if (adding && draft.boundaries) {
+        const done = await addFarmFields(draft.farmId, draft.boundaries, registeredBy);
+        setResult({ farm_id: done.farm_id, notes: [] });
+      } else {
+        setResult(await onboardFarm(draft.farmId, onboardBody(draft)));
+      }
     } catch (err) {
       setError(onboardErrorText(err instanceof ApiError ? err.status : null, err instanceof Error ? err.message : String(err), draft.farmId));
     } finally {
@@ -162,13 +174,19 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
           <AqSectionLabel>{t('farmMap.trace.saveAs')}</AqSectionLabel>
           <Field label={t('farmMap.trace.fieldName')} value={field} maxLength={40} onChange={setField} />
           <Field label={t('farmMap.trace.farmId')} value={farmId} placeholder="farm_my_paddies" maxLength={41} onChange={setFarmId} />
-          <Field label={t('farmMap.trace.farmName')} value={name} maxLength={80} onChange={setName} />
-          <Field label={t('farmMap.common.country')} value={country} placeholder="MM" maxLength={2} onChange={(v) => setCountry(v.toUpperCase())} />
+          {adding ? (
+            <p className="aq-fm-note" role="status">{t('farmMap.trace.addsTo')}</p>
+          ) : (
+            <>
+              <Field label={t('farmMap.trace.farmName')} value={name} maxLength={80} onChange={setName} />
+              <Field label={t('farmMap.common.country')} value={country} placeholder="MM" maxLength={2} onChange={(v) => setCountry(v.toUpperCase())} />
+            </>
+          )}
           {problems.map((p) => <p key={p} className="aq-hint is-error">{p}</p>)}
           {error ? <div className="aq-alert is-error" role="alert">{error}</div> : null}
           <div className="aq-fm-badges">
             <AqButton onClick={onCancel}>{t('farmMap.common.cancel')}</AqButton>
-            <AqButton variant="primary" disabled={busy || problems.length > 0} onClick={() => void save()}>{busy ? t('farmMap.common.saving') : t('farmMap.trace.saveField')}</AqButton>
+            <AqButton variant="primary" disabled={busy || problems.length > 0} onClick={() => void save()}>{busy ? t('farmMap.common.saving') : adding ? t('farmMap.trace.addField', { farm: draft.farmId }) : t('farmMap.trace.saveField')}</AqButton>
           </div>
         </DetailSection>
       ) : (

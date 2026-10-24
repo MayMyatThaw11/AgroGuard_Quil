@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 # A drawn area and a declared area may differ by this much before the planner says so.
 AREA_TOLERANCE = 0.10
+# Our rule, not a standard: two fields overlap when more than 5 % of the smaller one is shared.
+OVERLAP_SHARE = 0.05
+OVERLAP_GRID = 80
 
 
 def _local(ring: list[list[float]]) -> list[tuple[float, float]]:
@@ -90,3 +95,44 @@ def ring_problem(ring: list[list[float]]) -> str | None:
     if abs(twice) / 2 < 1.0:
         return "its corners enclose less than one square metre"
     return None
+
+
+def _metres(ring: list[list[float]], lat0: float, lon0: float) -> np.ndarray:
+    kx = 111320.0 * math.cos(math.radians(lat0))
+    return np.array([[(p[1] - lon0) * kx, (p[0] - lat0) * 110574.0] for p in ring])
+
+
+def _inside(points: np.ndarray, poly: np.ndarray) -> np.ndarray:
+    x, y = points[:, 0], points[:, 1]
+    hit = np.zeros(len(points), dtype=bool)
+    for (x1, y1), (x2, y2) in zip(poly, np.roll(poly, -1, axis=0), strict=True):
+        if y1 == y2:
+            continue
+        crosses = (y1 > y) != (y2 > y)
+        hit ^= crosses & (x < (x2 - x1) * (y - y1) / (y2 - y1) + x1)
+    return hit
+
+
+def _area(poly: np.ndarray) -> float:
+    x, y = poly[:, 0], poly[:, 1]
+    return abs(float(np.dot(x, np.roll(y, -1)) - np.dot(np.roll(x, -1), y))) / 2
+
+
+def rings_overlap(a: list[list[float]], b: list[list[float]]) -> bool:
+    """True when the two closed [lat, lon] rings share more than OVERLAP_SHARE of the smaller.
+
+    Fields that only share an edge or a corner do not overlap. The shared area is sampled on a
+    grid over the boxes' common part, so it is an estimate, accurate to about 1/OVERLAP_GRID.
+    """
+    lat0, lon0 = a[0][0], a[0][1]
+    pa, pb = _metres(a, lat0, lon0), _metres(b, lat0, lon0)
+    lo = np.maximum(pa.min(axis=0), pb.min(axis=0))
+    hi = np.minimum(pa.max(axis=0), pb.max(axis=0))
+    if np.any(hi <= lo):
+        return False
+    xs = lo[0] + (np.arange(OVERLAP_GRID) + 0.5) * (hi[0] - lo[0]) / OVERLAP_GRID
+    ys = lo[1] + (np.arange(OVERLAP_GRID) + 0.5) * (hi[1] - lo[1]) / OVERLAP_GRID
+    grid = np.array([(x, y) for x in xs for y in ys])
+    both = _inside(grid, pa) & _inside(grid, pb)
+    shared = float(both.mean()) * (hi[0] - lo[0]) * (hi[1] - lo[1])
+    return shared > OVERLAP_SHARE * min(_area(pa), _area(pb))

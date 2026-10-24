@@ -221,6 +221,52 @@ def _quote(text: str) -> str:
     return text.replace('"', "'").replace("\n", " ")
 
 
+def parcel_block(
+    farm_id: str, pid: str, row: dict[str, Any], ring: list[list[float]] | None
+) -> str:
+    lines = [f"parcel {pid} {{"]
+    if row.get("name") and row["name"] != pid:
+        lines.append(f'    name: "{_quote(row["name"])}"')
+    if ring:
+        lines.append(f"    boundary: {ring}")
+    if row.get("area_ha"):
+        lines.append(f"    area: {row['area_ha']} ha")
+    lines.append(f"    crop_id: {row.get('crop_id') or 'rice_lowland'}")
+    if row.get("variety"):
+        lines.append(f'    crop: "{_quote(row["variety"])}"')
+    if row.get("stage"):
+        lines.append(f'    stage: "{row["stage"]}"')
+    if row.get("planted"):
+        lines.append(f'    planted: "{row["planted"]}"')
+    lines.append(f'    sensors {{ water_depth: "{device_for(farm_id, pid)}" }}')
+    lines.append("}")
+    return "\n".join(lines)
+
+
+class ParcelExists(ValueError):
+    pass
+
+
+def add_parcels(farm_id: str, rings: dict[str, list[list[float]]], added_by: str) -> dict[str, Any]:
+    loaded = live.load(farm_id)
+    if loaded is None:
+        raise KeyError(farm_id)
+    text, verdict = loaded
+    have = {p["id"]: p.get("boundary") for p in (verdict["contract"] or {}).get("parcels", [])}
+    for pid, ring in rings.items():
+        if pid in have:
+            raise ParcelExists(f"field {pid} already exists in {farm_id}")
+        clash = next(
+            (o for o, other in have.items() if other and geometry.rings_overlap(ring, other)), None
+        )
+        if clash:
+            raise ValueError(f"field {pid} overlaps {clash}; draw it beside it, not over it")
+        have[pid] = ring
+    blocks = "\n\n".join(parcel_block(farm_id, pid, {}, ring) for pid, ring in rings.items())
+    out = live.register(farm_id, text.rstrip() + "\n\n" + blocks + "\n", added_by)
+    return {**out, "added": list(rings)}
+
+
 def build_contract(
     farm_id: str,
     name: str,
@@ -265,23 +311,7 @@ def build_contract(
             )
         elif not row.get("planted"):
             notes.append(f"{pid}: no planting date; crop age is unknown")
-        lines = [f"parcel {pid} {{"]
-        if row.get("name") and row["name"] != pid:
-            lines.append(f'    name: "{_quote(row["name"])}"')
-        if ring:
-            lines.append(f"    boundary: {ring}")
-        if area:
-            lines.append(f"    area: {area} ha")
-        lines.append(f"    crop_id: {row.get('crop_id') or 'rice_lowland'}")
-        if row.get("variety"):
-            lines.append(f'    crop: "{_quote(row["variety"])}"')
-        if row.get("stage"):
-            lines.append(f'    stage: "{row["stage"]}"')
-        if row.get("planted"):
-            lines.append(f'    planted: "{row["planted"]}"')
-        lines.append(f'    sensors {{ water_depth: "{device_for(farm_id, pid)}" }}')
-        lines.append("}")
-        parcels.append("\n".join(lines))
+        parcels.append(parcel_block(farm_id, pid, row, ring))
     if not points:
         raise ValueError("no location: give a boundary, or lat and lon, for at least one field")
     blocks = [*parcels, *_asset_blocks(assets or [], set(ids))]

@@ -1073,6 +1073,8 @@ export const EN = {
   'farmMap.photo.noGps': 'This photo has no location tag. Many apps remove it when a photo is shared; send the original, or turn on location for the camera.',
   'farmMap.photo.notJpeg': 'Only JPEG photos carry a readable location tag here.',
   'farmMap.search.shortLink': 'Short Google links (maps.app.goo.gl) cannot be read here. Open the link, then copy the full address from the browser\'s address bar.',
+  'farmMap.trace.addField': 'Add field to {farm}',
+  'farmMap.trace.addsTo': 'This farm already exists. The field is added and its other fields stay as they are.',
 } as const;
 
 export type Key = keyof typeof EN;

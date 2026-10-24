@@ -1218,6 +1218,11 @@ class OnboardReq(BaseModel):
     assets: list[OnboardAsset] = Field(default_factory=list, max_length=100)
 
 
+class ParcelsReq(BaseModel):
+    boundaries: OnboardBoundaries
+    registered_by: str = Field(min_length=1, max_length=80)
+
+
 def _too_big(label: str) -> HTTPException:
     return HTTPException(status_code=413, detail=f"{label} is larger than 2 MB")
 
@@ -1317,6 +1322,32 @@ async def farms_onboard(
     except live.ContractRejected as exc:
         raise HTTPException(status_code=422, detail=exc.verdict["diagnostics"]) from exc
     except (ValueError, KeyError, IndexError, zipfile.BadZipFile, csv.Error) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/farms/{farm_id}/parcels")
+async def farms_add_parcels(
+    farm_id: str, req: ParcelsReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    _named(caller, req.registered_by)
+    _own(caller, farm_id)
+    suffix, raw = _boundary_bytes(req.boundaries)
+
+    def work() -> dict[str, Any]:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / f"boundaries{suffix}"
+            path.write_bytes(raw)
+            return onboard.add_parcels(farm_id, onboard.read_boundaries(path), req.registered_by)
+
+    try:
+        return await asyncio.to_thread(work)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"no farm {farm_id}") from exc
+    except onboard.ParcelExists as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except live.ContractRejected as exc:
+        raise HTTPException(status_code=422, detail=exc.verdict["diagnostics"]) from exc
+    except (ValueError, IndexError, zipfile.BadZipFile) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

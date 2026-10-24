@@ -1074,4 +1074,6 @@ export const ID: Dictionary = {
   'farmMap.photo.noGps': 'Foto ini tidak punya tag lokasi. Banyak aplikasi menghapusnya saat foto dibagikan; kirim aslinya, atau nyalakan lokasi untuk kamera.',
   'farmMap.photo.notJpeg': 'Hanya foto JPEG yang membawa tag lokasi yang bisa dibaca di sini.',
   'farmMap.search.shortLink': 'Tautan pendek Google (maps.app.goo.gl) tidak bisa dibaca di sini. Buka tautannya, lalu salin alamat lengkap dari bilah alamat peramban.',
+  'farmMap.trace.addField': 'Tambah petak ke {farm}',
+  'farmMap.trace.addsTo': 'Lahan ini sudah ada. Petak ditambahkan dan petak lain tidak berubah.',
 };

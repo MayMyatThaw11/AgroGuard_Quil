@@ -1074,4 +1074,6 @@ export const VI: Dictionary = {
   'farmMap.photo.noGps': 'Ảnh này không có thẻ vị trí. Nhiều ứng dụng xóa thẻ khi chia sẻ ảnh; hãy gửi bản gốc hoặc bật định vị cho máy ảnh.',
   'farmMap.photo.notJpeg': 'Ở đây chỉ ảnh JPEG mới có thẻ vị trí đọc được.',
   'farmMap.search.shortLink': 'Không đọc được liên kết rút gọn của Google (maps.app.goo.gl). Hãy mở liên kết rồi sao chép địa chỉ đầy đủ từ thanh địa chỉ của trình duyệt.',
+  'farmMap.trace.addField': 'Thêm thửa vào {farm}',
+  'farmMap.trace.addsTo': 'Trang trại này đã có. Thửa mới được thêm vào, các thửa khác giữ nguyên.',
 };

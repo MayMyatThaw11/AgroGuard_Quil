@@ -310,6 +310,18 @@ export async function onboardFarm(farmId: string, body: OnboardRequest) {
   });
 }
 
+export interface FieldsAdded {
+  farm_id: string;
+  added: string[];
+}
+
+export async function addFarmFields(farmId: string, boundaries: NonNullable<OnboardRequest['boundaries']>, registeredBy: string) {
+  return request<FieldsAdded>(`/api/v1/agriquill/farms/${encodeURIComponent(farmId)}/parcels`, {
+    method: 'POST',
+    body: JSON.stringify({ boundaries, registered_by: registeredBy }),
+  });
+}
+
 export async function planLive(farmId: string, signal?: AbortSignal) {
   return request<LivePlan>(`/api/v1/agriquill/contracts/${encodeURIComponent(farmId)}/plan`, {
     method: 'POST',
