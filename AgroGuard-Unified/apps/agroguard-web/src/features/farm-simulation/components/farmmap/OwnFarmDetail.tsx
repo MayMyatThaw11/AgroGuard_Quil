@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert } from 'lucide-react';
 import { fieldInfo, latestHealthUpdate, type AgroguardField, type HealthUpdateSummary } from '../../lib/agroguard.ts';
-import { getHarvestReference, getRadar, getRisk, getRoadmap, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type HarvestReference, type MonitoringPaddy, type PersonaPlans, type RiverCell, type Roadmap } from '../../lib/api.ts';
+import { getHarvestReference, getRadar, getRisk, getRoadmap, getSatellite, getSummary, type FarmRadar, type FarmRisk, type FarmSatellite, type FarmSummary, type HarvestList, type HarvestReference, type HarvestScore, type MonitoringPaddy, type PersonaPlans, type RiverCell, type Roadmap } from '../../lib/api.ts';
 import { failedText } from '../../lib/apiError.ts';
 import { haversineKm } from '../../lib/farmmap/farmMapRandom.ts';
 import { AWD_SAFE_DEPTH_CM, PAW_SAN_T_HA, advisoryLitres, farmCentroid, nationalHarvest, pawSanHarvest, readAgroguardLocal, todayLine, type OwnStatus, type TodayLine } from '../../lib/farmmap/ownFarms.ts';
@@ -16,6 +16,7 @@ import { DetailSection, KV, More, UpdatedLine } from './detailParts.tsx';
 import { FlowView } from './FlowView.tsx';
 import { SeasonStrip } from './SeasonStrip.tsx';
 import { PersonaPlan } from './PersonaPlan.tsx';
+import { HarvestRecords, type HarvestPrefill } from './HarvestRecords.tsx';
 import { RecordsSection } from './RecordsSection.tsx';
 import { FieldNotesSection } from './FieldNotesSection.tsx';
 import { SeasonSection } from './SeasonSection.tsx';
@@ -102,6 +103,9 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const [risk, setRisk] = useState<FarmRisk | 'error' | null>(null);
   const [yieldRef, setYieldRef] = useState<HarvestReference | null>(null);
   const [roadmap, setRoadmap] = useState<Roadmap | string | null>(null);
+  const [recorded, setRecorded] = useState<HarvestList | null>(null);
+  const [prefill, setPrefill] = useState<HarvestPrefill | null>(null);
+  const [score, setScore] = useState<HarvestScore | null>(null);
   const centre = useMemo(() => farmCentroid(farm.spec), [farm.spec]);
   const local = useMemo(() => {
     const storage = browserStorage();
@@ -158,6 +162,8 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
   const charted = paddies.filter((p) => p.model?.band && p.model.band_dates.length > 0);
   const water = advisoryLitres(local.advisory, farm.fieldId, area);
   const harvest = pawSanHarvest(farm.spec);
+  const recordedYields = (recorded?.harvests ?? []).filter((h) => !h.voided_at && h.yield.kg_ha_14 !== null);
+  const ownYield = recordedYields.length ? { kg: recordedYields[0].yield.kg_ha_14 as number, count: recordedYields.length } : null;
   const national = harvest ? null : nationalHarvest(yieldRef);
   const nationalCheck = yieldRef?.parcels.find((p) => p.yield?.backtest)?.yield?.backtest ?? null;
   const flood = risk && risk !== 'error' ? risk : null;
@@ -217,7 +223,7 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
         </div>
       </DetailSection>
 
-      {water.litres !== null || harvest || national || risk ? (
+      {water.litres !== null || harvest || national || risk || ownYield ? (
         <DetailSection>
           <div className="aq-fm-tiles">
             {risk ? (
@@ -230,9 +236,11 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
             ) : null}
             {water.litres !== null ? <Tile label={t('farmMap.own.waterToAdd')} value={fmt(water.litres / 1000)} unit="m³" level="inferred" /> : null}
             {harvest ? <Tile label={t('farmMap.own.expected')} value={`${fmt(harvest.lowT)}–${fmt(harvest.highT)}`} unit="t" level="inferred" /> : null}
+            {ownYield ? <Tile label={t('farmMap.harvest.yourYield')} value={(ownYield.kg / 1000).toLocaleString(activeLocale(), { maximumFractionDigits: 2 })} unit="t/ha" level="measured" /> : null}
             {national ? <Tile label={t('farmMap.over.harvestNational')} value={span(national.lowT, national.highT)} unit="t" level="modelled" /> : null}
           </div>
           {water.litres !== null ? <p className="aq-fm-note">{t('farmMap.own.waterNote', { litres: fmt(water.litres), mm: local.advisory?.netDepthMm ?? '?', ha: area.toFixed(2) })}</p> : null}
+          {ownYield ? <p className="aq-fm-note">{t('farmMap.harvest.yourYieldNote', { n: ownYield.count })}</p> : null}
           {harvest ? <p className="aq-fm-note">{t('farmMap.own.pawSan', { ha: harvest.areaHa, low: PAW_SAN_T_HA[0], high: PAW_SAN_T_HA[1] })}</p> : null}
           {national ? <p className="aq-fm-note">{t('farmMap.own.nationalNote', { ha: national.areaHa, country: yieldRef?.country_name ?? '', year: national.year ?? '?' })}</p> : null}
           {national && nationalCheck ? <p className="aq-fm-note">{t('farmMap.own.backtest', { within: nationalCheck.within_10, n: nationalCheck.n, years: nationalCheck.years, error: nationalCheck.mape_pct })}</p> : null}
@@ -262,8 +270,9 @@ export const OwnFarmDetail: React.FC<{ farm: OwnFarmLive; onLink: (fieldId: numb
         </DetailSection>
       )}
 
-      {onPlaySeason ? <SeasonSection key={`season-${farm.id}`} farmId={farm.id} parcels={farm.spec.parcels} onPlay={onPlaySeason} /> : null}
+      {onPlaySeason ? <SeasonSection key={`season-${farm.id}`} farmId={farm.id} parcels={farm.spec.parcels} onPlay={onPlaySeason} score={score} onRecordHarvest={setPrefill} /> : null}
       {extra}
+      <HarvestRecords key={`harvest-${farm.id}`} farmId={farm.id} spec={farm.spec} prefill={prefill} onPrefillDone={() => setPrefill(null)} onScore={setScore} onHarvests={setRecorded} />
       <RecordsSection key={farm.id} farmId={farm.id} spec={farm.spec} />
       <FieldNotesSection key={`notes-${farm.id}`} farmId={farm.id} />
 

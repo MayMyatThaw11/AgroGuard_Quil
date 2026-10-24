@@ -867,18 +867,20 @@ export interface LotList {
   limit: number;
 }
 
-export type RecordKind = 'certificates' | 'fumigations' | 'lots';
+export type RecordKind = 'certificates' | 'fumigations' | 'lots' | 'harvests';
 
 export interface RecordRow {
   certificates: Certificate;
   fumigations: Fumigation;
   lots: Lot;
+  harvests: Harvest;
 }
 
 export interface RecordChanges {
   certificates: Partial<Pick<CertificateInput, 'issuer' | 'country' | 'issued' | 'expires'>>;
   fumigations: Partial<Pick<FumigationInput, 'parcels' | 'active_ingredient' | 'method'>>;
   lots: Partial<Pick<LotInput, 'parcels' | 'harvested_on' | 'mass_kg' | 'certifier'>>;
+  harvests: Partial<Pick<HarvestInput, 'fresh_kg' | 'moisture_pct' | 'cut_area_m2' | 'method' | 'variety'>>;
 }
 
 function recordsPath(farmId: string, kind: RecordKind, id?: string, tail = ''): string {
@@ -970,6 +972,93 @@ export async function addLotMoisture(farmId: string, lotId: string, body: Moistu
 
 export async function addLotMill(farmId: string, lotId: string, body: MillInput) {
   return request<Lot>(recordsPath(farmId, 'lots', lotId, '/mill'), post(body));
+}
+
+export type HarvestMethod = 'whole_field_weighed' | 'crop_cut' | 'mill_receipt';
+
+export interface HarvestInput {
+  parcel: string;
+  harvested_on: string;
+  transplant_date?: string | null;
+  method: HarvestMethod;
+  fresh_kg: number;
+  moisture_pct?: number | null;
+  cut_area_m2?: number | null;
+  variety?: string | null;
+  plan?: SeasonPlan | null;
+  recorded_by: string;
+}
+
+export interface HarvestYield {
+  dry_kg_ha: number | null;
+  kg_ha_14: number | null;
+  area_ha: number | null;
+  area_basis: string;
+  reason: string | null;
+  basis: string;
+  standard_moisture_pct: number;
+  standard_source: string;
+}
+
+export interface Harvest extends Omit<HarvestInput, 'recorded_by'>, RecordStamps {
+  id: string;
+  farm_id: string;
+  recorded_by: string;
+  recorded_at: string;
+  yield: HarvestYield;
+  flags: string[];
+  provenance: string;
+}
+
+export interface HarvestList {
+  farm_id: string;
+  harvests: Harvest[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface SeasonScoreRow {
+  id: string;
+  harvested_on: string;
+  error_pct: number;
+  measured_dry_kg_ha?: number;
+  engine_kg_dm_ha?: number;
+  measured_kg_ha_14?: number;
+  national_kg_ha?: number;
+}
+
+export interface SeasonScore {
+  pairs: number;
+  mean_abs_pct_error: number | null;
+  mean_signed_pct_error: number | null;
+  seasons: SeasonScoreRow[];
+  status: string;
+  basis: string;
+  reason?: string | null;
+}
+
+export interface HarvestScore {
+  farm_id: string;
+  scored_at: string;
+  min_pairs: number;
+  engines: Record<string, SeasonScore>;
+  baseline: SeasonScore;
+  skipped: { id: string; harvested_on: string; reason: string }[];
+  status: string;
+  note: string;
+}
+
+export async function getHarvests(farmId: string, options: RecordListOptions = {}, signal?: AbortSignal) {
+  return request<HarvestList>(recordsPath(farmId, 'harvests') + listQuery(options), { signal });
+}
+
+export async function addHarvest(farmId: string, body: HarvestInput) {
+  return request<Harvest>(recordsPath(farmId, 'harvests'), post(body));
+}
+
+export async function getHarvestScore(farmId: string, signal?: AbortSignal) {
+  return request<HarvestScore>(recordsPath(farmId, 'harvests', 'score'), { signal });
 }
 
 export async function correctRecord<K extends RecordKind>(farmId: string, kind: K, id: string, changes: RecordChanges[K], reason: string, correctedBy: string) {

@@ -37,8 +37,8 @@ export const BarRow: React.FC<BarRowProps> = ({ label, percent, children }) => (
   </div>
 );
 
-export const More: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => {
-  const [open, setOpen] = useState(false);
+export const More: React.FC<{ label: string; children: React.ReactNode; defaultOpen?: boolean }> = ({ label, children, defaultOpen = false }) => {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div>
       <AqButton variant="ghost" aria-expanded={open} onClick={() => setOpen((v) => !v)}>

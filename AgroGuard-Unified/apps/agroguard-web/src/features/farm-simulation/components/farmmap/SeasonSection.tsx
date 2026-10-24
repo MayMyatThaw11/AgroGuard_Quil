@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Play, Plus, Trash2 } from 'lucide-react';
-import { runSeason, type SeasonEvent, type SeasonReplay } from '../../lib/api.ts';
+import { Play, Plus, Scale, Trash2 } from 'lucide-react';
+import { runSeason, type HarvestScore, type SeasonEvent, type SeasonReplay } from '../../lib/api.ts';
 import { ApiError, failedText } from '../../lib/apiError.ts';
 import type { ContractParcel } from '../../lib/contractFarm.ts';
 import { FAO_HINTS, ORYZA_HINTS, defaultDraft, planErrors, replayYears, toPlan, type SeasonDraft } from '../../lib/farmmap/seasonPlan.ts';
@@ -10,6 +10,7 @@ import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
 import { SeasonChart } from './SeasonChart.tsx';
+import type { HarvestPrefill } from './HarvestRecords.tsx';
 
 type Kind = SeasonEvent['kind'];
 const KINDS: Kind[] = ['irrigate', 'fertiliser', 'spray', 'weed', 'weed_emergence'];
@@ -78,9 +79,11 @@ interface SeasonSectionProps {
   farmId: string;
   parcels: ContractParcel[];
   onPlay: (run: SeasonReplay, parcelId: string) => void;
+  score?: HarvestScore | null;
+  onRecordHarvest?: (prefill: HarvestPrefill) => void;
 }
 
-export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, onPlay }) => {
+export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, onPlay, score, onRecordHarvest }) => {
   const t = useT();
   const today = useMemo(() => new Date(), []);
   const [parcelId, setParcelId] = useState(parcels[0]?.id ?? '');
@@ -127,6 +130,7 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
           </div>
           {alert ? <div className={`aq-alert ${alert.kind === 'phi_block' || alert.kind === 'fish_toxic_spray' ? 'is-error' : 'is-warning'}`} role="status">{t(`farmMap.sim.window.${alert.kind}` as Key)} · {alert.start} · {alert.detail}</div> : null}
           <AqButton variant="primary" onClick={() => onPlay(run, parcel.id)}><Play size={14} aria-hidden="true" />{t('farmMap.sim.play')}</AqButton>
+          {onRecordHarvest ? <AqButton onClick={() => onRecordHarvest({ parcel: parcel.id, plan: { ...toPlan(draft), weather_years: [Number(draft.transplant_date.slice(0, 4))] } })}><Scale size={14} aria-hidden="true" />{t('farmMap.harvest.recordSeason')}</AqButton> : null}
           <More label={t('farmMap.sim.byEngine')}>
             {Object.entries(first.engines).map(([name, result]) =>
               'days' in result ? (
@@ -140,7 +144,10 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
             ))}
             <p className="aq-fm-note">{t('farmMap.sim.location', { basis: first.location_basis ?? '—' })}</p>
             {first.missing.map((m) => <p key={`${m.field}-${m.reason}`} className="aq-fm-note">{m.reason}</p>)}
-            <p className="aq-fm-note">{t('farmMap.sim.comparison')}</p>
+            {Object.entries(score?.engines ?? {}).filter(([, s]) => s.pairs > 0).map(([name, s]) => (
+              <p key={`m-${name}`} className="aq-fm-note">{t('farmMap.harvest.season.measured', { engine: ENGINE_LABEL[name] ?? name, abs: s.mean_abs_pct_error ?? '—', n: s.pairs })}</p>
+            ))}
+            <p className="aq-fm-note">{score && Object.values(score.engines).some((s) => s.pairs > 0) ? t('farmMap.harvest.season.scored') : t('farmMap.sim.comparison')}</p>
           </More>
           <More label={t('farmMap.sim.charts')}>
             <SeasonChart

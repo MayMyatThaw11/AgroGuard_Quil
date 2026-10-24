@@ -36,7 +36,7 @@ import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
 import { rememberRecords } from './useOwnFarms.ts';
 
-type Write = (run: (by: string) => Promise<unknown>, done: string) => Promise<boolean>;
+export type Write = (run: (by: string) => Promise<unknown>, done: string) => Promise<boolean>;
 
 interface Loaded {
   certs: CertificateCalendar;
@@ -66,7 +66,7 @@ const CERT_KINDS: Record<keyof typeof CERTIFICATE_KINDS, Key> = {
   other: 'farmMap.rec.cert.other',
 };
 
-const labels = <T extends string>(keys: Record<T, Key>): Record<T, string> => {
+export const labels = <T extends string>(keys: Record<T, Key>): Record<T, string> => {
   const out = {} as Record<T, string>;
   (Object.keys(keys) as T[]).forEach((k) => {
     out[k] = tr(keys[k]);
@@ -75,15 +75,15 @@ const labels = <T extends string>(keys: Record<T, Key>): Record<T, string> => {
 };
 
 const localNow = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-const today = () => localNow().slice(0, 10);
+export const today = () => localNow().slice(0, 10);
 const kg = (v: number) => `${v.toLocaleString(activeLocale(), { maximumFractionDigits: 1 })} kg`;
 const list = (v: string) => v.split(',').map((s) => s.trim()).filter(Boolean);
 
-const Entered: React.FC<{ by: string }> = ({ by }) => (
+export const Entered: React.FC<{ by: string }> = ({ by }) => (
   <AqBadge><PenLine size={12} aria-hidden="true" />{tr('farmMap.rec.enteredBy', { by })}</AqBadge>
 );
 
-const Computed: React.FC = () => (
+export const Computed: React.FC = () => (
   <AqBadge tone="water"><Calculator size={12} aria-hidden="true" />{tr('farmMap.rec.computed')}</AqBadge>
 );
 
@@ -102,7 +102,7 @@ const VerdictBadge: React.FC<{ v: FumigationVerdict }> = ({ v }) => {
   return <AqBadge tone={b.tone}><Icon size={12} aria-hidden="true" />{b.word}</AqBadge>;
 };
 
-const Field: React.FC<{ label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; inputMode?: 'decimal' | 'text' }> = ({ label, value, onChange, type = 'text', placeholder, inputMode }) => (
+export const Field: React.FC<{ label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; inputMode?: 'decimal' | 'text' }> = ({ label, value, onChange, type = 'text', placeholder, inputMode }) => (
   <label className="aq-fm-trace-field">
     <span className="aq-fm-kv-key">{label}</span>
     <span className="aq-input-wrap">
@@ -111,7 +111,7 @@ const Field: React.FC<{ label: string; value: string; onChange: (v: string) => v
   </label>
 );
 
-function Choice<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: Record<T, string>; onChange: (v: T) => void }) {
+export function Choice<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: Record<T, string>; onChange: (v: T) => void }) {
   return (
     <label className="aq-fm-trace-field">
       <span className="aq-fm-kv-key">{label}</span>
@@ -134,16 +134,16 @@ const Plots: React.FC<{ spec: ContractSpec; value: string[]; onChange: (v: strin
   </fieldset>
 );
 
-const Hint: React.FC<{ text: string | null }> = ({ text }) => (text ? <p className="aq-hint is-error">{text}</p> : null);
+export const Hint: React.FC<{ text: string | null }> = ({ text }) => (text ? <p className="aq-hint is-error">{text}</p> : null);
 
-interface EditField {
+export interface EditField {
   key: string;
   label: string;
   value: string;
   type?: 'date' | 'text';
 }
 
-const RowActions: React.FC<{ fields: EditField[]; write: Write; onCorrect: (changes: Record<string, string>, reason: string, by: string) => Promise<unknown>; onVoid: (reason: string, by: string) => Promise<unknown> }> = ({ fields, write, onCorrect, onVoid }) => {
+export const RowActions: React.FC<{ fields: EditField[]; write: Write; onCorrect: (changes: Record<string, string>, reason: string, by: string) => Promise<unknown>; onVoid: (reason: string, by: string) => Promise<unknown> }> = ({ fields, write, onCorrect, onVoid }) => {
   const [mode, setMode] = useState<'edit' | 'void' | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [reason, setReason] = useState('');
@@ -189,7 +189,7 @@ const RowActions: React.FC<{ fields: EditField[]; write: Write; onCorrect: (chan
   );
 };
 
-const Stamps: React.FC<{ row: RecordStamps }> = ({ row }) => (
+export const Stamps: React.FC<{ row: RecordStamps }> = ({ row }) => (
   <>
     {row.voided_at ? <p className="aq-fm-note"><AqBadge><Ban size={12} aria-hidden="true" />{tr('farmMap.rec.voided')}</AqBadge> {tr('farmMap.rec.dateBy', { date: row.voided_at.slice(0, 10), by: row.voided_by ?? '' })} · {row.void_reason}</p> : null}
     {row.corrected_at ? <p className="aq-fm-note">{tr('farmMap.rec.corrected', { date: row.corrected_at.slice(0, 10), by: row.corrected_by ?? '' })} · {row.correction_reason}</p> : null}

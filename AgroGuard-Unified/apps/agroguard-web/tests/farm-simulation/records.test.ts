@@ -3,6 +3,7 @@ import test, { afterEach } from 'node:test';
 import {
   addCertificate,
   addFumigation,
+  addHarvest,
   addLot,
   addLotMill,
   addLotMoisture,
@@ -10,6 +11,8 @@ import {
   downloadEvidencePack,
   getCertificates,
   getFumigations,
+  getHarvestScore,
+  getHarvests,
   getLots,
   getRoadmap,
   voidRecord,
@@ -159,4 +162,31 @@ test('conditional and unchecked verdicts say why, and a blocked one without a cl
   assert.equal(verdictBadge(CONDITIONAL).detail, 'only after preventive practices fail · 205.271');
   assert.equal(verdictBadge({ result: 'unchecked', standard: 'ASOA', reason: 'check with the certifier' }).word, 'Unchecked');
   assert.match(verdictBadge({ ...BLOCKED, clause: null }).detail, /clause not recorded/);
+});
+
+
+test('a harvest is posted with the write token and lists with paging', async () => {
+  signIn('code-a');
+  const calls = capture({ id: 'P1~2025-10-20' });
+  await addHarvest('demo farm', { parcel: 'P1', harvested_on: '2025-10-20', method: 'whole_field_weighed', fresh_kg: 5000, moisture_pct: 20, recorded_by: 'Ann' });
+  assert.equal(calls[0].url, `${FARMS}/harvests`);
+  assert.equal(calls[0].method, 'POST');
+  assert.equal(calls[0].headers['x-agriquill-write-token'], 'code-a');
+  assert.deepEqual(calls[0].body, { parcel: 'P1', harvested_on: '2025-10-20', method: 'whole_field_weighed', fresh_kg: 5000, moisture_pct: 20, recorded_by: 'Ann' });
+  await getHarvests('demo farm', { limit: 500, includeVoided: true });
+  assert.equal(calls[1].url, `${FARMS}/harvests?limit=500&include_voided=true`);
+});
+
+test('a harvest is corrected and voided by its parcel and date id, and scored on its own route', async () => {
+  signIn('code-a');
+  const calls = capture({});
+  await correctRecord('demo farm', 'harvests', 'P1~2025-10-20', { moisture_pct: 24 }, 'meter re-read', 'Ann');
+  assert.equal(calls[0].url, `${FARMS}/harvests/P1~2025-10-20`);
+  assert.equal(calls[0].method, 'PATCH');
+  assert.deepEqual(calls[0].body, { changes: { moisture_pct: 24 }, reason: 'meter re-read', corrected_by: 'Ann' });
+  await voidRecord('demo farm', 'harvests', 'P1~2025-10-20', 'wrong field', 'Ann');
+  assert.equal(calls[1].url, `${FARMS}/harvests/P1~2025-10-20?reason=wrong+field&voided_by=Ann`);
+  assert.equal(calls[1].method, 'DELETE');
+  await getHarvestScore('demo farm');
+  assert.equal(calls[2].url, `${FARMS}/harvests/score`);
 });
