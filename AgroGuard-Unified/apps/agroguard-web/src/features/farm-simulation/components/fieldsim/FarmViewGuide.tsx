@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CornerUpLeft, Layers, Move3d, Waves, type LucideIcon } from 'lucide-react';
+import { CornerUpLeft, Layers, Move3d, Waves, X, type LucideIcon } from 'lucide-react';
 import { useT, type Key } from '../../lib/i18n.ts';
 
 interface Step {
@@ -29,6 +29,10 @@ export const FarmViewGuide: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   return (
     <div className="aq-fv-guide" role="dialog" aria-label={t('farmMap.farmView.guide.title')}>
       <div className="aq-fv-guide-card" key={index}>
+        <button type="button" className="aq-fv-guide-skip" onClick={onClose}>
+          {t('farmMap.farmView.guide.skip')}
+          <X size={14} aria-hidden="true" />
+        </button>
         <span className="aq-fv-guide-icon" aria-hidden="true"><step.Icon size={28} /></span>
         <h3 className="aq-fv-guide-title">{t(step.title)}</h3>
         <p className="aq-fv-guide-body">{t(step.body)}</p>
@@ -36,11 +40,7 @@ export const FarmViewGuide: React.FC<{ onClose: () => void }> = ({ onClose }) =>
           {STEPS.map((_, i) => <span key={i} className={i === index ? 'is-on' : undefined} />)}
         </div>
         <div className="aq-fv-guide-actions">
-          {index > 0 ? (
-            <button type="button" className="aq-btn aq-btn-ghost" onClick={() => setIndex(index - 1)}>{t('farmMap.farmView.guide.prev')}</button>
-          ) : last ? null : (
-            <button type="button" className="aq-btn aq-btn-ghost" onClick={onClose}>{t('farmMap.farmView.guide.skip')}</button>
-          )}
+          {index > 0 ? <button type="button" className="aq-btn aq-btn-ghost" onClick={() => setIndex(index - 1)}>{t('farmMap.farmView.guide.prev')}</button> : null}
           <button ref={primary} type="button" className="aq-btn aq-btn-primary" onClick={() => (last ? onClose() : setIndex(index + 1))}>
             {last ? t('farmMap.farmView.guide.done') : t('farmMap.farmView.guide.next')}
           </button>

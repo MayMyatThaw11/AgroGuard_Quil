@@ -380,6 +380,7 @@
 }
 
 .aq-fv-guide-card {
+  position: relative;
   display: grid;
   justify-items: center;
   gap: var(--aq-space-3);
@@ -391,6 +392,26 @@
   text-align: center;
   animation: aq-fv-guide-in var(--aq-dur-slow) var(--aq-ease);
 }
+
+.aq-fv-guide-skip {
+  position: absolute;
+  top: var(--aq-space-2);
+  right: var(--aq-space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aq-space-1);
+  min-height: 44px;
+  padding: 0 var(--aq-space-3);
+  border: 0;
+  border-radius: var(--aq-radius-lg);
+  background: transparent;
+  color: var(--aq-text-muted);
+  font: var(--aq-type-label);
+  cursor: pointer;
+}
+
+.aq-fv-guide-skip:hover { background: var(--aq-surface-hover); color: var(--aq-text-strong); }
+.aq-fv-guide-skip:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--aq-focus-ring); }
 
 .aq-fv-guide-icon {
   display: grid;
