@@ -1124,4 +1124,12 @@ export const MY: Dictionary = {
   'farmMap.replica.eye': 'ကန်သင်းပေါ်တွင် ရပ်ရန်',
   'farmMap.replica.overview': 'ခြုံငုံမြင်ကွင်း',
   'farmMap.replica.plantSize': 'စပါးပင်အရွယ်အစားသည် သရုပ်ပြသာဖြစ်သည်၊ အဆင့်နှင့် ဖုံးလွှမ်းမှုသည် မော်ဒယ်အတိုင်းဖြစ်ပြီး အမြင့်မဟုတ်ပါ။',
+  'farmMap.replica.models': 'မော်ဒယ်များ ပြောသည့်အရာ',
+  'farmMap.replica.engineYield': '{engine}: တစ်ဟက်တာလျှင် {t} တန် DM',
+  'farmMap.replica.engineFailed': '{engine}: မလည်ပတ်နိုင်ပါ။ {reason}',
+  'farmMap.replica.maturity': '{date} တွင် ရင့်မည်၊ ရိတ်သိမ်းရန် စီစဉ်ထားသည့်ရက် {harvest}',
+  'farmMap.replica.heat': 'ရာသီအတွင်း 35 °C နှင့်အထက် {n} ရက် (သတ်မှတ်ချက် စစ်ဆေးရန်လို၊ TO VERIFY)',
+  'farmMap.replica.regime': 'ရေ: {regime}',
+  'farmMap.sim.open3dNeeds': '၃ဒီ လယ်ကွက်သည် မော်ဒယ်လည်ပတ်မှုကို ပြသသည်။ ရာသီကြာချိန်နှင့် ကန်သင်းအမြင့်ကို အရင်ဖြည့်ပါ၊ တန်ဖိုးမည်သည့်အရာမျှ မခန့်မှန်းပါ။',
+  'farmMap.replica.engineNoYield': '{engine}: အထွက်နှုန်း မရှိပါ။ {reason}',
 };

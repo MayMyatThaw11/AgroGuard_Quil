@@ -282,6 +282,30 @@
   background: var(--aq-surface-card);
 }
 
+.aq-fm-replica-models {
+  position: absolute;
+  top: calc(var(--aq-space-4) + 52px);
+  right: var(--aq-space-4);
+  width: min(320px, calc(100% - 2 * var(--aq-space-4)));
+  max-height: 55%;
+  overflow-y: auto;
+  padding: var(--aq-space-3) var(--aq-space-4);
+  border-radius: var(--aq-radius-md);
+  background: var(--aq-surface-glass);
+  color: var(--aq-text-strong);
+  font-size: 12px;
+}
+
+.aq-fm-replica-models summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.aq-fm-replica-models p {
+  margin: var(--aq-space-2) 0 0;
+  color: var(--aq-text-muted);
+}
+
 .aq-fm-replica-hud {
   position: absolute;
   top: var(--aq-space-4);

@@ -1124,4 +1124,12 @@ export const VI: Dictionary = {
   'farmMap.replica.eye': 'Đứng trên bờ',
   'farmMap.replica.overview': 'Toàn cảnh',
   'farmMap.replica.plantSize': 'Kích thước cây chỉ minh họa: giai đoạn và độ phủ theo mô hình, chiều cao thì không.',
+  'farmMap.replica.models': 'Các mô hình cho biết gì',
+  'farmMap.replica.engineYield': '{engine}: {t} tấn DM/ha',
+  'farmMap.replica.engineFailed': '{engine}: không chạy được. {reason}',
+  'farmMap.replica.maturity': 'Chín vào {date}; thu hoạch dự kiến {harvest}',
+  'farmMap.replica.heat': '{n} ngày từ 35 °C trở lên trong vụ (ngưỡng cần kiểm chứng, TO VERIFY)',
+  'farmMap.replica.regime': 'Nước: {regime}',
+  'farmMap.sim.open3dNeeds': 'Ruộng 3D chạy lại kết quả mô hình. Hãy nhập độ dài vụ và chiều cao bờ trước; không có giá trị nào được tự giả định.',
+  'farmMap.replica.engineNoYield': '{engine}: chưa có năng suất. {reason}',
 };

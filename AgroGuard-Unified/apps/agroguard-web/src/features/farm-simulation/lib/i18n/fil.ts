@@ -1124,4 +1124,12 @@ export const FIL: Dictionary = {
   'farmMap.replica.eye': 'Tumayo sa pilapil',
   'farmMap.replica.overview': 'Pangkalahatang tanaw',
   'farmMap.replica.plantSize': 'Ilustrasyon lang ang laki ng halaman: sinusunod ng modelo ang yugto at takip, hindi ang taas.',
+  'farmMap.replica.models': 'Ano ang sinasabi ng mga modelo',
+  'farmMap.replica.engineYield': '{engine}: {t} tonelada DM/ha',
+  'farmMap.replica.engineFailed': '{engine}: hindi tumakbo. {reason}',
+  'farmMap.replica.maturity': 'Hinog sa {date}; planadong ani {harvest}',
+  'farmMap.replica.heat': '{n} araw na 35 °C pataas sa panahon (kailangan pang beripikahin, TO VERIFY)',
+  'farmMap.replica.regime': 'Tubig: {regime}',
+  'farmMap.sim.open3dNeeds': 'Pinapatakbo ng 3D na bukid ang resulta ng modelo. Ilagay muna ang haba ng panahon at taas ng pilapil; walang ipinapalagay na halaga.',
+  'farmMap.replica.engineNoYield': '{engine}: walang ani. {reason}',
 };

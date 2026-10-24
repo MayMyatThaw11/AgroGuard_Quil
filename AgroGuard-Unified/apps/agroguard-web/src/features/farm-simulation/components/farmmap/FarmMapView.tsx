@@ -102,6 +102,10 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const { push } = toasts;
 
   selectionRef.current = selection;
+  const ownPicked = selection?.kind === 'own' ? selection.id : null;
+  useEffect(() => {
+    if (ownPicked) setView('sat');
+  }, [ownPicked]);
   const pickRef = useRef<(target: PickTarget | null, fromMap: boolean) => void>(() => undefined);
 
   const { engine, boot, bootFail, stats, hover } = useFarmMapEngine(mapRef, fogRef, {
@@ -329,12 +333,13 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                     const centre = farmCentroid(ownFarm.spec);
                     if (centre) engine?.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2200 });
                   }}
-                  onPlaySeason={(run, parcelId) => {
+                  onPlaySeason={(run, parcelId, replica) => {
                     setSeason({ farmId: ownFarm.id, parcelId, run, year: 0, engine: 'own', tint: 'ponded_mm' });
                     if (isPhone()) setPanels((p) => ({ ...p, right: false }));
                     const ring = ownFarm.spec.parcels.find((p) => p.id === parcelId)?.boundary;
                     if (ring?.length) engine?.fly({ center: [ring.reduce((s, c) => s + c[1], 0) / ring.length, ring.reduce((s, c) => s + c[0], 0) / ring.length], zoom: 17, duration: 2000 });
                     setPlayback({ day: 0, playing: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches, speed: 4, carry: 0 });
+                    setReplica(Boolean(replica));
                   }}
                   extra={<DeliversTo farmId={ownFarm.id} parcels={ownFarm.spec.parcels.map((p) => p.id)} sites={millSites.sites} onChanged={millSites.reload} />}
                 />

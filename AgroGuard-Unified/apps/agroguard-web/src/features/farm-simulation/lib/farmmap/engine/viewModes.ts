@@ -58,6 +58,7 @@ export function setView(ctx: EngineContext, view: MapView) {
   map.setPaintProperty('crops', 'fill-opacity', satellite ? 0.5 : 0.88);
   const boundColor: ExpressionSpecification = ex('match', getProp('status'), 'risk', STATUS_COLOR.risk, 'watch', STATUS_COLOR.watch, BOUND_COLOR);
   map.setPaintProperty('bounds', 'line-color', satellite ? MAP_COLOR.satText : boundColor);
+  map.setPaintProperty('own-line', 'line-color', satellite ? MAP_COLOR.satText : MAP_COLOR.ownLine);
 }
 
 export function setFilters(ctx: EngineContext, filters: Filters) {

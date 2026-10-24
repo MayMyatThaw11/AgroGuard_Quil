@@ -1124,4 +1124,12 @@ export const TH: Dictionary = {
   'farmMap.replica.eye': 'ยืนบนคันนา',
   'farmMap.replica.overview': 'ภาพรวม',
   'farmMap.replica.plantSize': 'ขนาดต้นข้าวเป็นภาพประกอบ: ระยะและความหนาแน่นตามโมเดล แต่ความสูงไม่ใช่',
+  'farmMap.replica.models': 'โมเดลบอกอะไร',
+  'farmMap.replica.engineYield': '{engine}: {t} ตัน DM/เฮกตาร์',
+  'farmMap.replica.engineFailed': '{engine}: ไม่ทำงาน {reason}',
+  'farmMap.replica.maturity': 'สุกวันที่ {date} กำหนดเก็บเกี่ยว {harvest}',
+  'farmMap.replica.heat': '{n} วันที่ 35 °C ขึ้นไปในฤดู (เกณฑ์ต้องตรวจสอบ TO VERIFY)',
+  'farmMap.replica.regime': 'น้ำ: {regime}',
+  'farmMap.sim.open3dNeeds': 'แปลง 3 มิติเล่นผลจากโมเดล โปรดใส่ความยาวฤดูและความสูงคันนาก่อน ระบบไม่สมมติค่าใดเลย',
+  'farmMap.replica.engineNoYield': '{engine}: ไม่มีผลผลิต {reason}',
 };

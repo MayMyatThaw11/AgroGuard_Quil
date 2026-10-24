@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Play, Plus, Scale, Trash2 } from 'lucide-react';
+import { Box, Play, Plus, Scale, Trash2 } from 'lucide-react';
 import { runSeason, type HarvestScore, type SeasonEvent, type SeasonReplay } from '../../lib/api.ts';
 import { ApiError, failedText } from '../../lib/apiError.ts';
 import type { ContractParcel } from '../../lib/contractFarm.ts';
@@ -78,7 +78,7 @@ const EventFields: React.FC<{ event: SeasonEvent; onChange: (e: SeasonEvent) => 
 interface SeasonSectionProps {
   farmId: string;
   parcels: ContractParcel[];
-  onPlay: (run: SeasonReplay, parcelId: string) => void;
+  onPlay: (run: SeasonReplay, parcelId: string, replica?: boolean) => void;
   score?: HarvestScore | null;
   onRecordHarvest?: (prefill: HarvestPrefill) => void;
 }
@@ -93,21 +93,34 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
   const [busy, setBusy] = useState(false);
   const [run, setRun] = useState<SeasonReplay | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [planOpen, setPlanOpen] = useState(false);
   if (!parcel) return null;
   const set = (patch: Partial<SeasonDraft>) => setDraft((d) => ({ ...d, ...patch }));
   const errors = planErrors(draft, today);
   const years = draft.transplant_date && draft.duration_days ? replayYears(today, draft.transplant_date, draft.duration_days) : [];
 
-  const submit = async () => {
+  const submit = async (): Promise<SeasonReplay | null> => {
     setBusy(true);
     setFailed(null);
     try {
-      setRun(await runSeason(farmId, parcel.id, toPlan(draft)));
+      const result = await runSeason(farmId, parcel.id, toPlan(draft));
+      setRun(result);
+      return result;
     } catch (err) {
       setFailed(`${failedText(err, t('farmMap.sim.failed'))}${err instanceof ApiError && err.requestId ? ` · ${t('farmMap.rec.request', { id: err.requestId })}` : ''}`);
+      return null;
     } finally {
       setBusy(false);
     }
+  };
+
+  const openField = async () => {
+    if (errors.length > 0) {
+      setPlanOpen(true);
+      return;
+    }
+    const ready = run ?? (await submit());
+    if (ready) onPlay(ready, parcel.id, true);
   };
 
   const first = run?.years[0];
@@ -118,6 +131,8 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
   return (
     <DetailSection>
       <AqSectionLabel aside={t('farmMap.sim.aside')}>{t('farmMap.sim.title')}</AqSectionLabel>
+      <AqButton variant="primary" disabled={busy} onClick={() => void openField()}><Box size={14} aria-hidden="true" />{busy ? t('farmMap.sim.running') : t('farmMap.sim.replica')}</AqButton>
+      {planOpen && errors.length > 0 ? <p className="aq-fm-note" role="status">{t('farmMap.sim.open3dNeeds')}</p> : null}
       {run && first && yields ? (
         <>
           <KV
@@ -178,7 +193,7 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
         <p className="aq-fm-note">{t('farmMap.sim.intro')}</p>
       )}
       {failed ? <div className="aq-alert is-error" role="alert">{failed}</div> : null}
-      <More label={t('farmMap.sim.plan')}>
+      <More key={String(planOpen)} label={t('farmMap.sim.plan')} defaultOpen={planOpen}>
         {parcels.length > 1 ? (
           <label className="aq-fm-trace-field">
             <span className="aq-fm-kv-key">{t('farmMap.sim.parcel')}</span>

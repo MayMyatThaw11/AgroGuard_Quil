@@ -122,6 +122,8 @@ function pinLayers(): LayerEntry[] {
 }
 
 export const OWN_FILL_COLOR = ex('match', getProp('status'), 'ok', STATUS_COLOR.ok, 'watch', STATUS_COLOR.watch, 'risk', STATUS_COLOR.risk, MAP_COLOR.ownUnknown);
+const OWN_LABEL = ex('format', ex('concat', getProp('kind'), ' · ', getProp('name'), ' ', getProp('parcel')), {}, ex('case', ex('==', getProp('detail'), ''), '', '\n'), {}, getProp('detail'), { 'font-scale': 0.85, 'text-font': ['literal', ['Noto Sans Regular']] });
+
 export const OWN_WATER_FILTER = ex('all', ex('==', ['geometry-type'], 'Polygon'), ex('>', ex('coalesce', getProp('depth'), -1), 0));
 // Display scale: the season slab grows from the field top to WATER_SLAB_M as ponded water reaches the bund.
 const ownWaterHeight = ex('case', ex('==', ex('feature-state', 'slab'), null), RELIEF_HEIGHT_M.own + WATER_SLAB_M, ex('+', RELIEF_HEIGHT_M.own, ex('*', WATER_SLAB_M, ex('max', 0.02, ex('to-number', ex('feature-state', 'slab'))))));
@@ -129,12 +131,12 @@ const ownWaterHeight = ex('case', ex('==', ex('feature-state', 'slab'), null), R
 function ownLayers(): LayerEntry[] {
   const color = OWN_FILL_COLOR;
   return [
-    { spec: { id: 'own-fill', type: 'fill', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), paint: { 'fill-color': color, 'fill-opacity': hoverOpacity(0.42) } } },
+    { spec: { id: 'own-fill', type: 'fill', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), paint: { 'fill-color': color, 'fill-opacity': ex('case', ex('boolean', ex('feature-state', 'hover'), false), 1, ex('==', getProp('status'), 'unknown'), 0.16, 0.42) } } },
     { spec: relief('own-3d', 'aq-own', ex('==', ['geometry-type'], 'Polygon'), color, RELIEF_HEIGHT_M.own, 8) },
     { spec: relief('own-water', 'aq-own', OWN_WATER_FILTER, MAP_COLOR.canalMain, ownWaterHeight, 8, RELIEF_HEIGHT_M.own, 0.7) },
     { spec: { id: 'own-line', type: 'line', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Polygon'), layout: round, paint: { 'line-color': MAP_COLOR.ownLine, 'line-width': zoomInterp(8, 1.5, 16, 4) } } },
     { spec: { id: 'own-point', type: 'circle', source: 'aq-own', filter: ex('==', ['geometry-type'], 'Point'), paint: { 'circle-radius': 9, 'circle-color': color, 'circle-stroke-color': MAP_COLOR.ownLine, 'circle-stroke-width': 3 } } },
-    { spec: { id: 'own-label', type: 'symbol', source: 'aq-own', layout: { 'icon-image': 'aq-pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [3, 9, 3, 9], 'text-field': ex('concat', getProp('kind'), ' · ', getProp('name'), ' ', getProp('parcel')), 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true, 'symbol-placement': 'point', 'text-anchor': 'bottom', 'text-offset': [0, -2.2] }, paint: { 'text-color': MAP_COLOR.ink } } },
+    { spec: { id: 'own-label', type: 'symbol', source: 'aq-own', layout: { 'icon-image': 'aq-pill', 'icon-text-fit': 'both', 'icon-text-fit-padding': [3, 9, 3, 9], 'text-field': OWN_LABEL, 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-justify': 'center', 'text-allow-overlap': true, 'symbol-placement': 'point', 'text-anchor': 'bottom', 'text-offset': [0, -2.2] }, paint: { 'text-color': MAP_COLOR.ink } } },
   ];
 }
 

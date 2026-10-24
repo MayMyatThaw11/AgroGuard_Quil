@@ -1123,6 +1123,14 @@ export const EN = {
   'farmMap.replica.eye': 'Stand on the bund',
   'farmMap.replica.overview': 'Overview',
   'farmMap.replica.plantSize': 'Plant size is illustrative: stage and cover follow the model, height does not.',
+  'farmMap.replica.models': 'What the models say',
+  'farmMap.replica.engineYield': '{engine}: {t} t DM/ha',
+  'farmMap.replica.engineFailed': '{engine}: did not run. {reason}',
+  'farmMap.replica.maturity': 'Matures {date}; planned harvest {harvest}',
+  'farmMap.replica.heat': '{n} days at or above 35 °C in the season (cut-off TO VERIFY)',
+  'farmMap.replica.regime': 'Water: {regime}',
+  'farmMap.sim.open3dNeeds': 'The 3D field plays the model run. Give the season length and the bund height first; nothing is assumed.',
+  'farmMap.replica.engineNoYield': '{engine}: no yield. {reason}',
 } as const;
 
 export type Key = keyof typeof EN;

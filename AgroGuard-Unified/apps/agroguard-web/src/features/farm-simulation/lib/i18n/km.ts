@@ -1124,4 +1124,12 @@ export const KM: Dictionary = {
   'farmMap.replica.eye': 'ឈរលើដងស្រែ',
   'farmMap.replica.overview': 'ទិដ្ឋភាពទូទៅ',
   'farmMap.replica.plantSize': 'ទំហំដើមស្រូវជាតែរូបភាពបង្ហាញ៖ ដំណាក់កាលនិងគម្របតាមម៉ូដែល ប៉ុន្តែកម្ពស់មិនមែនទេ។',
+  'farmMap.replica.models': 'ម៉ូដែលប្រាប់អ្វី',
+  'farmMap.replica.engineYield': '{engine}៖ {t} តោន DM/ហិកតា',
+  'farmMap.replica.engineFailed': '{engine}៖ មិនដំណើរការ។ {reason}',
+  'farmMap.replica.maturity': 'ទុំនៅ {date} ផែនការប្រមូលផល {harvest}',
+  'farmMap.replica.heat': '{n} ថ្ងៃ 35 °C ឬលើសក្នុងរដូវ (កម្រិតត្រូវផ្ទៀងផ្ទាត់ TO VERIFY)',
+  'farmMap.replica.regime': 'ទឹក៖ {regime}',
+  'farmMap.sim.open3dNeeds': 'ស្រែ 3D ចាក់ផ្សាយលទ្ធផលម៉ូដែល។ សូមបញ្ចូលរយៈពេលរដូវ និងកម្ពស់ដងស្រែជាមុន គ្មានតម្លៃណាត្រូវបានសន្មតទេ។',
+  'farmMap.replica.engineNoYield': '{engine}៖ គ្មានទិន្នផល។ {reason}',
 };

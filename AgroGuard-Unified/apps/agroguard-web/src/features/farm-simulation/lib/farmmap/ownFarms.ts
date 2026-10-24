@@ -1,5 +1,5 @@
 import type { Certificate, FarmMonitoring, FarmRisk, Fumigation, FumigationVerdict, HarvestReference, Lot, PersonaPlans } from '../api.ts';
-import type { ContractSpec } from '../contractFarm.ts';
+import type { ContractParcel, ContractSpec } from '../contractFarm.ts';
 import type { FarmStatus, PointFeature, PolygonFeature, Position } from './farmMapTypes.ts';
 import { tr } from '../i18n.ts';
 import { reasonText } from './personaInputs.ts';
@@ -14,6 +14,7 @@ export interface OwnFeatureProps {
   kind: string;
   status: OwnStatus;
   depth: number | null;
+  detail: string;
 }
 
 export interface OwnFeatures {
@@ -83,6 +84,11 @@ function closed(ring: [number, number][] | null | undefined): ring is [number, n
   return a[0] === b[0] && a[1] === b[1];
 }
 
+function parcelDetail(parcel: ContractParcel): string {
+  const crop = parcel.crop || parcel.crop_id?.replace(/_/g, ' ');
+  return [parcel.area_ha ? `${parcel.area_ha.toFixed(2)} ha` : null, crop, parcel.planted ? parcel.planted.slice(0, 10) : null].filter(Boolean).join(' · ');
+}
+
 export function contractFeatures(farmId: string, spec: ContractSpec, statuses: Record<string, OwnStatus>, seed = false, depths: Record<string, number | null> = {}): OwnFeatures {
   const name = spec.farm.name ?? farmId;
   const kind = seed ? 'Demo farm' : 'Your farm';
@@ -92,7 +98,7 @@ export function contractFeatures(farmId: string, spec: ContractSpec, statuses: R
     const ring: Position[] = parcel.boundary.map(([lat, lon]) => [lon, lat]);
     polygons.push({
       type: 'Feature',
-      properties: { key: `${farmId}|${parcel.id}`, farm: farmId, parcel: parcel.id, name, kind, status: statuses[parcel.id] ?? 'unknown', depth: depths[parcel.id] ?? null },
+      properties: { key: `${farmId}|${parcel.id}`, farm: farmId, parcel: parcel.id, name, kind, status: statuses[parcel.id] ?? 'unknown', depth: depths[parcel.id] ?? null, detail: parcelDetail(parcel) },
       geometry: { type: 'Polygon', coordinates: [ring] },
     });
   }
@@ -101,7 +107,7 @@ export function contractFeatures(farmId: string, spec: ContractSpec, statuses: R
     polygons.length === 0 && location
       ? [{
           type: 'Feature',
-          properties: { key: `${farmId}|`, farm: farmId, parcel: '', name, kind, status: statuses[''] ?? 'unknown', depth: null },
+          properties: { key: `${farmId}|`, farm: farmId, parcel: '', name, kind, status: statuses[''] ?? 'unknown', depth: null, detail: '' },
           geometry: { type: 'Point', coordinates: [location[1], location[0]] },
         }]
       : [];

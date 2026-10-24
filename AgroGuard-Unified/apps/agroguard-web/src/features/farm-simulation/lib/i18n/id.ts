@@ -1124,4 +1124,12 @@ export const ID: Dictionary = {
   'farmMap.replica.eye': 'Berdiri di pematang',
   'farmMap.replica.overview': 'Gambaran umum',
   'farmMap.replica.plantSize': 'Ukuran tanaman hanya ilustrasi: fase dan tutupan mengikuti model, tinggi tidak.',
+  'farmMap.replica.models': 'Apa kata model',
+  'farmMap.replica.engineYield': '{engine}: {t} ton BK/ha',
+  'farmMap.replica.engineFailed': '{engine}: tidak berjalan. {reason}',
+  'farmMap.replica.maturity': 'Matang {date}; panen direncanakan {harvest}',
+  'farmMap.replica.heat': '{n} hari di atas 35 °C selama musim (batas perlu diverifikasi, TO VERIFY)',
+  'farmMap.replica.regime': 'Air: {regime}',
+  'farmMap.sim.open3dNeeds': 'Petak 3D memutar hasil model. Isi dulu panjang musim dan tinggi pematang; tidak ada nilai yang diasumsikan.',
+  'farmMap.replica.engineNoYield': '{engine}: belum ada hasil. {reason}',
 };

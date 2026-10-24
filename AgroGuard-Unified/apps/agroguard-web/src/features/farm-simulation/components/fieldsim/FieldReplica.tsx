@@ -14,6 +14,7 @@ import { REPLICA_COLOR } from '../../lib/fieldsim/replicaTheme.ts';
 import { attachContextLossRecovery } from '../../lib/webglContextRecovery.ts';
 import { useT } from '../../lib/i18n.ts';
 import { CanvasErrorBoundary } from '../farm3d/CanvasErrorBoundary.tsx';
+import { ReplicaModels } from './ReplicaModels.tsx';
 
 const DRACO = '/draco/';
 const BUND_WIDTH_M = 0.5;
@@ -379,6 +380,7 @@ export const FieldReplica: React.FC<FieldReplicaProps> = ({ run, year, day, boun
         {eye ? <MapIcon size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
         {eye ? t('farmMap.replica.overview') : t('farmMap.replica.eye')}
       </button>
+      <ReplicaModels run={run} year={year} />
       <div className="aq-fm-replica-hud" role="status">
         <b>{row?.date ?? '—'} · {t(`farmMap.replica.stage.${stage}` as 'farmMap.replica.stage.seedling')}</b>
         <span>{t('farmMap.replica.water', { mm: Math.round(ponded), bund: Math.round(bundM * 1000) })}</span>
