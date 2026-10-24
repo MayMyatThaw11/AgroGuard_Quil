@@ -204,6 +204,16 @@ Built and pushed on `farm-simulation` (spec `docs/superpowers/specs/2026-10-23-s
 - The season run route needs the write token, like /ops/plan.
 - REA skill: it targets shipped binaries and runtime evidence without source; no REA tools are connected here and we own the full source, so the investor flow was audited with the Playwright scripts instead (link, short link, DMS, GPS photo, 1440 px, no console errors).
 
+### Done on 2026-10-24, investor path and harvest records
+- Tracing a second field into an existing farm now adds it (`POST /farms/{id}/parcels`); before, it replaced the whole contract. Overlap is refused above 5 % of the smaller field (our rule).
+- Harvest records per field and date (`/farms/{id}/harvests`), with dry kg/ha and kg/ha at 14 % moisture (Field to Market Eq. 2). Unknown moisture or area gives null with the reason.
+- `GET /farms/{id}/harvests/score` replays each recorded plan on its season's real weather and reports each engine's error against the measured dry grain, next to the FAOSTAT baseline. Fewer than 3 scored seasons are not called a score. Nothing is tuned on these seasons.
+- Farm panel: harvest form, "Open the 3D field" under the Today card, label detail on the map, satellite on select, eye-level 3D view, "What the models say" card.
+- Reload keeps the active view (sessionStorage). Before, a reload returned to the default 3D diorama.
+- Dark theme: the aq token layer, the ops view and the map basemap now follow `data-theme`.
+- Seen in the browser: with SoilGrids down, AquaCrop and WOFOST fail with their reason and only the own engine scores. On the one test harvest the own engine was 47.5 % below the measured value; that value was typed in as a test, not measured.
+- Not done: the 3D diorama view and Agent Studio use fixed dark Tailwind colours (about 20 components) and stay dark in light mode. Translations of the new strings need native review. The full `verify:farm-map` run was started last and not read.
+
 ### Still open
 1. Final whole-branch review by a fresh reviewer (not run; self-review only), then a fix pass.
 2. Replica: measure frame time in a headed browser ("this laptop only"); plants are small from the default camera; check Burmese.

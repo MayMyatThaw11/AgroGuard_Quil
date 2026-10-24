@@ -136,3 +136,53 @@
 .aq-mono {
   font-family: var(--aq-font-mono);
 }
+
+:root[data-theme='dark'] .aq-root {
+  color-scheme: dark;
+  --aq-leaf-100: #14301f;
+  --aq-leaf-200: #1a4128;
+  --aq-accent-ink: #5bd98a;
+  --aq-mint-100: #12261f;
+  --aq-mint-200: #173229;
+  --aq-mint-300: #1f4538;
+  --aq-sky-500: #3cc0cf;
+  --aq-water-100: #10272a;
+  --aq-water-300: #1f5a60;
+  --aq-water-500: #22b8c2;
+  --aq-water-600: #5ad1d8;
+  --aq-sea-light: #1b4a4e;
+  --aq-sea-deep: #153a3e;
+  --aq-grain-100: #2e2410;
+  --aq-grain-500: #f0a53a;
+  --aq-grain-700: #f5bd6a;
+  --aq-clay-100: #34181a;
+  --aq-clay-500: #f06a64;
+  --aq-clay-600: #f58a85;
+  --aq-clay-700: #f9a8a4;
+  --aq-stone-0: #141a17;
+  --aq-stone-25: #121714;
+  --aq-stone-50: #0f1311;
+  --aq-stone-100: #1a211d;
+  --aq-stone-150: #212925;
+  --aq-stone-200: #28322c;
+  --aq-stone-300: #35423a;
+  --aq-stone-400: #66736b;
+  --aq-stone-500: #8a978e;
+  --aq-stone-600: #a8b4ab;
+  --aq-stone-700: #c4cec7;
+  --aq-stone-800: #dfe6e1;
+  --aq-stone-900: #eef2ef;
+  --aq-surface-tile: rgba(26, 33, 29, 0.72);
+  --aq-surface-hover: rgba(255, 255, 255, 0.06);
+  --aq-surface-glass: rgba(20, 26, 23, 0.9);
+  --aq-glass-border: rgba(255, 255, 255, 0.08);
+  --aq-glass-pill: rgba(20, 26, 23, 0.84);
+  --aq-scrim: rgba(0, 0, 0, 0.55);
+  --aq-track: #26332e;
+  --aq-focus-ring: rgba(74, 222, 128, 0.45);
+  --aq-error-ring: rgba(240, 106, 100, 0.3);
+  --aq-shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.3);
+  --aq-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.25);
+  --aq-shadow-md: 0 4px 14px -4px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --aq-shadow-lg: 0 14px 36px -10px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.3);
+}

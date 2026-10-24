@@ -15,6 +15,7 @@ import { drawFog } from './fogOverlay.ts';
 import { bindEvents } from './interaction.ts';
 import { animateRouteFlow, clearRoute, planRoute, startGuide, stepGuide, stopGuide } from './routing.ts';
 import { setFilters, setLayers, setOffline, setView } from './viewModes.ts';
+import { setTheme } from './themeMode.ts';
 import type { OwnFeatures } from '../ownFarms.ts';
 import { tintExpression, type SeasonView } from '../seasonPlayback.ts';
 import type { EngineCallbacks, EngineContext, EngineState, FarmMapEngine } from './engineTypes.ts';
@@ -28,7 +29,7 @@ function initialState(): EngineState {
   return {
     ready: false, offline: false, filters: { crops: null, status: null, organic: false }, layers: DEFAULT_LAYERS, terrain: false, view: 'map',
     cinematic: true, hoverId: null, needFog: true, fogAnim: false, queue: [], active: 0, lastStats: 0, route: null, guide: null,
-    baseIds: [], savedPaint: {}, dirtyTimer: null, hatch: null, dashStep: 0, lastDash: 0, frame: 0,
+    baseIds: [], savedPaint: {}, dark: false, lightPaint: {}, dirtyTimer: null, hatch: null, dashStep: 0, lastDash: 0, frame: 0,
   };
 }
 
@@ -110,6 +111,7 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     unbind = bindEvents(ctx, () => stream(ctx));
     ctx.state.ready = true;
     setLayers(ctx, ctx.state.layers);
+    setTheme(ctx, ctx.state.dark);
     setView(ctx, ctx.state.view);
     setRegions(ctx);
     callbacks.onBoot('ready');
@@ -141,6 +143,7 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
       if (ctx.state.ready) paintSeason();
     },
     setView: (view) => setView(ctx, view),
+    setTheme: (dark) => setTheme(ctx, dark),
     setFilters: (filters) => setFilters(ctx, filters),
     setOffline: (offline) => {
       setOffline(ctx, offline);

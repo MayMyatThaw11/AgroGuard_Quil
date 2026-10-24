@@ -47,8 +47,34 @@
 
 :root[data-theme='dark'] .ops-root,
 :root:not([data-theme]) .ops-root {
-  --ops-haze: #dfe9e5;
-  --ops-haze-edge: rgba(223, 233, 229, 0.96);
+  --ops-haze: #0f1613;
+  --ops-haze-edge: rgba(15, 22, 19, 0.96);
+  --ops-surface: #141a17;
+  --ops-surface-sunken: #0f1311;
+  --ops-raised: #1a211d;
+  --ops-line: #28322c;
+  --ops-ink: #e8ede9;
+  --ops-ink-2: #c4cec7;
+  --ops-ink-3: #9aa69e;
+  --ops-green: #17a34a;
+  --ops-green-deep: #15803d;
+  --ops-green-ring: #4ade80;
+  --ops-green-soft: rgba(74, 222, 128, 0.14);
+  --ops-amber: #fbbf24;
+  --ops-amber-soft: rgba(251, 191, 36, 0.14);
+  --ops-red: #f87171;
+  --ops-red-soft: rgba(248, 113, 113, 0.14);
+  --ops-blue: #60a5fa;
+  --ops-blue-soft: rgba(96, 165, 250, 0.14);
+  --ops-water: #2bc0ca;
+  --ops-water-band: rgba(43, 192, 202, 0.2);
+  --ops-agent-water: #2bc0ca;
+  --ops-agent-scout: #4ade80;
+  --ops-agent-pest: #fb923c;
+  --ops-agent-harvest: #facc15;
+  --ops-agent-drone: #60a5fa;
+  --ops-blocked: #9aa69e;
+  --ops-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
 .ops-stage {
@@ -698,9 +724,9 @@
 }
 
 :root[data-theme='dark'] .ops-root {
-  --ops-view-bg: rgba(21, 128, 61, 0.12);
-  --ops-view-ink: #14532d;
-  --ops-view-line: rgba(21, 128, 61, 0.5);
+  --ops-view-bg: rgba(74, 222, 128, 0.12);
+  --ops-view-ink: #86efac;
+  --ops-view-line: rgba(74, 222, 128, 0.4);
   --ops-view-bg-active: #4ade80;
   --ops-view-ink-active: #052e16;
 }

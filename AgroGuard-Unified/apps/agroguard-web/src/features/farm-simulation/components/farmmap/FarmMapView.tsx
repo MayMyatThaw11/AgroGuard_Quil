@@ -43,6 +43,7 @@ import { useSites } from './useSites.ts';
 import { SeasonTimeline } from './SeasonTimeline.tsx';
 import { PhotoLocate } from './PhotoLocate.tsx';
 import { FieldReplica } from '../fieldsim/FieldReplica.tsx';
+import { useDocumentTheme } from '../../lib/useDocumentTheme.ts';
 import { seasonViewFor, type Playback, type TintVar } from '../../lib/farmmap/seasonPlayback.ts';
 import type { SeasonReplay } from '../../lib/api.ts';
 import { RoutePanel } from './RoutePanel.tsx';
@@ -122,6 +123,10 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       });
     },
   });
+  const theme = useDocumentTheme();
+  useEffect(() => {
+    engine?.setTheme(theme === 'dark');
+  }, [engine, theme]);
 
   const guideLayout = useCallback((active: boolean) => setPanels({ left: !active, right: true }), []);
   const planner = useRoutePlanner({ engine, selection, onRestore: setSelection, onFocusRight: guideLayout, toast: push });

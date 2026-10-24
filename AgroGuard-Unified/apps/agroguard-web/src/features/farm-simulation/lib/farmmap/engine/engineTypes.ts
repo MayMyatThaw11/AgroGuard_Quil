@@ -138,6 +138,8 @@ export interface EngineState {
   guide: GuideState | null;
   baseIds: string[];
   savedPaint: Record<string, { color: unknown; halo: unknown }>;
+  dark: boolean;
+  lightPaint: Record<string, unknown>;
   dirtyTimer: ReturnType<typeof setTimeout> | null;
   hatch: CanvasPattern | null;
   dashStep: number;
@@ -174,6 +176,7 @@ export interface FarmMapEngine {
   setSites: (features: FeatureCollection) => void;
   setSeasonView: (view: SeasonView | null) => void;
   setView: (view: MapView) => void;
+  setTheme: (dark: boolean) => void;
   setFilters: (filters: Filters) => void;
   setOffline: (offline: boolean) => void;
   setTerrain: (on: boolean) => void;

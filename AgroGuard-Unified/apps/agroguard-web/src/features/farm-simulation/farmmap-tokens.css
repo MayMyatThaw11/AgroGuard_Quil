@@ -63,3 +63,9 @@
     min-height: 44px;
   }
 }
+
+:root[data-theme='dark'] .aq-root {
+  --aq-attrib-bg: rgba(15, 19, 17, 0.82);
+  --aq-map-sea: #153a3e;
+  --aq-map-space: radial-gradient(120% 90% at 50% 45%, #14201d 0%, #101a19 45%, #0b1214 100%);
+}
