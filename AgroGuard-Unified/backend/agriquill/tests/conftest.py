@@ -18,7 +18,13 @@ def operator_pin() -> Iterator[None]:
         settings.write_token,
         settings.builtin_user,
         settings.environment,
+        settings.agroguard_url,
+        settings.agroguard_jwt_secret,
+        settings.agroguard_service_key,
     )
+    settings.agroguard_url = None
+    settings.agroguard_jwt_secret = None
+    settings.agroguard_service_key = None
     settings.actuation_pin = SecretStr(TEST_PIN)
     settings.users = None
     settings.write_token = None
@@ -32,5 +38,8 @@ def operator_pin() -> Iterator[None]:
         settings.write_token,
         settings.builtin_user,
         settings.environment,
+        settings.agroguard_url,
+        settings.agroguard_jwt_secret,
+        settings.agroguard_service_key,
     ) = saved
     safety.reset_rate_limits()
