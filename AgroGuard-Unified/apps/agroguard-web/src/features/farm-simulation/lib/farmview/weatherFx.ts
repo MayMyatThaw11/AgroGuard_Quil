@@ -143,7 +143,7 @@ export function fogScale(fx: Fx): number {
   return fx.fog === 'fog' ? 6 : fx.fog === 'mist' ? 2.5 : 1;
 }
 
-const NIGHT_LIGHT = 0.3;
+const NIGHT_LIGHT = 0.2;
 
 export function lightScale(fx: Fx): number {
   const cloud = (1 - 0.35 * fx.cloud) * (fx.night ? NIGHT_LIGHT : 1);

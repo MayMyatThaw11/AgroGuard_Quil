@@ -284,7 +284,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const sun = fx.night === true ? { ...clockSun, elevationDeg: Math.min(clockSun.elevationDeg, NIGHT_SUN_DEG) } : fx.preview ? { ...clockSun, elevationDeg: Math.max(clockSun.elevationDeg, PREVIEW_SUN_DEG) } : clockSun;
   const sunPos = sunPosition(sun, 200);
   const lightPos = sunPosition({ elevationDeg: Math.max(sun.elevationDeg, MIN_LIGHT_ELEVATION_DEG), azimuthDeg: sun.azimuthDeg }, 200);
-  const fogColor = REPLICA_COLOR.sky;
+  const fogColor = fx.night === true ? REPLICA_COLOR.night : REPLICA_COLOR.sky;
   const fogAmount = fogDensity(FAR_HALF_KM * 1000) * fogScale(fx);
   const ext = extent;
   const framing = useMemo<Framing>(() => {
