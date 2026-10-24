@@ -30,8 +30,17 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import axios from 'axios';
+import { useLanguage } from '../contexts/LanguageContext.jsx';
+import { translateNarrative } from '../data/councilNarrativeMy.js';
 
 export default function CouncilPage() {
+  const { t, language } = useLanguage();
+  const tr = (text) => translateNarrative(text, language);
+  const label = (group, code) => {
+    const key = `council.${group}.${code}`;
+    const value = t(key);
+    return value === key ? code : value;
+  };
   const [crop, setCrop] = useState('rice');
   const [stage, setStage] = useState('Ripening');
   const [waterDepth, setWaterDepth] = useState(-12.0);
@@ -82,9 +91,9 @@ export default function CouncilPage() {
   const scenarios = [
     {
       id: 'pre_harvest_rain',
-      title: '🌾 Pre-Harvest Rain Threat',
-      subtitle: '48h Rain vs 6d Harvest Window',
-      desc: 'Torrential monsoon rain arrives in 48h; harvest in 6 days; chemical fungicide banned by 21d PHI. Alpha triggers BIOLOGICAL_VETO; Qill locks forward harvest contract.',
+      title: t('council.sc.rain.title'),
+      subtitle: t('council.sc.rain.sub'),
+      desc: t('council.sc.rain.desc'),
       apply: () => {
         setActiveScenario('pre_harvest_rain');
         setStage('Ripening');
@@ -105,9 +114,9 @@ export default function CouncilPage() {
     },
     {
       id: 'clay_sensor_crack',
-      title: '🏜️ Clay Sensor False Alarm',
-      subtitle: 'Single-Node Soil Shrinkage Crack',
-      desc: 'Node 2 reports impossible 35%/hr soil moisture plunge due to clay cracking; spatial consensus fails (1 of 4); Lou triggers HARDWARE_DRIFT_VETO ($0 spend).',
+      title: t('council.sc.clay.title'),
+      subtitle: t('council.sc.clay.sub'),
+      desc: t('council.sc.clay.desc'),
       apply: () => {
         setActiveScenario('clay_sensor_crack');
         setStage('Tillering');
@@ -128,9 +137,9 @@ export default function CouncilPage() {
     },
     {
       id: 'monsoon_blight',
-      title: '🌧️ Monsoon Blight Risk',
-      subtitle: 'Optical Satellite Blindspot',
-      desc: 'Monsoon cloud cover blinds Sentinel-2 optical satellites for weeks; Lou detects sub-canopy VPD spike (<0.65 kPa) 72h ahead of NDVI lag; Alpha isolates bio-control.',
+      title: t('council.sc.blight.title'),
+      subtitle: t('council.sc.blight.sub'),
+      desc: t('council.sc.blight.desc'),
       apply: () => {
         setActiveScenario('monsoon_blight');
         setStage('Tillering');
@@ -151,9 +160,9 @@ export default function CouncilPage() {
     },
     {
       id: 'fertilizer_spike',
-      title: '🧪 Fertilizer Price Spike (-45%)',
-      subtitle: 'Urea Inflation vs 3x Single-Season ROI',
-      desc: 'Commercial urea doubles; blanket NPK fails 3x single-season ROI; Qill triggers ECONOMIC_VETO, routing Alpha to $0 organic Azolla and bio-foliar protocol.',
+      title: t('council.sc.fert.title'),
+      subtitle: t('council.sc.fert.sub'),
+      desc: t('council.sc.fert.desc'),
       apply: () => {
         setActiveScenario('fertilizer_spike');
         setStage('Tillering');
@@ -676,7 +685,7 @@ export default function CouncilPage() {
             <div className="flex items-center gap-2 flex-wrap text-xs font-semibold tracking-wider text-slate-500 uppercase">
               <span className="text-slate-700">AgroGuard Unified</span>
               <span className="text-slate-300">/</span>
-              <span className="text-slate-700">Frontier Multi-Agent Council</span>
+              <span className="text-slate-700">{t('council.crumb')}</span>
               <span className="rounded-full bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 tracking-wider uppercase">
                 BETA
               </span>
@@ -686,10 +695,10 @@ export default function CouncilPage() {
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900">
-              AgroGuard Council: Lou, Alpha & Qill
+              {t('council.title')}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 max-w-3xl leading-relaxed">
-              Constraint-driven adjudication multi-agent brain outthinking macro AgTech (Cropin, OneSoil) through ground-truth edge AI, generational agronomy, and IRL supply chain economics.
+              {t('council.subtitle')}
             </p>
           </div>
 
@@ -697,9 +706,9 @@ export default function CouncilPage() {
             {/* Crop selector pills matching reference design Screen 8 */}
             <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-full">
               {[
-                { id: 'rice', label: '🌾 Rice (Paw San)' },
-                { id: 'wheat', label: '🍞 Wheat' },
-                { id: 'coffee', label: '☕ Coffee' },
+                { id: 'rice', label: t('council.rice') },
+                { id: 'wheat', label: t('council.wheat') },
+                { id: 'coffee', label: t('council.coffee') },
               ].map((c) => (
                 <button
                   key={c.id}
@@ -721,7 +730,7 @@ export default function CouncilPage() {
               className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs sm:text-sm font-semibold rounded-full shadow-xs transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>{loading ? 'Adjudicating Council...' : 'Run Adjudication'}</span>
+              <span>{loading ? t('council.adjudicating') : t('council.run')}</span>
             </button>
           </div>
         </header>
@@ -731,9 +740,9 @@ export default function CouncilPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-500" />
-              <span>Real-World Field Scenarios (Where Enterprise AgTech Breaks Down)</span>
+              <span>{t('council.scenarios')}</span>
             </h2>
-            <span className="text-[11px] text-slate-400 font-mono">1-Click Test Harness</span>
+            <span className="text-[11px] text-slate-400 font-mono">{t('council.harness')}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -783,21 +792,21 @@ export default function CouncilPage() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                    Deterministic Zero-Hallucination Safety Audit
+                    {t('council.audit')}
                   </h3>
                   <span className="text-[10px] font-mono font-semibold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                    No LLM Math Permitted
+                    {t('council.nollm')}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Tetens VPD physics equation, Pre-Harvest Interval (PHI) verification, and 3x single-season ROI bounds.
+                  {t('council.auditDesc')}
                 </p>
               </div>
             </div>
 
             {/* Triage Classification Badge & Live Indicator */}
             <div className="flex items-center gap-3 shrink-0">
-              <span className="text-[10px] uppercase font-mono text-slate-400">Council Triage:</span>
+              <span className="text-[10px] uppercase font-mono text-slate-400">{t('council.triageLabel')}</span>
               <span
                 className={`px-3.5 py-1 rounded-full text-xs font-mono font-bold tracking-wider uppercase border ${
                   triageStatus === 'TYPE_1_SENSOR_FAULT'
@@ -807,7 +816,7 @@ export default function CouncilPage() {
                     : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                 }`}
               >
-                {triageStatus}
+                {label('triage', triageStatus)}
               </span>
               <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -822,14 +831,14 @@ export default function CouncilPage() {
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-sky-300 flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5" />
-                  Lou's Telemetry Gate
+                  {t('council.gateLou')}
                 </span>
                 <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold ${activeVetoes.some((v) => v.agent === 'Lou' || v.veto_type.includes('HARDWARE')) ? 'bg-rose-500/30 text-rose-200 border border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
-                  {activeVetoes.some((v) => v.agent === 'Lou' || v.veto_type.includes('HARDWARE')) ? 'HARDWARE_DRIFT_VETO' : 'GATE CLEAR'}
+                  {activeVetoes.some((v) => v.agent === 'Lou' || v.veto_type.includes('HARDWARE')) ? 'HARDWARE_DRIFT_VETO' : t('council.gateClear')}
                 </span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                {activeVetoes.find((v) => v.agent === 'Lou' || v.veto_type.includes('HARDWARE'))?.reason || 'Spatial consensus & rate-of-change normal. Ground hardware integrity verified.'}
+                {tr(activeVetoes.find((v) => v.agent === 'Lou' || v.veto_type.includes('HARDWARE'))?.reason) || t('council.louOk')}
               </p>
             </div>
 
@@ -838,14 +847,14 @@ export default function CouncilPage() {
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-amber-300 flex items-center gap-1.5">
                   <Sprout className="w-3.5 h-3.5" />
-                  Alpha's Phenological Gate
+                  {t('council.gateAlpha')}
                 </span>
                 <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold ${activeVetoes.some((v) => v.agent === 'Alpha' || v.veto_type.includes('BIOLOGICAL')) ? 'bg-amber-500/30 text-amber-200 border border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
-                  {activeVetoes.some((v) => v.agent === 'Alpha' || v.veto_type.includes('BIOLOGICAL')) ? 'BIOLOGICAL_VETO' : 'GATE CLEAR'}
+                  {activeVetoes.some((v) => v.agent === 'Alpha' || v.veto_type.includes('BIOLOGICAL')) ? 'BIOLOGICAL_VETO' : t('council.gateClear')}
                 </span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                {activeVetoes.find((v) => v.agent === 'Alpha' || v.veto_type.includes('BIOLOGICAL'))?.reason || 'Phenological window & soil aeration compatible with target operations.'}
+                {tr(activeVetoes.find((v) => v.agent === 'Alpha' || v.veto_type.includes('BIOLOGICAL'))?.reason) || t('council.alphaOk')}
               </p>
             </div>
 
@@ -854,14 +863,14 @@ export default function CouncilPage() {
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-emerald-300 flex items-center gap-1.5">
                   <Coins className="w-3.5 h-3.5" />
-                  Qill's Solvency Gate
+                  {t('council.gateQill')}
                 </span>
                 <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold ${activeVetoes.some((v) => v.agent === 'Qill' || v.veto_type.includes('ECONOMIC')) ? 'bg-purple-500/30 text-purple-200 border border-purple-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
-                  {activeVetoes.some((v) => v.agent === 'Qill' || v.veto_type.includes('ECONOMIC')) ? 'ECONOMIC_VETO' : 'GATE CLEAR'}
+                  {activeVetoes.some((v) => v.agent === 'Qill' || v.veto_type.includes('ECONOMIC')) ? 'ECONOMIC_VETO' : t('council.gateClear')}
                 </span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                {activeVetoes.find((v) => v.agent === 'Qill' || v.veto_type.includes('ECONOMIC'))?.reason || 'Input spend satisfies 3x Single-Season ROI threshold and fits farmer working capital.'}
+                {tr(activeVetoes.find((v) => v.agent === 'Qill' || v.veto_type.includes('ECONOMIC'))?.reason) || t('council.qillOk')}
               </p>
             </div>
           </div>
@@ -869,27 +878,27 @@ export default function CouncilPage() {
           {/* Pure Physics & Math Telemetry Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs font-mono">
             <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex flex-col justify-between">
-              <span className="text-[10px] text-slate-400 uppercase">Tetens VPD</span>
+              <span className="text-[10px] text-slate-400 uppercase">{t('council.m.vpd')}</span>
               <span className="text-sky-300 font-bold text-sm mt-0.5">{vpdKpa} kPa</span>
             </div>
             <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex flex-col justify-between">
-              <span className="text-[10px] text-slate-400 uppercase">Magnus Dew Point</span>
+              <span className="text-[10px] text-slate-400 uppercase">{t('council.m.dew')}</span>
               <span className="text-emerald-300 font-bold text-sm mt-0.5">{dewPointC} °C</span>
             </div>
             <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex flex-col justify-between">
-              <span className="text-[10px] text-slate-400 uppercase">Spatial Consensus</span>
+              <span className="text-[10px] text-slate-400 uppercase">{t('council.m.spatial')}</span>
               <span className={`font-bold text-sm mt-0.5 ${affectedNodes < 2 ? 'text-rose-400' : 'text-slate-200'}`}>
                 {spatialRatio}% ({affectedNodes}/{activeNodes})
               </span>
             </div>
             <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex flex-col justify-between">
-              <span className="text-[10px] text-slate-400 uppercase">Moisture Drop</span>
+              <span className="text-[10px] text-slate-400 uppercase">{t('council.m.drop')}</span>
               <span className={`font-bold text-sm mt-0.5 ${soilMoistureDropRate > 20 ? 'text-rose-400' : 'text-slate-200'}`}>
                 {soilMoistureDropRate}% / hr
               </span>
             </div>
             <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex flex-col justify-between">
-              <span className="text-[10px] text-slate-400 uppercase">Cash Budget Ceiling</span>
+              <span className="text-[10px] text-slate-400 uppercase">{t('council.m.budget')}</span>
               <span className="text-amber-300 font-bold text-sm mt-0.5">${remainingBudget.toFixed(2)} / ha</span>
             </div>
           </div>
@@ -898,12 +907,12 @@ export default function CouncilPage() {
           {circuitBreakerLogs.length > 0 && (
             <div className="bg-rose-950/40 border border-rose-800/60 p-3.5 rounded-2xl space-y-1">
               <span className="text-[10px] font-mono font-bold text-rose-400 uppercase tracking-wider block">
-                ⚡ Post-LLM Circuit Breaker Intercept Active:
+                {t('council.breaker')}
               </span>
               {circuitBreakerLogs.map((log, idx) => (
                 <div key={idx} className="text-xs text-rose-200 font-mono flex items-start gap-2">
                   <span className="text-rose-400">🛡️</span>
-                  <span>{log}</span>
+                  <span>{tr(log)}</span>
                 </div>
               ))}
             </div>
@@ -916,18 +925,18 @@ export default function CouncilPage() {
             <div>
               <h2 className="text-sm md:text-base font-bold text-slate-900 flex items-center gap-2">
                 <Network className="w-4 h-4 text-emerald-600" />
-                <span>The Tri-Bridge Architecture (Physical Soil ↔ Edge Mesh ↔ IRL Market)</span>
+                <span>{t('council.bridge.title')}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Bidirectional grounding eliminating hallucinated chemical prescriptions and false IoT panics.
+                {t('council.bridge.sub')}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               {[
-                { id: 'field-edge', label: '1. Field ↔ Edge (Alpha ↔ Lou)' },
-                { id: 'edge-market', label: '2. Edge ↔ Market (Lou ↔ Qill)' },
-                { id: 'agronomy-commerce', label: '3. Agronomy ↔ Market (Alpha ↔ Qill)' },
+                { id: 'field-edge', label: t('council.bridge.t1') },
+                { id: 'edge-market', label: t('council.bridge.t2') },
+                { id: 'agronomy-commerce', label: t('council.bridge.t3') },
               ].map((tb) => (
                 <button
                   key={tb.id}
@@ -952,22 +961,22 @@ export default function CouncilPage() {
                   <div className="flex items-center justify-between text-xs border-b border-slate-200/80 pb-2.5">
                     <span className="font-bold text-amber-800 flex items-center gap-1.5">
                       <Sprout className="w-4 h-4 text-amber-600" />
-                      Alpha (Muddy Boots Tactile Prior)
+                      {t('council.bridge.alphaTactile')}
                     </span>
                     <ArrowRight className="w-4 h-4 text-slate-400" />
                     <span className="font-bold text-sky-800 flex items-center gap-1.5">
                       <Cpu className="w-4 h-4 text-sky-600" />
-                      Lou (Bayesian Anomaly Recalibration)
+                      {t('council.bridge.louRecal')}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-1.5">
-                      <span className="text-[10px] font-mono text-amber-700 uppercase font-bold">Alpha's 6 AM Tactile Cue for Farmer:</span>
-                      <p className="text-slate-700 leading-relaxed">{triBridge.field_to_edge_bridge.alpha_visual_check_for_farmer}</p>
+                      <span className="text-[10px] font-mono text-amber-700 uppercase font-bold">{t('council.bridge.alphaCue')}</span>
+                      <p className="text-slate-700 leading-relaxed">{tr(triBridge.field_to_edge_bridge.alpha_visual_check_for_farmer)}</p>
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-1.5">
-                      <span className="text-[10px] font-mono text-sky-700 uppercase font-bold">Lou's Edge Sensor Recalibration:</span>
-                      <p className="text-slate-700 leading-relaxed">{triBridge.field_to_edge_bridge.lou_bayesian_recalibration_rule}</p>
+                      <span className="text-[10px] font-mono text-sky-700 uppercase font-bold">{t('council.bridge.louEdge')}</span>
+                      <p className="text-slate-700 leading-relaxed">{tr(triBridge.field_to_edge_bridge.lou_bayesian_recalibration_rule)}</p>
                     </div>
                   </div>
                 </div>
@@ -978,26 +987,26 @@ export default function CouncilPage() {
                   <div className="flex items-center justify-between text-xs border-b border-slate-200/80 pb-2.5">
                     <span className="font-bold text-sky-800 flex items-center gap-1.5">
                       <Cpu className="w-4 h-4 text-sky-600" />
-                      Lou (Verifiable Telemetry Proof)
+                      {t('council.bridge.louProof')}
                     </span>
                     <ArrowRight className="w-4 h-4 text-slate-400" />
                     <span className="font-bold text-emerald-800 flex items-center gap-1.5">
                       <Coins className="w-4 h-4 text-emerald-600" />
-                      Qill (Digital Crop Passport & Off-take)
+                      {t('council.bridge.qillPassport')}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-1.5">
-                      <span className="text-[10px] font-mono text-sky-700 uppercase font-bold">Continuous Sub-Canopy Telemetry Proof:</span>
-                      <p className="text-slate-700 leading-relaxed">{triBridge.edge_to_market_bridge.lou_verified_telemetry_proof}</p>
+                      <span className="text-[10px] font-mono text-sky-700 uppercase font-bold">{t('council.bridge.subCanopy')}</span>
+                      <p className="text-slate-700 leading-relaxed">{tr(triBridge.edge_to_market_bridge.lou_verified_telemetry_proof)}</p>
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-1.5">
-                      <span className="text-[10px] font-mono text-emerald-700 uppercase font-bold">Buyer Grade Compliance Status:</span>
+                      <span className="text-[10px] font-mono text-emerald-700 uppercase font-bold">{t('council.bridge.compliance')}</span>
                       <div className="flex items-center gap-2 pt-1">
                         <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-mono font-bold text-xs">
                           {triBridge.edge_to_market_bridge.qill_buyer_grade_compliance_status}
                         </span>
-                        <span className="text-slate-500 text-[11px]">Locks in Grade 1 premium with local exporter</span>
+                        <span className="text-slate-500 text-[11px]">{t('council.bridge.premium')}</span>
                       </div>
                     </div>
                   </div>
@@ -1009,26 +1018,26 @@ export default function CouncilPage() {
                   <div className="flex items-center justify-between text-xs border-b border-slate-200/80 pb-2.5">
                     <span className="font-bold text-amber-800 flex items-center gap-1.5">
                       <Sprout className="w-4 h-4 text-amber-600" />
-                      Alpha (Biological Protocol)
+                      {t('council.bridge.alphaBio')}
                     </span>
                     <ArrowRight className="w-4 h-4 text-slate-400" />
                     <span className="font-bold text-emerald-800 flex items-center gap-1.5">
                       <Coins className="w-4 h-4 text-emerald-600" />
-                      Qill (Verified Dealer Catalog SKU)
+                      {t('council.bridge.qillSku')}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                     <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">Approved Catalog SKU</span>
+                      <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">{t('council.bridge.sku')}</span>
                       <span className="font-mono font-bold text-slate-900 text-sm">{triBridge.agronomy_to_commerce_bridge.approved_catalog_sku_id}</span>
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">Unit Cost</span>
+                      <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">{t('council.bridge.unitCost')}</span>
                       <span className="font-mono font-bold text-emerald-700 text-sm">${triBridge.agronomy_to_commerce_bridge.unit_cost_usd_ha.toFixed(2)} / ha</span>
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">Verified Single-Season ROI</span>
-                      <span className="font-mono font-bold text-amber-700 text-sm">{triBridge.agronomy_to_commerce_bridge.verified_roi_multiple.toFixed(1)}x Multiple</span>
+                      <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">{t('council.bridge.roi')}</span>
+                      <span className="font-mono font-bold text-amber-700 text-sm">{triBridge.agronomy_to_commerce_bridge.verified_roi_multiple.toFixed(1)}{' '}{t('council.bridge.multiple')}</span>
                     </div>
                   </div>
                 </div>
@@ -1043,9 +1052,9 @@ export default function CouncilPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Workflow className="w-4 h-4 text-emerald-600" />
-                <h2 className="text-sm md:text-base font-bold text-slate-900 tracking-tight">Executable Tri-Bridge Dispatch Payloads</h2>
+                <h2 className="text-sm md:text-base font-bold text-slate-900 tracking-tight">{t('council.disp.title')}</h2>
               </div>
-              <span className="text-xs text-slate-500 font-mono">Real-World Actionable Directives</span>
+              <span className="text-xs text-slate-500 font-mono">{t('council.disp.sub')}</span>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -1058,34 +1067,34 @@ export default function CouncilPage() {
                         <Sprout size={16} />
                       </div>
                       <div>
-                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Farmer Action Card</h3>
-                        <span className="text-[10px] text-amber-800 font-medium">Alpha (Field Agronomist)</span>
+                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">{t('council.disp.farmerCard')}</h3>
+                        <span className="text-[10px] text-amber-800 font-medium">{t('council.disp.alphaRole')}</span>
                       </div>
                     </div>
                     <span className="bg-amber-100/80 text-amber-800 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-amber-200">
-                      $0 CASH PROTOCOL
+                      {t('council.disp.zeroCash')}
                     </span>
                   </div>
 
                   <div className="space-y-3 text-xs">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Immediate Field Task (T+6h):</span>
-                      <p className="text-slate-800 font-semibold mt-0.5 leading-snug">{dispatches.farmer_action_card_alpha.t_plus_6h_zero_cost_task}</p>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.task')}</span>
+                      <p className="text-slate-800 font-semibold mt-0.5 leading-snug">{tr(dispatches.farmer_action_card_alpha.t_plus_6h_zero_cost_task)}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Target Field Zone:</span>
-                      <p className="text-slate-600 font-mono text-[11px] mt-0.5">{dispatches.farmer_action_card_alpha.exact_field_zone}</p>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.zone')}</span>
+                      <p className="text-slate-600 font-mono text-[11px] mt-0.5">{tr(dispatches.farmer_action_card_alpha.exact_field_zone)}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Tools Needed:</span>
-                      <p className="text-amber-800 font-medium text-[11px] mt-0.5">{dispatches.farmer_action_card_alpha.tools_needed}</p>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.tools')}</span>
+                      <p className="text-amber-800 font-medium text-[11px] mt-0.5">{tr(dispatches.farmer_action_card_alpha.tools_needed)}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-mono flex items-center justify-between">
-                  <span>Zero-Capex Triage</span>
-                  <span className="text-amber-700 font-semibold">Dawn Boots Check</span>
+                  <span>{t('council.disp.zeroCapex')}</span>
+                  <span className="text-amber-700 font-semibold">{t('council.disp.dawn')}</span>
                 </div>
               </div>
 
@@ -1098,8 +1107,8 @@ export default function CouncilPage() {
                         <Cpu size={16} />
                       </div>
                       <div>
-                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">IoT Downlink Command</h3>
-                        <span className="text-[10px] text-sky-800 font-medium">Lou (Edge AI & IoT Architect)</span>
+                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">{t('council.disp.iotCard')}</h3>
+                        <span className="text-[10px] text-sky-800 font-medium">{t('council.disp.louRole')}</span>
                       </div>
                     </div>
                     <span className="bg-sky-100/80 text-sky-800 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-sky-200">
@@ -1109,7 +1118,7 @@ export default function CouncilPage() {
 
                   <div className="space-y-3 text-xs">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Target Node IDs:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.nodes')}</span>
                       <div className="flex flex-wrap gap-1.5 mt-1">
                         {dispatches.iot_downlink_command_lou.target_node_ids.map((id, i) => (
                           <span key={i} className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-800 font-mono text-[11px]">
@@ -1119,13 +1128,13 @@ export default function CouncilPage() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">New Wake Interval:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.wake')}</span>
                       <p className="text-slate-800 font-medium text-[11px] mt-0.5">
-                        {dispatches.iot_downlink_command_lou.new_wake_interval_sec} seconds (Duty cycle optimized)
+                        {dispatches.iot_downlink_command_lou.new_wake_interval_sec} {t('council.disp.seconds')}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Anomaly Threshold Patch:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.patch')}</span>
                       <p className="text-slate-800 font-mono text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-200 mt-0.5 break-all">
                         {dispatches.iot_downlink_command_lou.anomaly_threshold_patch}
                       </p>
@@ -1134,7 +1143,7 @@ export default function CouncilPage() {
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-mono flex items-center justify-between">
-                  <span>OTA Payload Ready</span>
+                  <span>{t('council.disp.ota')}</span>
                   <span className="text-sky-700 font-semibold">SF8 Channel</span>
                 </div>
               </div>
@@ -1148,40 +1157,40 @@ export default function CouncilPage() {
                         <Coins size={16} />
                       </div>
                       <div>
-                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">IRL Market Intent</h3>
-                        <span className="text-[10px] text-emerald-800 font-medium">Qill (Agri-Economics Strategist)</span>
+                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">{t('council.disp.marketCard')}</h3>
+                        <span className="text-[10px] text-emerald-800 font-medium">{t('council.disp.qillRole')}</span>
                       </div>
                     </div>
                     <span className="bg-emerald-100/80 text-emerald-800 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      SUPPLY CHAIN ROUTED
+                      {t('council.disp.routed')}
                     </span>
                   </div>
 
                   <div className="space-y-3 text-xs">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Contract Action Type:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.action')}</span>
                       <p className="text-emerald-700 font-mono font-bold text-sm mt-0.5">
                         {dispatches.irl_market_intent_qill.action_type}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Target Counterparty ID:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.counterparty')}</span>
                       <p className="text-slate-700 font-mono text-[11px] mt-0.5">
                         {dispatches.irl_market_intent_qill.counterparty_id}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Protected Margin:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">{t('council.disp.margin')}</span>
                       <p className="text-emerald-700 font-mono font-bold text-sm mt-0.5">
-                        +${dispatches.irl_market_intent_qill.protected_margin_usd_ha.toFixed(2)} / ha advantage
+                        +${dispatches.irl_market_intent_qill.protected_margin_usd_ha.toFixed(2)} {t('council.disp.advantage')}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-mono flex items-center justify-between">
-                  <span>Capital Allocation</span>
-                  <span className="text-emerald-700 font-semibold">Grade 1 Premium</span>
+                  <span>{t('council.disp.capital')}</span>
+                  <span className="text-emerald-700 font-semibold">{t('council.disp.grade1')}</span>
                 </div>
               </div>
             </div>
@@ -1193,9 +1202,9 @@ export default function CouncilPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">1</span>
-              <h2 className="text-sm md:text-base font-bold text-slate-900 tracking-tight">Independent Domain Assessments (Stage 1)</h2>
+              <h2 className="text-sm md:text-base font-bold text-slate-900 tracking-tight">{t('council.stage1')}</h2>
             </div>
-            <span className="text-xs text-slate-500 font-mono">Parallel Cognitive Processing</span>
+            <span className="text-xs text-slate-500 font-mono">{t('council.stage1Sub')}</span>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -1214,7 +1223,7 @@ export default function CouncilPage() {
                           Lou
                         </h3>
                         <span className="text-[11px] font-medium text-sky-700 tracking-wide uppercase">
-                          Frontier Agri-Tech & Edge Systems
+                          {t('council.louTitle')}
                         </span>
                       </div>
                     </div>
@@ -1227,7 +1236,7 @@ export default function CouncilPage() {
                           : 'bg-rose-50 text-rose-800 border-rose-200'
                       }`}
                     >
-                      {assessments.tech.stance}
+                      {label('stance', assessments.tech.stance)}
                     </span>
                   </div>
 
@@ -1243,7 +1252,7 @@ export default function CouncilPage() {
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
-                        {tab === 'build-break' ? 'Build / Break' : tab === 'smart' ? 'SMART' : 'Diagnosis'}
+                        {tab === 'build-break' ? t('council.tab.buildBreak') : tab === 'smart' ? t('council.tab.smart') : t('council.tab.diagnosis')}
                       </button>
                     ))}
                   </div>
@@ -1252,11 +1261,11 @@ export default function CouncilPage() {
                   {agentCardTabs.lou === 'diagnosis' && (
                     <div className="space-y-3 text-xs">
                       <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/70 text-slate-700 leading-relaxed">
-                        {assessments.tech.core_argument}
+                        {tr(assessments.tech.core_argument)}
                       </div>
                       <div className="bg-sky-50 border border-sky-100 p-3 rounded-2xl text-[11px] text-sky-900">
-                        <strong className="block text-sky-800 font-bold mb-0.5">🔒 Edge Constraint:</strong>
-                        {assessments.tech.system_constraint}
+                        <strong className="block text-sky-800 font-bold mb-0.5">{t('council.edgeConstraint')}</strong>
+                        {tr(assessments.tech.system_constraint)}
                       </div>
                     </div>
                   )}
@@ -1265,16 +1274,16 @@ export default function CouncilPage() {
                   {agentCardTabs.lou === 'build-break' && assessments.tech.build_break_pitch && (
                     <div className="space-y-2 text-xs">
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">🔨 Build It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.tech.build_break_pitch.build_it}</p>
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">{t('council.buildIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.tech.build_break_pitch.build_it)}</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">💥 Break It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.tech.build_break_pitch.break_it}</p>
+                        <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">{t('council.breakIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.tech.build_break_pitch.break_it)}</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider block mb-1">📢 Pitch It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.tech.build_break_pitch.pitch_it}</p>
+                        <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider block mb-1">{t('council.pitchIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.tech.build_break_pitch.pitch_it)}</p>
                       </div>
                     </div>
                   )}
@@ -1285,7 +1294,7 @@ export default function CouncilPage() {
                       {Object.entries(assessments.tech.smart_objective).map(([k, v]) => (
                         <div key={k} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
                           <span className="text-sky-700 font-bold uppercase text-[9px] mr-2">[{k[0].toUpperCase()}]</span>
-                          <span className="text-slate-700">{v}</span>
+                          <span className="text-slate-700">{tr(v)}</span>
                         </div>
                       ))}
                     </div>
@@ -1293,8 +1302,8 @@ export default function CouncilPage() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                  <span>Ground-Truth Edge Superiority</span>
-                  <span className="text-sky-700 font-medium">Sub-Canopy ViT / LoRa</span>
+                  <span>{t('council.louFoot1')}</span>
+                  <span className="text-sky-700 font-medium">{t('council.louFoot2')}</span>
                 </div>
               </div>
             )}
@@ -1314,7 +1323,7 @@ export default function CouncilPage() {
                           Alpha
                         </h3>
                         <span className="text-[11px] font-medium text-amber-700 tracking-wide uppercase">
-                          Generational Agronomy Master
+                          {t('council.alphaTitle')}
                         </span>
                       </div>
                     </div>
@@ -1327,7 +1336,7 @@ export default function CouncilPage() {
                           : 'bg-rose-50 text-rose-800 border-rose-200'
                       }`}
                     >
-                      {assessments.agriculture.stance}
+                      {label('stance', assessments.agriculture.stance)}
                     </span>
                   </div>
 
@@ -1343,7 +1352,7 @@ export default function CouncilPage() {
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
-                        {tab === 'build-break' ? 'Build / Break' : tab === 'smart' ? 'SMART' : 'Diagnosis'}
+                        {tab === 'build-break' ? t('council.tab.buildBreak') : tab === 'smart' ? t('council.tab.smart') : t('council.tab.diagnosis')}
                       </button>
                     ))}
                   </div>
@@ -1352,11 +1361,11 @@ export default function CouncilPage() {
                   {agentCardTabs.alpha === 'diagnosis' && (
                     <div className="space-y-3 text-xs">
                       <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/70 text-slate-700 leading-relaxed">
-                        {assessments.agriculture.core_argument}
+                        {tr(assessments.agriculture.core_argument)}
                       </div>
                       <div className="bg-amber-50 border border-amber-100 p-3 rounded-2xl text-[11px] text-amber-900">
-                        <strong className="block text-amber-800 font-bold mb-0.5">⚠️ Blind Spot Warning:</strong>
-                        {assessments.agriculture.blind_spot_warning}
+                        <strong className="block text-amber-800 font-bold mb-0.5">{t('council.blindSpot')}</strong>
+                        {tr(assessments.agriculture.blind_spot_warning)}
                       </div>
                     </div>
                   )}
@@ -1365,16 +1374,16 @@ export default function CouncilPage() {
                   {agentCardTabs.alpha === 'build-break' && assessments.agriculture.build_break_pitch && (
                     <div className="space-y-2 text-xs">
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">🔨 Build It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.agriculture.build_break_pitch.build_it}</p>
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">{t('council.buildIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.agriculture.build_break_pitch.build_it)}</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">💥 Break It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.agriculture.build_break_pitch.break_it}</p>
+                        <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">{t('council.breakIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.agriculture.build_break_pitch.break_it)}</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider block mb-1">📢 Pitch It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.agriculture.build_break_pitch.pitch_it}</p>
+                        <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider block mb-1">{t('council.pitchIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.agriculture.build_break_pitch.pitch_it)}</p>
                       </div>
                     </div>
                   )}
@@ -1385,7 +1394,7 @@ export default function CouncilPage() {
                       {Object.entries(assessments.agriculture.smart_objective).map(([k, v]) => (
                         <div key={k} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
                           <span className="text-amber-700 font-bold uppercase text-[9px] mr-2">[{k[0].toUpperCase()}]</span>
-                          <span className="text-slate-700">{v}</span>
+                          <span className="text-slate-700">{tr(v)}</span>
                         </div>
                       ))}
                     </div>
@@ -1393,8 +1402,8 @@ export default function CouncilPage() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                  <span>Soil Moisture & Bearing Focus</span>
-                  <span className="text-amber-700 font-medium">Muddy Boots Intuition</span>
+                  <span>{t('council.alphaFoot1')}</span>
+                  <span className="text-amber-700 font-medium">{t('council.alphaFoot2')}</span>
                 </div>
               </div>
             )}
@@ -1414,7 +1423,7 @@ export default function CouncilPage() {
                           Qill
                         </h3>
                         <span className="text-[11px] font-medium text-emerald-700 tracking-wide uppercase">
-                          Agri-Business & Supply Chain
+                          {t('council.qillTitle')}
                         </span>
                       </div>
                     </div>
@@ -1427,7 +1436,7 @@ export default function CouncilPage() {
                           : 'bg-rose-50 text-rose-800 border-rose-200'
                       }`}
                     >
-                      {assessments.market.stance}
+                      {label('stance', assessments.market.stance)}
                     </span>
                   </div>
 
@@ -1443,7 +1452,7 @@ export default function CouncilPage() {
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
-                        {tab === 'build-break' ? 'Build / Break' : tab === 'smart' ? 'SMART' : 'Diagnosis'}
+                        {tab === 'build-break' ? t('council.tab.buildBreak') : tab === 'smart' ? t('council.tab.smart') : t('council.tab.diagnosis')}
                       </button>
                     ))}
                   </div>
@@ -1452,11 +1461,11 @@ export default function CouncilPage() {
                   {agentCardTabs.qill === 'diagnosis' && (
                     <div className="space-y-3 text-xs">
                       <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/70 text-slate-700 leading-relaxed">
-                        {assessments.market.core_argument}
+                        {tr(assessments.market.core_argument)}
                       </div>
                       <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-2xl text-[11px] text-emerald-900">
-                        <strong className="block text-emerald-800 font-bold mb-0.5">📈 Unit Economics Impact:</strong>
-                        {assessments.market.unit_economics_impact}
+                        <strong className="block text-emerald-800 font-bold mb-0.5">{t('council.unitEcon')}</strong>
+                        {tr(assessments.market.unit_economics_impact)}
                       </div>
                     </div>
                   )}
@@ -1465,16 +1474,16 @@ export default function CouncilPage() {
                   {agentCardTabs.qill === 'build-break' && assessments.market.build_break_pitch && (
                     <div className="space-y-2 text-xs">
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">🔨 Build It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.market.build_break_pitch.build_it}</p>
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">{t('council.buildIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.market.build_break_pitch.build_it)}</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">💥 Break It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.market.build_break_pitch.break_it}</p>
+                        <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block mb-1">{t('council.breakIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.market.build_break_pitch.break_it)}</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider block mb-1">📢 Pitch It</span>
-                        <p className="text-slate-700 text-[11px] leading-relaxed">{assessments.market.build_break_pitch.pitch_it}</p>
+                        <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider block mb-1">{t('council.pitchIt')}</span>
+                        <p className="text-slate-700 text-[11px] leading-relaxed">{tr(assessments.market.build_break_pitch.pitch_it)}</p>
                       </div>
                     </div>
                   )}
@@ -1485,7 +1494,7 @@ export default function CouncilPage() {
                       {Object.entries(assessments.market.smart_objective).map(([k, v]) => (
                         <div key={k} className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
                           <span className="text-emerald-700 font-bold uppercase text-[9px] mr-2">[{k[0].toUpperCase()}]</span>
-                          <span className="text-slate-700">{v}</span>
+                          <span className="text-slate-700">{tr(v)}</span>
                         </div>
                       ))}
                     </div>
@@ -1493,8 +1502,8 @@ export default function CouncilPage() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                  <span>3x Single-Season ROI</span>
-                  <span className="text-emerald-700 font-medium">Working Capital Defense</span>
+                  <span>{t('council.qillFoot1')}</span>
+                  <span className="text-emerald-700 font-medium">{t('council.qillFoot2')}</span>
                 </div>
               </div>
             )}
@@ -1507,9 +1516,9 @@ export default function CouncilPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-bold">2</span>
-                <h2 className="text-sm md:text-base font-bold text-slate-900 tracking-tight">Council Cross-Examination (Friction & Clash Round)</h2>
+                <h2 className="text-sm md:text-base font-bold text-slate-900 tracking-tight">{t('council.stage2')}</h2>
               </div>
-              <span className="text-xs text-slate-500 font-mono">Asymmetric Veto Adjudication · No Consensus Averaging</span>
+              <span className="text-xs text-slate-500 font-mono">{t('council.stage2Sub')}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -1519,14 +1528,14 @@ export default function CouncilPage() {
                     <span className={item.from_agent === 'agriculture' ? 'text-amber-800' : item.from_agent === 'tech' ? 'text-sky-800' : 'text-emerald-800'}>
                       {item.from_agent === 'agriculture' ? 'ALPHA' : item.from_agent === 'tech' ? 'LOU' : 'QILL'}
                     </span>
-                    <span className="text-slate-400 text-[11px]">⚔️ challenges</span>
+                    <span className="text-slate-400 text-[11px]">{t('council.challenges')}</span>
                     <span className={item.to_agent === 'agriculture' ? 'text-amber-800' : item.to_agent === 'tech' ? 'text-sky-800' : 'text-emerald-800'}>
                       {item.to_agent === 'agriculture' ? 'ALPHA' : item.to_agent === 'tech' ? 'LOU' : 'QILL'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 leading-relaxed"><strong className="text-slate-800">Pushback:</strong> {item.challenge}</p>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong className="text-slate-800">{t('council.pushback')}</strong> {tr(item.challenge)}</p>
                   <p className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                    <strong className="text-emerald-700">Compromise:</strong> {item.proposed_compromise}
+                    <strong className="text-emerald-700">{t('council.compromise')}</strong> {tr(item.proposed_compromise)}
                   </p>
                 </div>
               ))}
@@ -1541,26 +1550,26 @@ export default function CouncilPage() {
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">3</span>
-                <h2 className="text-base md:text-lg font-bold text-slate-900 tracking-tight">Executive Synthesis & Actionable Directive</h2>
+                <h2 className="text-base md:text-lg font-bold text-slate-900 tracking-tight">{t('council.stage3')}</h2>
               </div>
               <span className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full font-semibold">
-                Constraint Adjudicated
+                {t('council.adjudicated')}
               </span>
             </div>
 
             {/* Directive Box */}
             <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-2xl p-5 space-y-3.5">
-              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">🎯 AgroGuard Unified Directive</span>
-              <p className="text-sm sm:text-base font-semibold text-emerald-950 leading-relaxed">{verdict.final_decision}</p>
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">{t('council.directive')}</span>
+              <p className="text-sm sm:text-base font-semibold text-emerald-950 leading-relaxed">{tr(verdict.final_decision)}</p>
 
               {/* Trade-offs list */}
               <div className="pt-3 border-t border-emerald-200/80 space-y-1.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Accepted Domain Trade-offs:</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('council.tradeoffs')}</span>
                 <ul className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-700">
-                  {verdict.key_tradeoffs_made.map((t, idx) => (
+                  {verdict.key_tradeoffs_made.map((tradeoff, idx) => (
                     <li key={idx} className="bg-white p-3 rounded-xl border border-emerald-200/70 flex items-start gap-2 shadow-2xs">
                       <span className="text-emerald-600 font-bold">•</span>
-                      <span>{t}</span>
+                      <span>{tr(tradeoff)}</span>
                     </li>
                   ))}
                 </ul>
@@ -1572,23 +1581,23 @@ export default function CouncilPage() {
               <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-1.5">
                 <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
                   <Sprout size={14} className="text-amber-600 shrink-0" />
-                  Alpha (Field Execution)
+                  {t('council.pillar.alpha')}
                 </span>
-                <p className="text-xs text-slate-700 leading-relaxed">{verdict.action_plan.field_execution}</p>
+                <p className="text-xs text-slate-700 leading-relaxed">{tr(verdict.action_plan.field_execution)}</p>
               </div>
               <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-1.5">
                 <span className="text-[10px] font-bold text-sky-800 uppercase tracking-wider flex items-center gap-1.5">
                   <Cpu size={14} className="text-sky-600 shrink-0" />
-                  Lou (Technical Downlink)
+                  {t('council.pillar.lou')}
                 </span>
-                <p className="text-xs text-slate-700 leading-relaxed">{verdict.action_plan.technical_implementation}</p>
+                <p className="text-xs text-slate-700 leading-relaxed">{tr(verdict.action_plan.technical_implementation)}</p>
               </div>
               <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-1.5">
                 <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
                   <Coins size={14} className="text-emerald-600 shrink-0" />
-                  Qill (Commercial SLA)
+                  {t('council.pillar.qill')}
                 </span>
-                <p className="text-xs text-slate-700 leading-relaxed">{verdict.action_plan.commercial_positioning}</p>
+                <p className="text-xs text-slate-700 leading-relaxed">{tr(verdict.action_plan.commercial_positioning)}</p>
               </div>
             </div>
 
@@ -1599,17 +1608,17 @@ export default function CouncilPage() {
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       <FileCheck2 className="w-4 h-4 text-emerald-600" />
-                      <span>AMCHAM 8-Point Master Project Plan (01 - 08 Standards)</span>
+                      <span>{t('council.amcham.title')}</span>
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Strict execution alignment across objectives, RACI, WBS, and risk heat map.</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{t('council.amcham.sub')}</p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { id: 'smart-scope', label: '01-02 SMART & Scope' },
-                      { id: 'raci-stakeholders', label: '03-04 RACI' },
-                      { id: 'wbs-timeline', label: '05-06 WBS & Timeline' },
-                      { id: 'risk-mitigation', label: '07-08 3x3 Heat Map' },
+                      { id: 'smart-scope', label: t('council.amcham.t1') },
+                      { id: 'raci-stakeholders', label: t('council.amcham.t2') },
+                      { id: 'wbs-timeline', label: t('council.amcham.t3') },
+                      { id: 'risk-mitigation', label: t('council.amcham.t4') },
                     ].map((tab) => (
                       <button
                         key={tab.id}
@@ -1630,51 +1639,51 @@ export default function CouncilPage() {
                 {activeTab === 'smart-scope' && (
                   <div className="space-y-5">
                     <div>
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">01 SMART Project Objective</span>
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">{t('council.p01')}</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
                         {Object.entries(plan.smart_objective).map(([k, v]) => (
                           <div key={k} className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl">
                             <span className="text-[10px] font-mono font-bold text-emerald-700 block mb-1">
-                              {k === 'specific' ? 'S - SPECIFIC' : k === 'measurable' ? 'M - MEASURABLE' : k === 'achievable' ? 'A - ACHIEVABLE' : k === 'relevant' ? 'R - RELEVANT' : 'T - TIME-BOUND'}
+                              {t(`council.smart.${['specific', 'measurable', 'achievable', 'relevant'].includes(k) ? k : 'time_bound'}`)}
                             </span>
-                            <span className="text-slate-700 leading-relaxed">{v}</span>
+                            <span className="text-slate-700 leading-relaxed">{tr(v)}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     <div className="pt-3 border-t border-slate-200/80">
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">02 Scope & Deliverables (Define the Work Before Planning)</span>
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">{t('council.p02')}</span>
                       <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-3.5 text-xs">
-                        <div className="text-slate-800"><strong className="text-slate-900">Objective (Why?):</strong> {plan.scope_and_deliverables.project_objective}</div>
+                        <div className="text-slate-800"><strong className="text-slate-900">{t('council.objectiveWhy')}</strong> {tr(plan.scope_and_deliverables.project_objective)}</div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <span className="text-[11px] font-bold text-emerald-800 block mb-1">Deliverables (What we produce):</span>
+                            <span className="text-[11px] font-bold text-emerald-800 block mb-1">{t('council.deliverables')}</span>
                             <ul className="list-disc list-inside text-slate-600 space-y-1">
-                              {plan.scope_and_deliverables.deliverables.map((d, i) => <li key={i}>{d}</li>)}
+                              {plan.scope_and_deliverables.deliverables.map((d, i) => <li key={i}>{tr(d)}</li>)}
                             </ul>
                           </div>
 
                           <div>
-                            <span className="text-[11px] font-bold text-amber-800 block mb-1">Success Criteria (How we know we succeeded):</span>
+                            <span className="text-[11px] font-bold text-amber-800 block mb-1">{t('council.success')}</span>
                             <ul className="list-disc list-inside text-slate-600 space-y-1">
-                              {plan.scope_and_deliverables.success_criteria.map((c, i) => <li key={i}>{c}</li>)}
+                              {plan.scope_and_deliverables.success_criteria.map((c, i) => <li key={i}>{tr(c)}</li>)}
                             </ul>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-200/70">
                           <div>
-                            <span className="text-[11px] font-bold text-sky-800 block mb-1">Scope Included:</span>
+                            <span className="text-[11px] font-bold text-sky-800 block mb-1">{t('council.scopeIn')}</span>
                             <ul className="list-disc list-inside text-slate-500 text-[11px] space-y-0.5">
-                              {plan.scope_and_deliverables.scope_included.map((inc, i) => <li key={i}>{inc}</li>)}
+                              {plan.scope_and_deliverables.scope_included.map((inc, i) => <li key={i}>{tr(inc)}</li>)}
                             </ul>
                           </div>
                           <div>
-                            <span className="text-[11px] font-bold text-rose-800 block mb-1">Scope Excluded (Guardrails):</span>
+                            <span className="text-[11px] font-bold text-rose-800 block mb-1">{t('council.scopeOut')}</span>
                             <ul className="list-disc list-inside text-slate-500 text-[11px] space-y-0.5">
-                              {plan.scope_and_deliverables.scope_excluded.map((exc, i) => <li key={i}>{exc}</li>)}
+                              {plan.scope_and_deliverables.scope_excluded.map((exc, i) => <li key={i}>{tr(exc)}</li>)}
                             </ul>
                           </div>
                         </div>
@@ -1687,41 +1696,41 @@ export default function CouncilPage() {
                 {activeTab === 'raci-stakeholders' && (
                   <div className="space-y-5">
                     <div>
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">03 Key Project Stakeholders</span>
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">{t('council.p03')}</span>
                       <div className="flex flex-wrap gap-2">
                         {plan.stakeholders.map((s, idx) => (
                           <span key={idx} className="bg-slate-50 border border-slate-200 text-slate-700 text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 font-medium">
                             <Users className="w-3.5 h-3.5 text-emerald-600" />
-                            {s}
+                            {tr(s)}
                           </span>
                         ))}
                       </div>
                     </div>
 
                     <div className="pt-3 border-t border-slate-200/80">
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">04 RACI Matrix (Who Does What?)</span>
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">{t('council.p04')}</span>
                       <p className="text-[11px] text-slate-400 mb-3">
-                        <strong className="text-purple-700">R</strong> (Responsible) · <strong className="text-rose-700">A</strong> (Accountable) · <strong className="text-emerald-700">C</strong> (Consulted) · <strong className="text-sky-700">I</strong> (Informed)
+                        <strong className="text-purple-700">R</strong> {t('council.raci.R')} · <strong className="text-rose-700">A</strong> {t('council.raci.A')} · <strong className="text-emerald-700">C</strong> {t('council.raci.C')} · <strong className="text-sky-700">I</strong> {t('council.raci.I')}
                       </p>
                       <div className="overflow-x-auto border border-slate-200 rounded-2xl">
                         <table className="w-full text-xs text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
-                              <th className="py-2.5 px-3.5 font-semibold">Activity</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Responsible (R)</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Accountable (A)</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Consulted (C)</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Informed (I)</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.activity')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.R')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.A')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.C')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.I')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {plan.raci_matrix.map((row, i) => (
                               <tr key={i} className="hover:bg-slate-50/50">
-                                <td className="py-3 px-3.5 font-medium text-slate-800">{row.activity}</td>
-                                <td className="py-3 px-3.5 text-purple-800 font-mono text-[11px]"><span className="bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded mr-1">R</span> {row.responsible}</td>
-                                <td className="py-3 px-3.5 text-rose-800 font-mono text-[11px]"><span className="bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded mr-1">A</span> {row.accountable}</td>
-                                <td className="py-3 px-3.5 text-emerald-800 font-mono text-[11px]"><span className="bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded mr-1">C</span> {row.consulted}</td>
-                                <td className="py-3 px-3.5 text-sky-800 font-mono text-[11px]"><span className="bg-sky-100 border border-sky-200 px-1.5 py-0.5 rounded mr-1">I</span> {row.informed}</td>
+                                <td className="py-3 px-3.5 font-medium text-slate-800">{tr(row.activity)}</td>
+                                <td className="py-3 px-3.5 text-purple-800 font-mono text-[11px]"><span className="bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded mr-1">R</span> {tr(row.responsible)}</td>
+                                <td className="py-3 px-3.5 text-rose-800 font-mono text-[11px]"><span className="bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded mr-1">A</span> {tr(row.accountable)}</td>
+                                <td className="py-3 px-3.5 text-emerald-800 font-mono text-[11px]"><span className="bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded mr-1">C</span> {tr(row.consulted)}</td>
+                                <td className="py-3 px-3.5 text-sky-800 font-mono text-[11px]"><span className="bg-sky-100 border border-sky-200 px-1.5 py-0.5 rounded mr-1">I</span> {tr(row.informed)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1735,29 +1744,29 @@ export default function CouncilPage() {
                 {activeTab === 'wbs-timeline' && (
                   <div className="space-y-5">
                     <div>
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">05 Work Breakdown Structure (A Task is Not a Plan)</span>
-                      <p className="text-[11px] text-slate-400 mb-3">Every work package defines: WHAT, WHO, WHEN, DEPENDENCY, MILESTONE.</p>
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">{t('council.p05')}</span>
+                      <p className="text-[11px] text-slate-400 mb-3">{t('council.p05sub')}</p>
                       <div className="overflow-x-auto border border-slate-200 rounded-2xl">
                         <table className="w-full text-xs text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
                               <th className="py-2.5 px-3.5 font-semibold">WBS</th>
-                              <th className="py-2.5 px-3.5 font-semibold">What Needs to be Done</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Who Owns</th>
-                              <th className="py-2.5 px-3.5 font-semibold">When</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Dependency</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Milestone</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.what')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.who')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.when')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.dependency')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.milestone')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {plan.wbs.map((w, i) => (
                               <tr key={i} className="hover:bg-slate-50/50">
                                 <td className="py-3 px-3.5 font-mono font-bold text-emerald-700">{w.id}</td>
-                                <td className="py-3 px-3.5 text-slate-800 font-medium">{w.what}</td>
-                                <td className="py-3 px-3.5 text-slate-600">{w.who}</td>
-                                <td className="py-3 px-3.5 text-slate-500 font-mono text-[11px]">{w.when}</td>
-                                <td className="py-3 px-3.5 text-slate-500 text-[11px]">{w.dependency}</td>
-                                <td className="py-3 px-3.5 text-emerald-800 font-medium text-[11px]">{w.milestone}</td>
+                                <td className="py-3 px-3.5 text-slate-800 font-medium">{tr(w.what)}</td>
+                                <td className="py-3 px-3.5 text-slate-600">{tr(w.who)}</td>
+                                <td className="py-3 px-3.5 text-slate-500 font-mono text-[11px]">{tr(w.when)}</td>
+                                <td className="py-3 px-3.5 text-slate-500 text-[11px]">{tr(w.dependency)}</td>
+                                <td className="py-3 px-3.5 text-emerald-800 font-medium text-[11px]">{tr(w.milestone)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1766,12 +1775,12 @@ export default function CouncilPage() {
                     </div>
 
                     <div className="pt-3 border-t border-slate-200/80">
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">06 Timeline & Milestones Countdown</span>
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">{t('council.p06')}</span>
                       <div className="space-y-2">
-                        {plan.timeline_and_milestones.map((t, idx) => (
+                        {plan.timeline_and_milestones.map((milestone, idx) => (
                           <div key={idx} className="bg-slate-50 border-l-3 border-emerald-500 p-3 rounded-r-xl text-xs text-slate-700 flex items-center gap-2.5">
                             <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>{t}</span>
+                            <span>{tr(milestone)}</span>
                           </div>
                         ))}
                       </div>
@@ -1783,58 +1792,58 @@ export default function CouncilPage() {
                 {activeTab === 'risk-mitigation' && (
                   <div className="space-y-5">
                     <div>
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">07 3x3 Risk Heat Map (Pepsi / AMCHAM Standard)</span>
-                      <p className="text-[11px] text-slate-400 mb-3">Ground-truth risks prioritized across agronomic, technical, and commercial domains.</p>
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">{t('council.p07')}</span>
+                      <p className="text-[11px] text-slate-400 mb-3">{t('council.p07sub')}</p>
 
                       {/* Visual 3x3 Matrix Grid */}
                       <div className="max-w-2xl bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
                         <div className="grid grid-cols-4 gap-2.5 text-center text-xs">
                           {/* Header row */}
-                          <div className="text-slate-400 font-mono text-[10px] self-end pb-1">LIKELIHOOD \ IMPACT</div>
-                          <div className="text-slate-600 font-bold text-[11px] pb-1">Low Impact</div>
-                          <div className="text-slate-600 font-bold text-[11px] pb-1">Medium Impact</div>
-                          <div className="text-slate-600 font-bold text-[11px] pb-1">High Impact</div>
+                          <div className="text-slate-400 font-mono text-[10px] self-end pb-1">{t('council.hm.corner')}</div>
+                          <div className="text-slate-600 font-bold text-[11px] pb-1">{t('council.hm.lowImpact')}</div>
+                          <div className="text-slate-600 font-bold text-[11px] pb-1">{t('council.hm.medImpact')}</div>
+                          <div className="text-slate-600 font-bold text-[11px] pb-1">{t('council.hm.highImpact')}</div>
 
                           {/* Row 1: High Likelihood */}
-                          <div className="text-slate-600 font-bold text-[11px] flex items-center justify-end pr-2">High Like</div>
+                          <div className="text-slate-600 font-bold text-[11px] flex items-center justify-end pr-2">{t('council.hm.highLike')}</div>
                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-amber-700 font-bold">Medium</span>
+                            <span className="text-[10px] text-amber-700 font-bold">{label('level', 'Medium')}</span>
                           </div>
                           <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-rose-700 font-bold">High</span>
+                            <span className="text-[10px] text-rose-700 font-bold">{label('level', 'High')}</span>
                           </div>
                           <div className="bg-rose-100 border border-rose-300 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-rose-800 font-bold">High</span>
-                            <span className="bg-rose-200 text-rose-900 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">R-04 (Panic Cut)</span>
+                            <span className="text-[10px] text-rose-800 font-bold">{label('level', 'High')}</span>
+                            <span className="bg-rose-200 text-rose-900 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">{t('council.hm.r04')}</span>
                           </div>
 
                           {/* Row 2: Medium Likelihood */}
-                          <div className="text-slate-600 font-bold text-[11px] flex items-center justify-end pr-2">Med Like</div>
+                          <div className="text-slate-600 font-bold text-[11px] flex items-center justify-end pr-2">{t('council.hm.medLike')}</div>
                           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-emerald-700 font-bold">Low</span>
+                            <span className="text-[10px] text-emerald-700 font-bold">{label('level', 'Low')}</span>
                           </div>
                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-amber-700 font-bold">Medium</span>
-                            <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">R-01 (Sensor Crack)</span>
+                            <span className="text-[10px] text-amber-700 font-bold">{label('level', 'Medium')}</span>
+                            <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">{t('council.hm.r01')}</span>
                           </div>
                           <div className="bg-rose-100 border border-rose-300 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-rose-800 font-bold">High</span>
-                            <span className="bg-rose-200 text-rose-900 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">R-03 (Soil Bog)</span>
+                            <span className="text-[10px] text-rose-800 font-bold">{label('level', 'High')}</span>
+                            <span className="bg-rose-200 text-rose-900 text-[10px] px-1.5 py-0.5 rounded font-mono font-medium">{t('council.hm.r03')}</span>
                           </div>
 
                           {/* Row 3: Low Likelihood */}
-                          <div className="text-slate-600 font-bold text-[11px] flex items-center justify-end pr-2">Low Like</div>
+                          <div className="text-slate-600 font-bold text-[11px] flex items-center justify-end pr-2">{t('council.hm.lowLike')}</div>
                           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-emerald-700 font-bold">Low</span>
+                            <span className="text-[10px] text-emerald-700 font-bold">{label('level', 'Low')}</span>
                           </div>
                           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-emerald-700 font-bold">Low</span>
+                            <span className="text-[10px] text-emerald-700 font-bold">{label('level', 'Low')}</span>
                           </div>
                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 min-h-16 flex flex-col justify-between">
-                            <span className="text-[10px] text-amber-700 font-bold">Medium</span>
+                            <span className="text-[10px] text-amber-700 font-bold">{label('level', 'Medium')}</span>
                             <div className="space-y-1">
-                              <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-mono block font-medium">R-02 (PHI MRL)</span>
-                              <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-mono block font-medium">R-05 (Wind Lock)</span>
+                              <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-mono block font-medium">{t('council.hm.r02')}</span>
+                              <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-mono block font-medium">{t('council.hm.r05')}</span>
                             </div>
                           </div>
                         </div>
@@ -1842,27 +1851,27 @@ export default function CouncilPage() {
                     </div>
 
                     <div className="pt-3 border-t border-slate-200/80">
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">08 Actionable Mitigation Matrix</span>
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2.5">{t('council.p08')}</span>
                       <div className="overflow-x-auto border border-slate-200 rounded-2xl">
                         <table className="w-full text-xs text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
-                              <th className="py-2.5 px-3.5 font-semibold">ID</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Risk Event</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Likelihood</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Impact</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Heat</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Actionable Mitigation Countermeasure</th>
-                              <th className="py-2.5 px-3.5 font-semibold">Owner</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.id')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.risk')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.likelihood')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.impact')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.heat')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.mitigation')}</th>
+                              <th className="py-2.5 px-3.5 font-semibold">{t('council.th.owner')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {plan.top_risks.map((r, i) => (
                               <tr key={i} className="hover:bg-slate-50/50">
                                 <td className="py-3 px-3.5 font-mono font-bold text-emerald-700">{r.id}</td>
-                                <td className="py-3 px-3.5 font-medium text-slate-800">{r.name}</td>
-                                <td className="py-3 px-3.5 text-slate-500">{r.likelihood}</td>
-                                <td className="py-3 px-3.5 text-slate-500">{r.impact}</td>
+                                <td className="py-3 px-3.5 font-medium text-slate-800">{tr(r.name)}</td>
+                                <td className="py-3 px-3.5 text-slate-500">{label('level', r.likelihood)}</td>
+                                <td className="py-3 px-3.5 text-slate-500">{label('level', r.impact)}</td>
                                 <td className="py-3 px-3.5">
                                   <span
                                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
@@ -1873,10 +1882,10 @@ export default function CouncilPage() {
                                         : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                     }`}
                                   >
-                                    {r.heat_score}
+                                    {label('level', r.heat_score)}
                                   </span>
                                 </td>
-                                <td className="py-3 px-3.5 text-emerald-800 font-medium">{r.mitigation_plan}</td>
+                                <td className="py-3 px-3.5 text-emerald-800 font-medium">{tr(r.mitigation_plan)}</td>
                                 <td className="py-3 px-3.5 text-slate-500 font-mono text-[11px]">{r.owner}</td>
                               </tr>
                             ))}
