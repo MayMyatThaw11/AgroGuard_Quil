@@ -181,3 +181,27 @@ export function clampCamera(pos: Vec3, target: Vec3, limits: CameraLimits): { po
 }
 
 export const fogDensity = (edgeM: number): number => Math.sqrt(-Math.log(0.02)) / edgeM;
+
+const MAX_RISE = 8;
+const LIFT_STEP = 1.15;
+const SIGHT_SAMPLES = 40;
+
+export function clearView(eye: Vec3, target: Vec3, groundAt: (x: number, z: number) => number, margin: number): Vec3 {
+  let y = eye.y;
+  const ceiling = eye.y * MAX_RISE;
+  while (y < ceiling) {
+    let hidden = false;
+    for (let i = 1; i < SIGHT_SAMPLES - 3; i += 1) {
+      const t = i / SIGHT_SAMPLES;
+      const x = eye.x + (target.x - eye.x) * t;
+      const z = eye.z + (target.z - eye.z) * t;
+      if (y + (target.y - y) * t < groundAt(x, z) + margin) {
+        hidden = true;
+        break;
+      }
+    }
+    if (!hidden) return { x: eye.x, y, z: eye.z };
+    y = Math.min(ceiling, y * LIFT_STEP + 1);
+  }
+  return { x: eye.x, y: ceiling, z: eye.z };
+}

@@ -5,7 +5,7 @@ import { bundStrip, type XZ } from '../../lib/fieldsim/localFrame.ts';
 
 export const DRACO = '/draco/';
 export const BUND_WIDTH_M = 0.5;
-export const TEXTURE_URL = { mud: '/models/farmmap/mud_wet.jpg', dry: '/models/farmmap/soil_dry.jpg', clay: '/models/farmmap/bund_clay.jpg' } as const;
+export const TEXTURE_URL = { mud: '/models/farmmap/mud_wet.jpg', dry: '/models/farmmap/soil_dry.jpg', clay: '/models/farmmap/bund_clay.jpg', waterNormal: '/models/farmmap/water_normal.jpg' } as const;
 
 export function shapeOf(ring: readonly XZ[], hole?: readonly XZ[]): THREE.Shape {
   const shape = new THREE.Shape(ring.map(([x, z]) => new THREE.Vector2(x, -z)));
@@ -24,7 +24,7 @@ export function bundGeometry(ring: readonly XZ[], widthM: number, heightM: numbe
   return merged;
 }
 
-export function useTexture(url: string, repeat: number): THREE.Texture | null {
+export function useTexture(url: string, repeat: number, colour = true): THREE.Texture | null {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
   useEffect(() => {
     let alive = true;
@@ -32,13 +32,13 @@ export function useTexture(url: string, repeat: number): THREE.Texture | null {
       if (!alive) return;
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.repeat.set(repeat, repeat);
-      t.colorSpace = THREE.SRGBColorSpace;
+      if (colour) t.colorSpace = THREE.SRGBColorSpace;
       setTexture(t);
     });
     return () => {
       alive = false;
     };
-  }, [url, repeat]);
+  }, [url, repeat, colour]);
   return texture;
 }
 
@@ -50,4 +50,12 @@ export interface FieldTextures {
 
 export function useFieldTextures(): FieldTextures {
   return { mud: useTexture(TEXTURE_URL.mud, 8), dry: useTexture(TEXTURE_URL.dry, 8), clay: useTexture(TEXTURE_URL.clay, 4) };
+}
+
+export function meshesOf(scene: THREE.Object3D): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  scene.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh);
+  });
+  return out;
 }

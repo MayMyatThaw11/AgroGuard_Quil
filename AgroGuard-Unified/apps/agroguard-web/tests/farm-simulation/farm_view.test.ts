@@ -6,10 +6,11 @@ import { fromExample, fromOwn, inAsean, mainField, type FarmTarget, type TargetF
 import { inside, localFrame } from '../../src/features/farm-simulation/lib/fieldsim/localFrame.ts';
 import { fieldLayout } from '../../src/features/farm-simulation/lib/farmview/fieldLayout.ts';
 import { sunPosition, weedDensity } from '../../src/features/farm-simulation/lib/farmview/seasonField.ts';
-import { boxAround, clampCamera, decodeTerrarium, fogDensity, heightAt, heightfieldFromTiles, padBlend, ringDistance, ringPlan, slopeStats, type Heightfield } from '../../src/features/farm-simulation/lib/farmview/terrain.ts';
-import { buildNeighbourhood, type OmtFeature } from '../../src/features/farm-simulation/lib/farmview/neighbourhood.ts';
+import { boxAround, clampCamera, clearView, decodeTerrarium, fogDensity, heightAt, heightfieldFromTiles, padBlend, ringDistance, ringPlan, slopeStats, type Heightfield } from '../../src/features/farm-simulation/lib/farmview/terrain.ts';
+import { assignSpecies, buildNeighbourhood, treeMix, type OmtFeature } from '../../src/features/farm-simulation/lib/farmview/neighbourhood.ts';
+import { toOmtFeature } from '../../src/features/farm-simulation/lib/farmview/captureOmt.ts';
 import { buildProfile } from '../../src/features/farm-simulation/lib/farmview/profile.ts';
-import { effectsFor, previewWeather, type WeatherNow } from '../../src/features/farm-simulation/lib/farmview/weatherFx.ts';
+import { effectsFor, previewWeather, toWeatherNow, type WeatherNow } from '../../src/features/farm-simulation/lib/farmview/weatherFx.ts';
 import { tilesFor } from '../../src/features/farm-simulation/lib/fieldsim/imagery.ts';
 import { riceStageFromName } from '../../src/features/farm-simulation/lib/fieldsim/models.ts';
 import type { ContractSpec } from '../../src/features/farm-simulation/lib/contractFarm.ts';
@@ -389,4 +390,57 @@ test('the sun points north when its azimuth is 0, east at 90, and never drops be
   assert.ok(east[0] > 0 && Math.abs(east[2]) < 1e-9);
   const low = sunPosition({ elevationDeg: -20, azimuthDeg: 0 }, 100);
   assert.ok(Math.abs(low[1] - 100 * Math.sin((5 * Math.PI) / 180)) < 1e-9);
+});
+
+test('a tree mix sums to one and follows the elevation band', () => {
+  for (const set of ['lowland', 'upland', 'montane'] as const) {
+    const mix = treeMix(set);
+    assert.ok(Math.abs(Object.values(mix).reduce((a, b) => a + b, 0) - 1) < 1e-9, `${set} does not sum to one`);
+  }
+  assert.ok(treeMix('montane').tree_conifer > treeMix('lowland').tree_conifer);
+  assert.ok(treeMix('lowland').tree_palm > treeMix('montane').tree_palm);
+});
+
+test('species are assigned the same way every time and in about the mix proportions', () => {
+  const trees = Array.from({ length: 3000 }, (_, i) => ({ x: i, z: 0, s: 1 }));
+  const a = assignSpecies(trees, treeMix('lowland'), 'seed');
+  const b = assignSpecies(trees, treeMix('lowland'), 'seed');
+  assert.deepEqual(a, b);
+  const total = Object.values(a).reduce((sum, list) => sum + list.length, 0);
+  assert.equal(total, 3000);
+  assert.ok(Math.abs(a.tree_broadleaf.length / 3000 - treeMix('lowland').tree_broadleaf) < 0.05);
+  assert.equal(a.tree_conifer.length, 0);
+});
+
+test('a rendered tile feature becomes a neighbourhood feature, dropping collections', () => {
+  const ring = [[[0, 0], [1, 0], [1, 1], [0, 0]]];
+  const ok = toOmtFeature('building', { id: 7, properties: { class: 'house', render_height: 6, name_en: 'Hut' }, geometry: { type: 'Polygon', coordinates: ring } });
+  assert.deepEqual(ok && { layer: ok.layer, cls: ok.cls, id: ok.id, name: ok.name }, { layer: 'building', cls: 'house', id: 7, name: 'Hut' });
+  assert.equal(ok?.props.render_height, 6);
+  assert.equal(toOmtFeature('water', { properties: {}, geometry: { type: 'GeometryCollection', geometries: [] } }), null);
+  assert.equal(toOmtFeature('water', { properties: {}, geometry: { type: 'Polygon', coordinates: ring } })?.cls, null);
+});
+
+test('a backend weather envelope becomes a reading, and a failed one becomes none', () => {
+  const reading = toWeatherNow({ current: { weather_code: 61, rain: 1.2, precipitation: 1.2, is_day: 1, visibility: null, cloud_cover: 80, wind_speed_10m: 3.2, wind_direction_10m: 215, wind_gusts_10m: 6.8, temperature_2m: 29.1, relative_humidity_2m: 78 } });
+  assert.ok(reading);
+  assert.equal(reading.weather_code, 61);
+  assert.equal(reading.visibility, null);
+  assert.equal(reading.wind_direction_10m, 215);
+  assert.equal(toWeatherNow({ current: null }), null);
+  const odd = toWeatherNow({ current: { weather_code: 'x', rain: '1.2' } });
+  assert.equal(odd?.weather_code, null);
+  assert.equal(odd?.rain, null);
+});
+
+test('the camera rises until a ridge no longer hides the target', () => {
+  const ridge = (x: number) => (Math.abs(x - 50) < 20 ? 40 : 0);
+  const open = clearView({ x: 100, y: 200, z: 0 }, { x: 0, y: 0, z: 0 }, (x) => ridge(x), 5);
+  assert.equal(open.y, 200);
+  const blocked = clearView({ x: 100, y: 30, z: 0 }, { x: 0, y: 0, z: 0 }, (x) => ridge(x), 5);
+  assert.ok(blocked.y > 30);
+  const rayAt = (x: number) => blocked.y * (x / 100);
+  for (let x = 0; x <= 100; x += 2) assert.ok(rayAt(x) >= ridge(x) + 5 - 1e-6 || x < 5, `ray hits the ridge at ${x}`);
+  const capped = clearView({ x: 100, y: 10, z: 0 }, { x: 0, y: 0, z: 0 }, () => 1e6, 5);
+  assert.ok(capped.y <= 10 * 8 + 1e-9);
 });

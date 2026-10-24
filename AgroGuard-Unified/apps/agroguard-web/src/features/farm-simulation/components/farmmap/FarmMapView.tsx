@@ -43,6 +43,7 @@ import { useSites } from './useSites.ts';
 import { SeasonTimeline } from './SeasonTimeline.tsx';
 import { PhotoLocate } from './PhotoLocate.tsx';
 import { FarmView } from '../fieldsim/FarmView.tsx';
+import { captureOmt } from '../../lib/farmview/captureOmt.ts';
 import { fromExample, fromOwn, inAsean, type FarmTarget } from '../../lib/farmview/farmTarget.ts';
 import { useDocumentTheme } from '../../lib/useDocumentTheme.ts';
 import { seasonViewFor, type Playback, type TintVar } from '../../lib/farmmap/seasonPlayback.ts';
@@ -169,6 +170,10 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       setFarmView(target);
     },
     [engine, push, t],
+  );
+  const capture = useCallback(
+    (centre: { lat: number; lon: number }) => (engine ? captureOmt(engine.map(), centre) : Promise.resolve({ features: [], partial: true })),
+    [engine],
   );
   const closeView = useCallback(() => {
     setFarmView(null);
@@ -485,6 +490,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         <FarmView
           target={farmView}
           season={season && season.farmId === farmView.id ? { run: season.run, year: season.year, day: playback.day, parcelId: season.parcelId } : null}
+          capture={capture}
           onClose={closeView}
         />
       ) : null}

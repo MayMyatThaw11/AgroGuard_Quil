@@ -6,7 +6,7 @@ import type { FieldLayout } from '../../lib/farmview/fieldLayout.ts';
 import type { XZ } from '../../lib/fieldsim/localFrame.ts';
 import { riceModel, type RiceStage } from '../../lib/fieldsim/models.ts';
 import { REPLICA_COLOR } from '../../lib/fieldsim/replicaTheme.ts';
-import { DRACO, bundGeometry, shapeOf, BUND_WIDTH_M, type FieldTextures } from './fieldKit.ts';
+import { DRACO, bundGeometry, meshesOf, shapeOf, BUND_WIDTH_M, type FieldTextures } from './fieldKit.ts';
 
 const RAIN_DROPS = 1500;
 const RAIN_CEILING_M = 20;
@@ -48,14 +48,6 @@ const Instanced: React.FC<{ geometry: THREE.BufferGeometry; material: THREE.Mate
   }, [points, scale]);
   return <instancedMesh ref={ref} args={[geometry, material, points.length]} castShadow />;
 };
-
-function meshesOf(scene: THREE.Object3D): THREE.Mesh[] {
-  const out: THREE.Mesh[] = [];
-  scene.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh);
-  });
-  return out;
-}
 
 const Plants: React.FC<{ stage: RiceStage; lod: 0 | 1; points: readonly XZ[]; scale: number }> = ({ stage, lod, points, scale }) => {
   const gltf = useGLTF(`/${riceModel(stage, lod)}`, DRACO);

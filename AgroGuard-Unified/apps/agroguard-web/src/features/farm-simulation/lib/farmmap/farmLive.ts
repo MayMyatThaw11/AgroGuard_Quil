@@ -140,7 +140,7 @@ export function benchmarkLine(
 
 export type Loaded<T> = { status: 'loading' } | { status: 'ready'; value: T } | { status: 'error'; error: string };
 
-function useLoaded<T>(load: () => Promise<T>, deps: readonly unknown[]): Loaded<T> {
+export function useLoaded<T>(load: () => Promise<T>, deps: readonly unknown[]): Loaded<T> {
   const [state, setState] = useState<Loaded<T>>({ status: 'loading' });
   useEffect(() => {
     let live = true;

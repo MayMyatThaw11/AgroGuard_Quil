@@ -1248,3 +1248,38 @@ export interface SeasonReplay {
 export async function runSeason(farmId: string, parcelId: string, plan: SeasonPlan, signal?: AbortSignal) {
   return request<SeasonReplay>(`/api/v1/agriquill/farms/${encodeURIComponent(farmId)}/parcels/${encodeURIComponent(parcelId)}/season-run`, { ...post(plan), signal });
 }
+
+export interface SourceRef {
+  provider: string;
+  url: string;
+  retrieved_at: string;
+  sha256: string;
+}
+
+export interface VolcanoNear {
+  volcano: { number: number; name: string; lat: number; lon: number; country: string | null; last_eruption_year: number | string | null; url: string } | null;
+  km: number | null;
+  missing: { field: string; reason: string }[];
+  source: SourceRef | null;
+}
+
+export async function getNearestVolcano(lat: number, lon: number): Promise<VolcanoNear> {
+  return request<VolcanoNear>(`/api/v1/agriquill/volcano/nearest?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`);
+}
+
+export interface WeatherNowEnvelope {
+  provider: string;
+  current: Record<string, unknown> | null;
+  units?: Record<string, string | null>;
+  time?: string;
+  interval_s?: number | null;
+  stale?: boolean;
+  stale_reason?: string;
+  missing: { field: string; reason: string }[];
+  licence?: string;
+  source: SourceRef | null;
+}
+
+export async function getWeatherNow(lat: number, lon: number): Promise<WeatherNowEnvelope> {
+  return request<WeatherNowEnvelope>(`/api/v1/agriquill/weather/now?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`);
+}

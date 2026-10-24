@@ -2,6 +2,7 @@ import { hash, rng } from '../farmmap/farmMapRandom.ts';
 import type { NearGeometry } from '../farmmap/surroundings.ts';
 import type { BBox } from '../fieldsim/imagery.ts';
 import { inside, type XZ } from '../fieldsim/localFrame.ts';
+import type { TreeSet } from './profile.ts';
 
 export interface OmtFeature {
   layer: string;
@@ -174,5 +175,34 @@ export function buildNeighbourhood(
       out.volcano = { name: f.name ?? '', eleM: typeof ele === 'number' ? ele : null };
     }
   }
+  return out;
+}
+
+export type TreeKind = 'tree_broadleaf' | 'tree_palm' | 'tree_conifer' | 'bamboo';
+
+const TREE_MIX: Record<TreeSet, Record<TreeKind, number>> = {
+  lowland: { tree_broadleaf: 0.55, tree_palm: 0.3, tree_conifer: 0, bamboo: 0.15 },
+  upland: { tree_broadleaf: 0.6, tree_palm: 0.1, tree_conifer: 0.2, bamboo: 0.1 },
+  montane: { tree_broadleaf: 0.4, tree_palm: 0, tree_conifer: 0.55, bamboo: 0.05 },
+};
+
+export const treeMix = (set: TreeSet): Record<TreeKind, number> => TREE_MIX[set];
+
+export function assignSpecies(trees: readonly Scatter[], mix: Record<TreeKind, number>, seed: string): Record<TreeKind, Scatter[]> {
+  const kinds = Object.keys(mix) as TreeKind[];
+  const out: Record<TreeKind, Scatter[]> = { tree_broadleaf: [], tree_palm: [], tree_conifer: [], bamboo: [] };
+  trees.forEach((tree, i) => {
+    const r = (hash(`${seed}:${i}`) % 10000) / 10000;
+    let acc = 0;
+    let chosen: TreeKind = kinds[kinds.length - 1];
+    for (const kind of kinds) {
+      acc += mix[kind];
+      if (r < acc) {
+        chosen = kind;
+        break;
+      }
+    }
+    out[chosen].push(tree);
+  });
   return out;
 }

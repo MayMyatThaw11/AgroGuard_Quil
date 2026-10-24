@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { heightAt, padBlend, ringDistance, type Heightfield, type Rings } from '../../lib/farmview/terrain.ts';
+import { SCREEN } from '../../lib/farmview/profile.ts';
+import { NEIGHBOURHOOD_HALF_KM, heightAt, padBlend, ringDistance, slopeStats, type Heightfield, type Rings } from '../../lib/farmview/terrain.ts';
 import type { BBox } from '../../lib/fieldsim/imagery.ts';
 import type { LocalFrame, XZ } from '../../lib/fieldsim/localFrame.ts';
 import { loadDem, stitchImagery, type Imagery } from './groundData.ts';
@@ -22,6 +23,8 @@ export interface Pad {
 
 export interface Ground {
   status: GroundStatus;
+  steep: boolean;
+  dem: { near: Heightfield | null; far: Heightfield | null };
   patches: Patch[];
   groundAt: (x: number, z: number) => number;
   padHeights: number[];
@@ -32,11 +35,11 @@ export interface Ground {
 const SEGMENTS: Record<PatchKey, number> = { far: 96, neighbourhood: 128, farm: 96 };
 const IMAGERY_TILES: Record<PatchKey, number> = { far: 9, neighbourhood: 16, farm: 16 };
 const DEM_TILES = { far: 9, neighbourhood: 9 };
-const PAD_FALLOFF_M = 25;
+const PAD_FALLOFF_M = 45;
 const PAD_SINK_M = 0.08;
 const ORDER: Record<PatchKey, number> = { far: 0, neighbourhood: 1, farm: 2 };
 
-const flatGround = (): Ground => ({ status: 'loading', patches: [], groundAt: () => 0, padHeights: [], imageryFailed: false, zoom: null });
+const flatGround = (): Ground => ({ status: 'loading', steep: false, dem: { near: null, far: null }, patches: [], groundAt: () => 0, padHeights: [], imageryFailed: false, zoom: null });
 
 function patchGeometry(corners: [XZ, XZ], segments: number, groundAt: (x: number, z: number) => number): THREE.BufferGeometry {
   const [nw, se] = corners;
@@ -76,7 +79,7 @@ function cornersOf(box: BBox, frame: LocalFrame): [XZ, XZ] {
   return [frame.toLocal(box.maxLat, box.minLon), frame.toLocal(box.minLat, box.maxLon)];
 }
 
-function ground(frame: LocalFrame, dem: { near: Heightfield | null; far: Heightfield | null }, pads: XZ[][]): Pick<Ground, 'groundAt' | 'padHeights'> {
+function ground(frame: LocalFrame, dem: { near: Heightfield | null; far: Heightfield | null }, pads: XZ[][], flatten: boolean): Pick<Ground, 'groundAt' | 'padHeights'> {
   const sample = (x: number, z: number): number | null => {
     const { lat, lon } = frame.toGeo(x, z);
     return (dem.near ? heightAt(dem.near, lat, lon) : null) ?? (dem.far ? heightAt(dem.far, lat, lon) : null);
@@ -91,6 +94,7 @@ function ground(frame: LocalFrame, dem: { near: Heightfield | null; far: Heightf
     const raw = sample(x, z);
     if (raw === null) return 0;
     let y = raw - origin;
+    if (!flatten) return y;
     let nearest: Pad | null = null;
     let best = Infinity;
     for (const pad of list) {
@@ -105,11 +109,13 @@ function ground(frame: LocalFrame, dem: { near: Heightfield | null; far: Heightf
   return { groundAt, padHeights: list.map((p) => p.height) };
 }
 
-export function useGround(frame: LocalFrame | null, rings: Rings | null, pads: XZ[][]): Ground {
+export function useGround(frame: LocalFrame | null, rings: Rings | null, pads: XZ[][], terraceSteep: boolean): Ground {
   const [state, setState] = useState<Ground>(flatGround);
   const key = frame && rings ? JSON.stringify([frame.origin, rings, pads]) : '';
   const padsRef = useRef(pads);
   padsRef.current = pads;
+  const terraceRef = useRef(terraceSteep);
+  terraceRef.current = terraceSteep;
   useEffect(() => {
     if (!frame || !rings) return;
     let alive = true;
@@ -124,7 +130,10 @@ export function useGround(frame: LocalFrame | null, rings: Rings | null, pads: X
         stitchImagery(boxes.farm, IMAGERY_TILES.farm, frame.toLocal).catch(() => null),
       ]);
       if (!alive) return;
-      const built = ground(frame, { near: demNear, far: demFar }, padsRef.current);
+      const field = demNear ?? demFar;
+      const slope = field ? slopeStats(field, frame.origin.lat, frame.origin.lon, NEIGHBOURHOOD_HALF_KM * 1000) : null;
+      const steep = slope !== null && slope.p90Deg >= SCREEN.hillyDeg;
+      const built = ground(frame, { near: demNear, far: demFar }, padsRef.current, !steep || terraceRef.current);
       const imagery: Record<PatchKey, Imagery | null> = { far: farImg, neighbourhood: nearImg, farm: farmImg };
       const patches: Patch[] = (['far', 'neighbourhood', 'farm'] as PatchKey[]).map((patchKey) => ({
         key: patchKey,
@@ -132,7 +141,7 @@ export function useGround(frame: LocalFrame | null, rings: Rings | null, pads: X
         texture: imagery[patchKey]?.texture ?? null,
         order: ORDER[patchKey],
       }));
-      setState({ status: demFar || demNear ? 'ready' : 'flat', patches, ...built, imageryFailed: !farmImg, zoom: farmImg?.zoom ?? null });
+      setState({ status: demFar || demNear ? 'ready' : 'flat', steep, dem: { near: demNear, far: demFar }, patches, ...built, imageryFailed: !farmImg, zoom: farmImg?.zoom ?? null });
     })();
     return () => {
       alive = false;

@@ -100,3 +100,27 @@ const PREVIEW: Record<PreviewKind, Partial<WeatherNow>> = {
 export function previewWeather(kind: PreviewKind, reducedMotion: boolean): Fx {
   return { ...effectsFor({ ...SAMPLE, ...PREVIEW[kind] }, reducedMotion), preview: true };
 }
+
+export interface WeatherEnvelope {
+  current: Record<string, unknown> | null;
+}
+
+const reading = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+
+export function toWeatherNow(envelope: WeatherEnvelope): WeatherNow | null {
+  const c = envelope.current;
+  if (!c) return null;
+  return {
+    weather_code: reading(c.weather_code),
+    precipitation: reading(c.precipitation),
+    rain: reading(c.rain),
+    cloud_cover: reading(c.cloud_cover),
+    wind_speed_10m: reading(c.wind_speed_10m),
+    wind_direction_10m: reading(c.wind_direction_10m),
+    wind_gusts_10m: reading(c.wind_gusts_10m),
+    is_day: reading(c.is_day),
+    visibility: reading(c.visibility),
+    temperature_2m: reading(c.temperature_2m),
+    relative_humidity_2m: reading(c.relative_humidity_2m),
+  };
+}

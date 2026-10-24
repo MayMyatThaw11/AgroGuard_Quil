@@ -10,17 +10,24 @@ import { sunAt } from '../../lib/farmmap/sun.ts';
 import { fieldLayout, type FieldLayout } from '../../lib/farmview/fieldLayout.ts';
 import { mainField, type FarmTarget, type TargetField } from '../../lib/farmview/farmTarget.ts';
 import { sunPosition, weedDensity } from '../../lib/farmview/seasonField.ts';
-import { FAR_HALF_KM, NEIGHBOURHOOD_HALF_KM, RELIEF_ATTRIBUTION, clampCamera, fogDensity, ringPlan } from '../../lib/farmview/terrain.ts';
+import { OMT_ATTRIBUTION } from '../../lib/farmview/captureOmt.ts';
+import { buildProfile, type Chip } from '../../lib/farmview/profile.ts';
+import { FAR_HALF_KM, NEIGHBOURHOOD_HALF_KM, RELIEF_ATTRIBUTION, clampCamera, clearView, fogDensity, heightAt, ringPlan, slopeStats } from '../../lib/farmview/terrain.ts';
+import { nearest, type NearFeature } from '../../lib/farmmap/surroundings.ts';
 import { localFrame, type XZ } from '../../lib/fieldsim/localFrame.ts';
 import { riceStageFromName, stageForDvs, type RiceStage } from '../../lib/fieldsim/models.ts';
 import { REPLICA_COLOR } from '../../lib/fieldsim/replicaTheme.ts';
 import { attachContextLossRecovery } from '../../lib/webglContextRecovery.ts';
-import { useT } from '../../lib/i18n.ts';
+import { useT, type Key } from '../../lib/i18n.ts';
 import { CanvasErrorBoundary } from '../farm3d/CanvasErrorBoundary.tsx';
 import { FieldLayer } from './FieldLayer.tsx';
 import { BUND_WIDTH_M, useFieldTextures } from './fieldKit.ts';
 import { ReplicaModels } from './ReplicaModels.tsx';
 import { useGround, type Patch } from './useGround.ts';
+import { Neighbourhood } from './Neighbourhood.tsx';
+import { OutlineFields } from './OutlineFields.tsx';
+import { useNeighbourhood, type Capture } from './useNeighbourhood.ts';
+import { useVolcano } from './useFarmFacts.ts';
 
 const MAX_PLANTS = 4000;
 const MAX_PLANTS_OTHER = 400;
@@ -35,6 +42,8 @@ const MIN_LIGHT_ELEVATION_DEG = 28;
 const MIN_FRAMING_SPAN_M = 60;
 const OVERVIEW_HEIGHT = 0.3;
 const OVERVIEW_BACK = 1.1;
+const OVERVIEW_CLEARANCE = 0.3;
+const SIGHT_MARGIN_M = 8;
 
 export interface FarmViewSeason {
   run: SeasonReplay;
@@ -46,8 +55,24 @@ export interface FarmViewSeason {
 interface FarmViewProps {
   target: FarmTarget;
   season?: FarmViewSeason | null;
+  capture?: Capture;
   onClose: () => void;
 }
+
+const CHIP_LABEL: Record<string, Key> = {
+  elevation: 'farmMap.farm.elevation',
+  slope: 'farmMap.farmView.slope',
+  river: 'farmMap.near.river',
+  canal: 'farmMap.near.canal',
+  coast: 'farmMap.near.coast',
+  lake: 'farmMap.near.lake',
+  forest: 'farmMap.near.forest',
+  wetland: 'farmMap.near.wetland',
+  peak: 'farmMap.near.peak',
+  volcano: 'farmMap.farmView.volcano',
+};
+
+const chipText = (chip: Chip, label: string) => `${label}: ${chip.value === null ? '—' : `${chip.unit === 'km' ? chip.value.toFixed(1) : Math.round(chip.value)} ${chip.unit === 'deg' ? '°' : chip.unit}`}${chip.name ? ` · ${chip.name}` : ''}`;
 
 interface ViewControls {
   target: THREE.Vector3;
@@ -66,7 +91,7 @@ interface Framing {
   span: number;
 }
 
-const ViewPreset: React.FC<{ eye: boolean; ring: readonly XZ[]; framing: Framing; baseY: number }> = ({ eye, ring, framing, baseY }) => {
+const ViewPreset: React.FC<{ eye: boolean; ring: readonly XZ[]; framing: Framing; baseY: number; ready: boolean; groundAt: (x: number, z: number) => number }> = ({ eye, ring, framing, baseY, ready, groundAt }) => {
   const camera = useThree((state) => state.camera);
   const controls = useThree((state) => state.controls) as ViewControls | null;
   useEffect(() => {
@@ -77,11 +102,16 @@ const ViewPreset: React.FC<{ eye: boolean; ring: readonly XZ[]; framing: Framing
       controls.target.set(0, baseY + EYE_HEIGHT_M * 0.4, 0);
     } else {
       const [cx, cz] = framing.centre;
-      camera.position.set(cx + framing.span * 0.45, baseY + framing.span * OVERVIEW_HEIGHT, cz + framing.span * OVERVIEW_BACK);
+      const px = cx + framing.span * 0.45;
+      const pz = cz + framing.span * OVERVIEW_BACK;
+      const y = Math.max(baseY + framing.span * OVERVIEW_HEIGHT, ready ? groundAt(px, pz) + framing.span * OVERVIEW_CLEARANCE : 0);
+      const eyePos = ready ? clearView({ x: px, y, z: pz }, { x: cx, y: baseY, z: cz }, groundAt, SIGHT_MARGIN_M) : { x: px, y, z: pz };
+      camera.position.set(eyePos.x, eyePos.y, eyePos.z);
       controls.target.set(cx, baseY, cz);
     }
     controls.update();
-  }, [eye, ring, framing, baseY, camera, controls]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eye, ring, framing, baseY, ready, camera, controls]);
   return null;
 };
 
@@ -127,7 +157,7 @@ interface PlacedField {
   main: boolean;
 }
 
-export const FarmView: React.FC<FarmViewProps> = ({ target, season, onClose }) => {
+export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onClose }) => {
   const t = useT();
   const closeRef = useRef<HTMLButtonElement>(null);
   const detach = useRef<() => void>(() => {});
@@ -144,7 +174,23 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, onClose }) =
     return target.fields.map((field) => ({ field, ring: openRing(field.ring.map(([la, lo]) => frame.toLocal(la, lo))), main: field.id === main?.id }));
   }, [frame, target.fields, main]);
   const rings = useMemo(() => (frame ? ringPlan(target.bbox, frame.origin) : null), [frame, target.bbox]);
-  const ground = useGround(frame, rings, useMemo(() => placed.map((p) => p.ring), [placed]));
+  const ground = useGround(frame, rings, useMemo(() => placed.map((p) => p.ring), [placed]), target.kind === 'own');
+  const outlined = ground.steep && target.kind !== 'own';
+  const hood = useNeighbourhood(capture, frame, rings, target.id);
+  const origin = frame?.origin ?? target.centre;
+  const volcano = useVolcano(origin.lat, origin.lon);
+  const demField = ground.dem.near ?? ground.dem.far;
+  const profile = useMemo(() => {
+    const elevation = demField ? heightAt(demField, origin.lat, origin.lon) : null;
+    const features: NearFeature[] = hood.features.map((f) => ({ layer: f.layer, cls: f.cls ?? '', name: f.name, ele: typeof f.props.ele === 'number' ? f.props.ele : null, geometry: f.geometry }));
+    return buildProfile({
+      elevationM: elevation === null ? null : Math.round(elevation),
+      slope: demField ? slopeStats(demField, origin.lat, origin.lon, NEIGHBOURHOOD_HALF_KM * 1000) : null,
+      nearest: nearest(origin.lat, origin.lon, features, NEIGHBOURHOOD_HALF_KM),
+      volcano: volcano.status === 'ready' && volcano.value.volcano && volcano.value.km !== null ? { km: volcano.value.km, name: volcano.value.volcano.name } : null,
+      volcanoPeak: hood.data?.volcano != null,
+    });
+  }, [demField, origin.lat, origin.lon, hood.features, hood.data, volcano]);
 
   const run = season?.run;
   const plan = season ? run?.years[season.year]?.plan : undefined;
@@ -212,11 +258,11 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, onClose }) =
     detach.current = attachContextLossRecovery(state.gl.domElement, { onLost: () => setLost(true), onRestored: () => setLost(false) });
   };
 
-  const ready = ground.status !== 'loading';
+  const ready = ground.status !== 'loading' && hood.status !== 'loading';
   const dryRun = Boolean(season) && !plan;
 
   return (
-    <div className="aq-fm-replica" role="dialog" aria-label={t('farmMap.farmView.title')} data-ready={ready ? 'true' : 'false'}>
+    <div className="aq-fm-replica" role="dialog" aria-label={t('farmMap.farmView.title')} data-ready={ready ? 'true' : 'false'} data-terrain={profile.terrain} data-volcanic={profile.volcanic ? 'true' : 'false'}>
       <CanvasErrorBoundary fallback={(reset) => <div className="aq-fm-replica-empty"><p>{t('farmMap.replica.crashed')}</p><button type="button" className="aq-btn aq-btn-secondary" onClick={reset}>{t('farmMap.replica.reload')}</button></div>}>
         <Canvas aria-hidden="true" flat shadows gl={{ logarithmicDepthBuffer: true }} dpr={[1, 2]} camera={{ position: [framing.centre[0] + framing.span * 0.45, framing.span * OVERVIEW_HEIGHT, framing.centre[1] + framing.span * OVERVIEW_BACK], fov: 42, near: 0.3, far: 40000 }} onCreated={onCreated}>
           <fogExp2 attach="fog" args={[fogColor, fogAmount]} />
@@ -224,7 +270,9 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, onClose }) =
           <hemisphereLight args={[REPLICA_COLOR.hemiSky, REPLICA_COLOR.hemiGround, 0.8]} />
           <directionalLight position={lightPos} intensity={sun.elevationDeg > -6 ? 2.2 : 0.5} color={sun.elevationDeg < 12 ? REPLICA_COLOR.sunLow : REPLICA_COLOR.sunDay} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-framing.span} shadow-camera-right={framing.span} shadow-camera-top={framing.span} shadow-camera-bottom={-framing.span} shadow-camera-far={900} />
           <GroundPatches patches={ground.patches} />
-          {layouts.map(({ placed: p, layout, seasonal }) => {
+          {hood.data && ground.status !== 'loading' ? <Neighbourhood data={hood.data} groundAt={ground.groundAt} profile={profile} seed={target.id} /> : null}
+          {outlined ? <OutlineFields rings={placed.map((p) => p.ring)} groundAt={ground.groundAt} /> : null}
+          {(outlined ? [] : layouts).map(({ placed: p, layout, seasonal }) => {
             const stage: RiceStage | null = seasonal ? stageForDvs(dvs) : riceStageFromName(p.field.stage);
             const flooded = p.field.stage === 'Flooded';
             const waterY = seasonal ? (ponded > 0 ? ponded / 1000 : null) : flooded ? FLOODED_SHEET_M : null;
@@ -250,7 +298,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, onClose }) =
             );
           })}
           <OrbitControls makeDefault target={[framing.centre[0], mainBase, framing.centre[1]]} maxPolarAngle={eye ? Math.PI / 2 : Math.PI / 2.1} minDistance={eye ? 1 : Math.max(5, ext * 0.1)} maxDistance={MAX_VIEW_DISTANCE_M} />
-          <ViewPreset eye={eye} ring={mainLayout?.layout.ring ?? []} framing={framing} baseY={mainBase} />
+          <ViewPreset eye={eye} ring={mainLayout?.layout.ring ?? []} framing={framing} baseY={mainBase} ready={ground.status !== 'loading'} groundAt={ground.groundAt} />
           <CameraLimits eye={eye} groundAt={ground.groundAt} />
         </Canvas>
       </CanvasErrorBoundary>
@@ -276,7 +324,10 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, onClose }) =
             {sprayed ? <span>{t('farmMap.replica.spray')}</span> : null}
           </>
         ) : null}
+        {profile.chips.filter((c) => c.value !== null || c.key === 'elevation' || c.key === 'slope').map((c) => <span key={c.key} title={c.reason ?? c.source}>{chipText(c, t(CHIP_LABEL[c.key] ?? 'farmMap.farm.elevation'))}</span>)}
+        {hood.status === 'partial' ? <span>{t('farmMap.farmView.partial')}</span> : null}
         <span>{t('farmMap.replica.flat')}</span>
+        {hood.data ? <span>{OMT_ATTRIBUTION}</span> : null}
         {ground.status === 'flat' ? <span>{t('farmMap.farmView.terrainFailed')}</span> : <span>{RELIEF_ATTRIBUTION}</span>}
         {ground.imageryFailed && ready ? <span>{t('farmMap.replica.imageryFailed')}</span> : <span>{SAT_ATTRIBUTION}</span>}
         {lost ? <span>{t('farmMap.replica.paused')}</span> : null}
