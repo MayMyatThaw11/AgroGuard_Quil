@@ -1,7 +1,9 @@
 import { tileX, tileY, type BBox } from '../fieldsim/imagery.ts';
+import { inside, type XZ } from '../fieldsim/localFrame.ts';
 
 export const DEM_TILES = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
 export const DEM_MAX_ZOOM = 14;
+export const RELIEF_ATTRIBUTION = 'Relief about 30 m: AWS Terrain Tiles (SRTM, GMTED, ETOPO)';
 export const NEIGHBOURHOOD_HALF_KM = 1.5;
 export const FAR_HALF_KM = 5;
 const FARM_PAD_M = 150;
@@ -58,7 +60,56 @@ export function heightAt(field: Heightfield, lat: number, lon: number): number |
   const at = (xi: number, yi: number) => field.data[yi * width + xi];
   const top = at(x, y) * (1 - fx) + at(x + 1, y) * fx;
   const bottom = at(x, y + 1) * (1 - fx) + at(x + 1, y + 1) * fx;
-  return top * (1 - fy) + bottom * fy;
+  const h = top * (1 - fy) + bottom * fy;
+  return Number.isFinite(h) ? h : null;
+}
+
+export interface TilePlan {
+  z: number;
+  x0: number;
+  y0: number;
+  cols: number;
+  rows: number;
+}
+
+export function heightfieldFromTiles(plan: TilePlan, readTile: (x: number, y: number) => ArrayLike<number> | null): Heightfield {
+  const width = plan.cols * TILE;
+  const data = new Float32Array(width * plan.rows * TILE).fill(Number.NaN);
+  for (let ty = 0; ty < plan.rows; ty += 1) {
+    for (let tx = 0; tx < plan.cols; tx += 1) {
+      const rgba = readTile(plan.x0 + tx, plan.y0 + ty);
+      if (!rgba) continue;
+      for (let py = 0; py < TILE; py += 1) {
+        for (let px = 0; px < TILE; px += 1) {
+          const i = (py * TILE + px) * 4;
+          data[(ty * TILE + py) * width + tx * TILE + px] = decodeTerrarium(rgba[i], rgba[i + 1], rgba[i + 2]);
+        }
+      }
+    }
+  }
+  return { ...plan, data };
+}
+
+export function ringDistance(x: number, z: number, ring: readonly XZ[]): number {
+  let best = Infinity;
+  for (let i = 0; i < ring.length; i += 1) {
+    const [x1, z1] = ring[i];
+    const [x2, z2] = ring[(i + 1) % ring.length];
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+    const len = dx * dx + dz * dz;
+    const t = len === 0 ? 0 : clamp(((x - x1) * dx + (z - z1) * dz) / len, 0, 1);
+    best = Math.min(best, Math.hypot(x - (x1 + t * dx), z - (z1 + t * dz)));
+  }
+  return inside([x, z], ring) ? -best : best;
+}
+
+export function padBlend(terrain: number, distanceM: number, pad: number, falloffM: number): number {
+  if (distanceM <= 0) return pad;
+  if (distanceM >= falloffM) return terrain;
+  const t = distanceM / falloffM;
+  const eased = t * t * (3 - 2 * t);
+  return pad + (terrain - pad) * eased;
 }
 
 export interface SlopeStats {

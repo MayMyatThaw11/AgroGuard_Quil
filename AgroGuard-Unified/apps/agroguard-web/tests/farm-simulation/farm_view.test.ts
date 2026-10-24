@@ -2,12 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getFarmMap } from '../../src/features/farm-simulation/lib/farmmap/farmMapData.ts';
 import { fieldsOf } from '../../src/features/farm-simulation/lib/farmmap/farmMapGeometry.ts';
-import { fromExample, fromOwn, inAsean } from '../../src/features/farm-simulation/lib/farmview/farmTarget.ts';
-import { boxAround, clampCamera, decodeTerrarium, fogDensity, heightAt, ringPlan, slopeStats, type Heightfield } from '../../src/features/farm-simulation/lib/farmview/terrain.ts';
+import { fromExample, fromOwn, inAsean, mainField, type FarmTarget, type TargetField } from '../../src/features/farm-simulation/lib/farmview/farmTarget.ts';
+import { inside, localFrame } from '../../src/features/farm-simulation/lib/fieldsim/localFrame.ts';
+import { fieldLayout } from '../../src/features/farm-simulation/lib/farmview/fieldLayout.ts';
+import { sunPosition, weedDensity } from '../../src/features/farm-simulation/lib/farmview/seasonField.ts';
+import { boxAround, clampCamera, decodeTerrarium, fogDensity, heightAt, heightfieldFromTiles, padBlend, ringDistance, ringPlan, slopeStats, type Heightfield } from '../../src/features/farm-simulation/lib/farmview/terrain.ts';
 import { buildNeighbourhood, type OmtFeature } from '../../src/features/farm-simulation/lib/farmview/neighbourhood.ts';
 import { buildProfile } from '../../src/features/farm-simulation/lib/farmview/profile.ts';
 import { effectsFor, previewWeather, type WeatherNow } from '../../src/features/farm-simulation/lib/farmview/weatherFx.ts';
 import { tilesFor } from '../../src/features/farm-simulation/lib/fieldsim/imagery.ts';
+import { riceStageFromName } from '../../src/features/farm-simulation/lib/fieldsim/models.ts';
 import type { ContractSpec } from '../../src/features/farm-simulation/lib/contractFarm.ts';
 
 const flat = (lat: number, lon: number): [number, number] => [(lon - 95) * 111320 * Math.cos((lat * Math.PI) / 180), -(lat - 17) * 110574];
@@ -278,4 +282,111 @@ test('preview weather is always marked as a preview', () => {
   assert.equal(previewWeather('storm', false).lightning, true);
   assert.equal(previewWeather('night', false).night, true);
   assert.equal(effectsFor(wx({}), false).preview, false);
+});
+
+test('local metres convert back to the latitude and longitude they came from', () => {
+  const frame = localFrame(SQUARE)!;
+  const [x, z] = frame.toLocal(17.0042, 95.0061);
+  const back = frame.toGeo(x, z);
+  assert.ok(Math.abs(back.lat - 17.0042) < 1e-9 && Math.abs(back.lon - 95.0061) < 1e-9);
+});
+
+test('elevation tiles are read into one height grid, and a missing tile stays unknown', () => {
+  const plan = { z: 14, x0: 100, y0: 200, cols: 2, rows: 1 };
+  const tile = new Uint8ClampedArray(256 * 256 * 4);
+  for (let i = 0; i < 256 * 256; i += 1) tile.set([128, 10, 0, 255], i * 4);
+  const field = heightfieldFromTiles(plan, (x, y) => (x === 100 && y === 200 ? tile : null));
+  assert.equal(field.cols, 2);
+  assert.equal(field.data.length, 512 * 256);
+  assert.equal(field.data[5 * 512 + 5], 10);
+  assert.ok(Number.isNaN(field.data[5 * 512 + 300]));
+  const lon = ((100 + 0.5) / 2 ** 14) * 360 - 180;
+  const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * (200 + 0.5)) / 2 ** 14))) * 180) / Math.PI;
+  assert.ok(Math.abs((heightAt(field, lat, lon) ?? NaN) - 10) < 1e-9);
+  const lonMissing = ((101 + 0.5) / 2 ** 14) * 360 - 180;
+  assert.equal(heightAt(field, lat, lonMissing), null);
+});
+
+test('the ground under a field is flattened to the field and eases back to the terrain', () => {
+  assert.equal(padBlend(40, -5, 12, 20), 12);
+  assert.equal(padBlend(40, 0, 12, 20), 12);
+  assert.equal(padBlend(40, 25, 12, 20), 40);
+  const mid = padBlend(40, 10, 12, 20);
+  assert.ok(mid > 12 && mid < 40);
+  assert.equal(padBlend(40, 10, 12, 20), 12 + (40 - 12) * 0.5);
+});
+
+test('the main field is the selected one, else the largest', () => {
+  const small: TargetField = { id: 'a', ring: [[17, 95], [17, 95.0005], [17.0005, 95.0005], [17.0005, 95], [17, 95]], crop: null, stage: null };
+  const large: TargetField = { id: 'b', ring: SQUARE, crop: null, stage: null };
+  const target: FarmTarget = { kind: 'own', id: 'f', label: 'f', fields: [small, large], centre: { lat: 17, lon: 95 }, bbox: { minLat: 17, maxLat: 17.01, minLon: 95, maxLon: 95.01 }, selectedId: null };
+  assert.equal(mainField({ ...target, selectedId: null })?.id, 'b');
+  assert.equal(mainField({ ...target, selectedId: 'a' })?.id, 'a');
+  assert.equal(mainField({ ...target, fields: [], selectedId: null }), null);
+});
+
+test('a stage name from the map or a contract picks a rice model, and non-crop stages pick none', () => {
+  assert.equal(riceStageFromName('Seedling'), 'seedling');
+  assert.equal(riceStageFromName('Tillering'), 'tillering');
+  assert.equal(riceStageFromName('Booting'), 'booting');
+  assert.equal(riceStageFromName('Panicle Initiation'), 'booting');
+  assert.equal(riceStageFromName('Heading'), 'heading');
+  assert.equal(riceStageFromName('Flowering'), 'heading');
+  assert.equal(riceStageFromName('Ripening'), 'ripening');
+  assert.equal(riceStageFromName('Flooded'), null);
+  assert.equal(riceStageFromName('Harvested'), null);
+  assert.equal(riceStageFromName(null), null);
+});
+
+test('distance to a field outline is negative inside and positive outside, in metres', () => {
+  const ring: [number, number][] = [[-5, -5], [5, -5], [5, 5], [-5, 5]];
+  assert.equal(ringDistance(0, 0, ring), -5);
+  assert.equal(ringDistance(8, 0, ring), 3);
+  assert.ok(Math.abs(ringDistance(8, 8, ring) - Math.hypot(3, 3)) < 1e-9);
+});
+
+const FORTY: [number, number][] = [[-20, -20], [20, -20], [20, 20], [-20, 20]];
+
+test('a field layout keeps plants inside the bund and under the plant budget', () => {
+  const layout = fieldLayout(FORTY, { bundWidthM: 0.5, trenchWidthCm: null, realSpacingM: null, maxPlants: 400 });
+  assert.ok(Math.abs(layout.area - 1600) < 1e-6);
+  assert.ok(layout.points.length > 0 && layout.points.length <= 400, `plants ${layout.points.length}`);
+  assert.ok(layout.points.every((p) => inside(p, layout.field)));
+  assert.equal(layout.trench, null);
+  assert.equal(layout.extent, 40);
+});
+
+test('the farmer spacing wins when it is wider than the budget needs, and is reported', () => {
+  const layout = fieldLayout(FORTY, { bundWidthM: 0.5, trenchWidthCm: null, realSpacingM: 0.5, maxPlants: 100000 });
+  assert.equal(layout.real, 0.5);
+  assert.equal(layout.spacing, 0.5);
+  const coarse = fieldLayout(FORTY, { bundWidthM: 0.5, trenchWidthCm: null, realSpacingM: 0.05, maxPlants: 100000 });
+  assert.equal(coarse.spacing, 0.25);
+});
+
+test('a trench band is kept free of plants', () => {
+  const layout = fieldLayout(FORTY, { bundWidthM: 0.5, trenchWidthCm: 100, realSpacingM: null, maxPlants: 1000 });
+  assert.ok(layout.trench);
+  assert.ok(layout.points.every((p) => !(inside(p, layout.trench!.outer) && !inside(p, layout.trench!.inner))));
+});
+
+test('weeds grow with each emergence and shrink by the share a weeding removes', () => {
+  const events = [
+    { kind: 'weed_emergence', date: '2026-07-01', density_m2: 100, cousens_i: null, cousens_a: null },
+    { kind: 'weed', date: '2026-07-10', method: 'hand', removed_pct: 75 },
+    { kind: 'weed_emergence', date: '2026-07-20', density_m2: 20, cousens_i: null, cousens_a: null },
+  ] as const;
+  assert.equal(weedDensity(events, '2026-06-30'), 0);
+  assert.equal(weedDensity(events, '2026-07-05'), 100);
+  assert.equal(weedDensity(events, '2026-07-10'), 25);
+  assert.equal(weedDensity(events, '2026-07-25'), 45);
+});
+
+test('the sun points north when its azimuth is 0, east at 90, and never drops below 5 degrees', () => {
+  const north = sunPosition({ elevationDeg: 30, azimuthDeg: 0 }, 100);
+  assert.ok(north[2] < 0 && Math.abs(north[0]) < 1e-9);
+  const east = sunPosition({ elevationDeg: 30, azimuthDeg: 90 }, 100);
+  assert.ok(east[0] > 0 && Math.abs(east[2]) < 1e-9);
+  const low = sunPosition({ elevationDeg: -20, azimuthDeg: 0 }, 100);
+  assert.ok(Math.abs(low[1] - 100 * Math.sin((5 * Math.PI) / 180)) < 1e-9);
 });

@@ -42,7 +42,8 @@ import { DeliversTo, SiteDetail, SitesUpload } from './SiteDetail.tsx';
 import { useSites } from './useSites.ts';
 import { SeasonTimeline } from './SeasonTimeline.tsx';
 import { PhotoLocate } from './PhotoLocate.tsx';
-import { FieldReplica } from '../fieldsim/FieldReplica.tsx';
+import { FarmView } from '../fieldsim/FarmView.tsx';
+import { fromExample, fromOwn, inAsean, type FarmTarget } from '../../lib/farmview/farmTarget.ts';
 import { useDocumentTheme } from '../../lib/useDocumentTheme.ts';
 import { seasonViewFor, type Playback, type TintVar } from '../../lib/farmmap/seasonPlayback.ts';
 import type { SeasonReplay } from '../../lib/api.ts';
@@ -89,7 +90,8 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const [spot, setSpot] = useState<Spot | null>(null);
   const [season, setSeason] = useState<{ farmId: string; parcelId: string; run: SeasonReplay; year: number; engine: string; tint: TintVar } | null>(null);
   const [playback, setPlayback] = useState<Playback>({ day: 0, playing: false, speed: 4, carry: 0 });
-  const [replica, setReplica] = useState(false);
+  const [farmView, setFarmView] = useState<FarmTarget | null>(null);
+  const savedCamera = useRef<{ center: [number, number]; zoom: number; bearing: number; pitch: number } | null>(null);
   const [layers, setLayers] = useState(() => loadLayers(browserStorage()));
   const [view, setView] = useState<MapView>('map');
   const [terrain, setTerrain] = useState(false);
@@ -108,9 +110,13 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
     if (ownPicked) setView('sat');
   }, [ownPicked]);
   const pickRef = useRef<(target: PickTarget | null, fromMap: boolean) => void>(() => undefined);
+  const openRef = useRef<(target: PickTarget | null) => void>(() => undefined);
 
   const { engine, boot, bootFail, stats, hover } = useFarmMapEngine(mapRef, fogRef, {
-    onSelect: (target) => pickRef.current(target, true),
+    onSelect: (target) => {
+      pickRef.current(target, true);
+      openRef.current(target);
+    },
     onChunkError: (key) => {
       errors.current += 1;
       push({
@@ -148,6 +154,40 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
     const found = millSites.sites.find((s) => s.id === siteId);
     return found ? { lat: found.centroid[0], lon: found.centroid[1] } : null;
   }, [millSites.sites]);
+  const openView = useCallback(
+    (target: FarmTarget | null) => {
+      if (!engine || !target) return;
+      if (!inAsean(target.centre)) {
+        push({ tone: 'info', title: t('farmMap.farmView.title'), message: t('farmMap.farmView.outside') });
+        return;
+      }
+      if (!savedCamera.current) {
+        const map = engine.map();
+        const centre = map.getCenter();
+        savedCamera.current = { center: [centre.lng, centre.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+      }
+      setFarmView(target);
+    },
+    [engine, push, t],
+  );
+  const closeView = useCallback(() => {
+    setFarmView(null);
+    const saved = savedCamera.current;
+    savedCamera.current = null;
+    if (saved && engine) engine.map().jumpTo(saved);
+  }, [engine]);
+  const openOwn = useCallback(
+    (farmId: string, parcelId: string | null) => {
+      const found = ownFarms.find((f) => f.id === farmId);
+      if (found) openView(fromOwn(found.id, found.spec, parcelId));
+    },
+    [ownFarms, openView],
+  );
+  openRef.current = (target) => {
+    if (tracing || farmView || !target) return;
+    if (target.kind === 'farm') openView(fromExample(data.farmById[target.id], target.field ?? null));
+    else if (target.kind === 'own') openOwn(target.farm, null);
+  };
   const pickTarget = useFarmMapPick({ engine, selectionRef, onSelection: setSelection, onDismissRoute: planner.dismiss, ownCentre, siteCentre });
   const pick = useCallback(
     (target: PickTarget | null, fromMap = false) => {
@@ -262,7 +302,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       <div className="aq-fm-stage">
         <div ref={mapRef} className="aq-fm-map" />
         <canvas ref={fogRef} className="aq-fm-fog" aria-hidden="true" />
-        <div className="aq-fm-tipbox"><HoverTip info={hover} width={mapWidth} /></div>
+        <div className="aq-fm-tipbox"><HoverTip info={farmView ? null : hover} width={mapWidth} /></div>
         {tracing ? <div ref={trace.crosshairRef} className="aq-fm-crosshair" aria-hidden="true" /> : null}
       </div>
       <FarmMapTopBar
@@ -329,11 +369,12 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
               ) : route ? (
                 <RoutePanel route={route} onChange={planner.patch} onClose={planner.close} onStart={planner.start} />
               ) : farm && selection?.kind === 'farm' ? (
-                <FarmDetail farm={farm} field={selection.field} onRoute={planner.open} onFocus={() => engine?.focusFarm(farm)} onPick={pick} onOpenOps={onOpenOps} surroundings={surroundings} />
+                <FarmDetail farm={farm} field={selection.field} onRoute={planner.open} onFocus={() => engine?.focusFarm(farm)} onPick={pick} onOpenOps={onOpenOps} onOpen3d={() => openView(fromExample(farm, selection.field))} surroundings={surroundings} />
               ) : ownFarm ? (
                 <OwnFarmDetail
                   farm={ownFarm}
                   onLink={(fieldId) => own.link(ownFarm.id, fieldId)}
+                  onOpen3d={() => openOwn(ownFarm.id, season?.farmId === ownFarm.id ? season.parcelId : null)}
                   onFocus={() => {
                     const centre = farmCentroid(ownFarm.spec);
                     if (centre) engine?.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2200 });
@@ -344,7 +385,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
                     const ring = ownFarm.spec.parcels.find((p) => p.id === parcelId)?.boundary;
                     if (ring?.length) engine?.fly({ center: [ring.reduce((s, c) => s + c[1], 0) / ring.length, ring.reduce((s, c) => s + c[0], 0) / ring.length], zoom: 17, duration: 2000 });
                     setPlayback({ day: 0, playing: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches, speed: 4, carry: 0 });
-                    setReplica(Boolean(replica));
+                    if (replica) openOwn(ownFarm.id, parcelId);
                   }}
                   extra={<DeliversTo farmId={ownFarm.id} parcels={ownFarm.spec.parcels.map((p) => p.id)} sites={millSites.sites} onChanged={millSites.reload} />}
                 />
@@ -433,20 +474,18 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
           onEngine={(name) => setSeason((s) => (s ? { ...s, engine: name } : s))}
           onTint={(tint) => setSeason((s) => (s ? { ...s, tint } : s))}
           onPlayback={setPlayback}
-          onReplica={() => setReplica((r) => !r)}
+          onReplica={() => (farmView ? closeView() : openOwn(season.farmId, season.parcelId))}
           onClose={() => {
             setSeason(null);
-            setReplica(false);
+            closeView();
           }}
         />
       ) : null}
-      {season && replica ? (
-        <FieldReplica
-          run={season.run}
-          year={season.year}
-          day={playback.day}
-          boundary={ownFarms.find((f) => f.id === season.farmId)?.spec.parcels.find((p) => p.id === season.parcelId)?.boundary}
-          onClose={() => setReplica(false)}
+      {farmView ? (
+        <FarmView
+          target={farmView}
+          season={season && season.farmId === farmView.id ? { run: season.run, year: season.year, day: playback.day, parcelId: season.parcelId } : null}
+          onClose={closeView}
         />
       ) : null}
       {guide && route?.result ? <GuideHud guide={guide} steps={route.result.steps} mode={route.mode} onStop={planner.stopGuide} /> : null}

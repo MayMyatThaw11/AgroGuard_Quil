@@ -46,6 +46,22 @@ export const TEXTURE_FILES: readonly string[] = [
   `${base}wall_plaster.jpg`,
 ];
 
+const STAGE_BY_NAME: Record<string, RiceStage> = {
+  seedling: 'seedling',
+  nursery: 'seedling',
+  tillering: 'tillering',
+  booting: 'booting',
+  'panicle initiation': 'booting',
+  heading: 'heading',
+  flowering: 'heading',
+  ripening: 'ripening',
+  mature: 'ripening',
+};
+
+export function riceStageFromName(name: string | null | undefined): RiceStage | null {
+  return name ? (STAGE_BY_NAME[name.trim().toLowerCase()] ?? null) : null;
+}
+
 export function stageForDvs(dvs: number | null): RiceStage {
   if (dvs === null || dvs < 0.2) return 'seedling';
   if (dvs < 0.65) return 'tillering';

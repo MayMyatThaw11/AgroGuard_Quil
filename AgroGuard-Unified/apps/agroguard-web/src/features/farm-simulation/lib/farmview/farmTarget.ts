@@ -3,6 +3,7 @@ import { fieldsOf } from '../farmmap/farmMapGeometry.ts';
 import { ASEAN_BOUNDS } from '../farmmap/farmMapRegions.ts';
 import type { Farm } from '../farmmap/farmMapTypes.ts';
 import type { BBox } from '../fieldsim/imagery.ts';
+import { localFrame, ringArea } from '../fieldsim/localFrame.ts';
 
 export type LatLon = readonly [number, number];
 
@@ -60,6 +61,22 @@ export function fromOwn(farmId: string, spec: ContractSpec, parcelId: string | n
     return null;
   }
   return { kind: 'own', id: farmId, label: spec.farm.name ?? farmId, fields, centre, bbox: bboxOf(points, centre), selectedId: parcelId };
+}
+
+export function mainField(target: FarmTarget): TargetField | null {
+  const chosen = target.fields.find((f) => f.id === target.selectedId);
+  if (chosen) return chosen;
+  let best: TargetField | null = null;
+  let bestArea = -1;
+  for (const f of target.fields) {
+    const frame = localFrame(f.ring);
+    const area = frame ? ringArea(frame.ring) : -1;
+    if (area > bestArea) {
+      best = f;
+      bestArea = area;
+    }
+  }
+  return best;
 }
 
 export function inAsean(point: { lat: number; lon: number }): boolean {

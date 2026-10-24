@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ChevronRight, Route, ScanLine, ShieldCheck, Tractor } from 'lucide-react';
+import { Box, ChevronRight, Route, ScanLine, ShieldCheck, Tractor } from 'lucide-react';
 import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
 import { fieldsOf } from '../../lib/farmmap/farmMapGeometry.ts';
 import { nearestPoi } from '../../lib/farmmap/farmMapSearch.ts';
@@ -29,6 +29,7 @@ interface FarmDetailProps {
   onFocus: () => void;
   onPick: (target: PickTarget) => void;
   onOpenOps: (farmId: string) => void;
+  onOpen3d: () => void;
   surroundings: SurroundingsScan | 'loading' | null;
 }
 
@@ -103,7 +104,7 @@ const TONE: Record<FarmStatus, 'accent' | 'warning' | 'alert'> = { ok: 'accent',
 
 const NEARBY: PoiType[] = ['market', 'storage', 'mill', 'water'];
 
-export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, onFocus, onPick, onOpenOps, surroundings }) => {
+export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, onFocus, onPick, onOpenOps, onOpen3d, surroundings }) => {
   const t = useT();
   const data = getFarmMap();
   const safeDepthCm = usePaddySettingsStore((s) => s.applied.awd_safe_depth_cm);
@@ -139,6 +140,10 @@ export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, on
           {farm.organic ? <AqBadge tone="accent"><ShieldCheck size={12} aria-hidden="true" />{t('farmMap.farm.organic')}</AqBadge> : null}
         </div>
         <UpdatedLine>{t('farmMap.farm.valuesNote')}</UpdatedLine>
+        <AqButton variant="secondary" large onClick={onOpen3d}>
+          <Box size={14} aria-hidden="true" />
+          {t('farmMap.farmView.open')}
+        </AqButton>
         {farm.crop === 'rice' ? (
           <AqButton variant="primary" large onClick={() => onOpenOps(farm.id)}>
             <Tractor size={14} aria-hidden="true" />

@@ -338,3 +338,28 @@
   .aq-fm-replica-hud { max-width: calc(100% - 72px); font-size: 11px; }
   .aq-fm-replica-hud span:nth-of-type(n + 4) { display: none; }
 }
+
+.aq-fm-replica-hud b {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aq-space-1);
+}
+
+.aq-fm-replica-load {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aq-space-1);
+  color: var(--aq-leaf-700);
+}
+
+.aq-fm-replica-load svg {
+  animation: aq-fm-load-spin 1.2s linear infinite;
+}
+
+@keyframes aq-fm-load-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aq-fm-replica-load svg { animation: none; }
+}

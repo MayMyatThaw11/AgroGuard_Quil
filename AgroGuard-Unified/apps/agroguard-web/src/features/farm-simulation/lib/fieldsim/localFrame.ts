@@ -6,6 +6,7 @@ const M_PER_DEG_LON = 111320;
 export interface LocalFrame {
   origin: { lat: number; lon: number };
   toLocal: (lat: number, lon: number) => XZ;
+  toGeo: (x: number, z: number) => { lat: number; lon: number };
   ring: XZ[];
 }
 
@@ -17,7 +18,8 @@ export function localFrame(boundary: readonly (readonly [number, number])[]): Lo
   const lon = open.reduce((s, p) => s + p[1], 0) / open.length;
   const kx = M_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
   const toLocal = (la: number, lo: number): XZ => [(lo - lon) * kx, -(la - lat) * M_PER_DEG_LAT];
-  return { origin: { lat, lon }, toLocal, ring: open.map(([la, lo]) => toLocal(la, lo)) };
+  const toGeo = (x: number, z: number) => ({ lat: lat - z / M_PER_DEG_LAT, lon: lon + x / kx });
+  return { origin: { lat, lon }, toLocal, toGeo, ring: open.map(([la, lo]) => toLocal(la, lo)) };
 }
 
 export function ringArea(ring: readonly XZ[]): number {
