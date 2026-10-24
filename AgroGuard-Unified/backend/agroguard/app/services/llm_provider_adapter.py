@@ -28,7 +28,7 @@ DEFAULT_MODELS: dict[str, str] = {
     "ollama": "llama3.1",
     "openai": "gpt-4o-mini",
     "claude": "claude-3-5-haiku-latest",
-    "gemini": "gemini-2.0-flash",
+    "gemini": "gemini-2.5-flash",
     "groq": "llama-3.3-70b-versatile",
 }
 

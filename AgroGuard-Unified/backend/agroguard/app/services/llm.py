@@ -1,10 +1,11 @@
 import json
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 
 from httpx import AsyncClient, HTTPStatusError, RequestError
 
 from app.core.config import get_settings
+from app.services.chat_providers import ChatProvider, configured_providers
 from app.services.topic_guard import is_farming_related, refusal_message, reply_language
 
 logger = logging.getLogger(__name__)
@@ -111,13 +112,44 @@ def _build_messages(messages: list[dict], language: str) -> list[dict]:
     return [{"role": "system", "content": system_prompt}, *messages]
 
 
+async def _stream_from(
+    provider: ChatProvider, messages: list[dict], language: str
+) -> AsyncGenerator[str, None]:
+    payload = {
+        "model": provider.model,
+        "messages": _build_messages(messages, language),
+        "stream": True,
+        "temperature": 0.5,
+        "max_tokens": 2048,
+    }
+    async with (
+        AsyncClient(timeout=provider.timeout_s) as client,
+        client.stream("POST", provider.url, json=payload, headers=provider.headers()) as response,
+    ):
+        response.raise_for_status()
+        async for line in response.aiter_lines():
+            if not line.startswith("data: "):
+                continue
+            data_str = line[6:]
+            if data_str.strip() == "[DONE]":
+                return
+            try:
+                chunk = json.loads(data_str)
+            except json.JSONDecodeError:
+                continue
+            delta = (chunk.get("choices") or [{}])[0].get("delta", {})
+            content = delta.get("content", "")
+            if content:
+                yield content
+
+
 async def stream_chat(
     messages: list[dict],
     language: str,
+    on_provider: Callable[[str], None] | None = None,
 ) -> AsyncGenerator[str, None]:
-    settings = get_settings()
-    api_key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else None
-    if not api_key:
+    providers = configured_providers()
+    if not providers:
         yield _fallback_chat_response(messages, language)
         return
 
@@ -125,52 +157,64 @@ async def stream_chat(
     latest = messages[-1]["content"] if messages else ""
     # Answer in the language the question was written in, whatever the UI is set to.
     language = reply_language(latest, language)
-    if not await is_farming_related(messages, api_key):
-        yield refusal_message(latest, language)
-        return
 
-    url = f"{settings.llm_endpoint.rstrip('/')}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": settings.llm_model,
-        "messages": _build_messages(messages, language),
-        "stream": True,
-        "temperature": 0.5,
-        "max_tokens": 2048,
-    }
-
-    async with AsyncClient(timeout=60) as client:
+    failures: list[tuple[str, str]] = []
+    for provider in providers:
+        started = False
         try:
-            async with client.stream("POST", url, json=payload, headers=headers) as response:
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str.strip() == "[DONE]":
-                            return
-                        import json
-                        try:
-                            chunk = json.loads(data_str)
-                            delta = chunk.get("choices", [{}])[0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                yield content
-                        except json.JSONDecodeError:
-                            continue
-        except (HTTPStatusError, RequestError) as e:
-            yield f"\n\n_Error communicating with LLM: {e}_"
+            if not await is_farming_related(messages, provider):
+                yield refusal_message(latest, language)
+                return
+            async for content in _stream_from(provider, messages, language):
+                if not started and on_provider is not None:
+                    on_provider(provider.label)
+                started = True
+                yield content
+            return
+        except (HTTPStatusError, RequestError) as error:
+            if started:
+                yield f"\n\n_Error communicating with LLM: {error}_"
+                return
+            logger.warning("Chat model %s unavailable (%s); trying the next", provider.name, error)
+            failures.append((provider.name, _reason(error)))
+
+    yield _all_providers_failed(language, failures)
+
+
+def _reason(error: Exception) -> str:
+    if isinstance(error, HTTPStatusError):
+        return f"HTTP {error.response.status_code}"
+    return type(error).__name__
+
+
+def _all_providers_failed(language: str, failures: list[tuple[str, str]]) -> str:
+    tried = {name for name, _ in failures}
+    details = "; ".join(f"{name}: {reason}" for name, reason in failures)
+    if language == "my":
+        text = "ယခု AI ကို မရရှိနိုင်သေးပါ။ ဒေသတွင်းမော်ဒယ် (Ollama) ကို စတင်ပါ"
+        if tried <= {"local"}:
+            text += " သို့မဟုတ် AGROGUARD_GEMINI_API_KEY ကို သတ်မှတ်ပါ။"
+        else:
+            text += "။ Gemini မော်ဒယ်အမည်နှင့် သော့ကို စစ်ပါ။"
+        return f"{text} ({details})"
+    text = "The AI assistant is not available right now. Start the local model (Ollama)"
+    if tried <= {"local"}:
+        text += " or set the `AGROGUARD_GEMINI_API_KEY` environment variable."
+    else:
+        text += ". The Gemini fallback also failed: check its key and model name."
+    return f"{text} ({details})"
 
 
 def _fallback_chat_response(messages: list[dict], language: str) -> str:
     user_msg = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
     if language == "my":
-        return f"ကျေးဇူးပြု၍ AgroGuard API ကို အသုံးပြုရန်အတွက် LLM API သော့ကို သတ်မှတ်ပါ။\n\nမေးခွန်း- {user_msg}"
+        return (
+            "AI မော်ဒယ် မသတ်မှတ်ရသေးပါ။ ဒေသတွင်းမော်ဒယ် (Ollama) ကို စတင်ပါ သို့မဟုတ် "
+            f"AGROGUARD_GEMINI_API_KEY ကို သတ်မှတ်ပါ။\n\nမေးခွန်း- {user_msg}"
+        )
     return (
-        f"AgroGuard requires an LLM API key to function. "
-        f"Please set the `AGROGUARD_LLM_API_KEY` environment variable.\n\n"
+        "No AI model is set up. Start the local model (Ollama) or set the "
+        "`AGROGUARD_GEMINI_API_KEY` environment variable.\n\n"
         f"Your question was: {user_msg}"
     )
 

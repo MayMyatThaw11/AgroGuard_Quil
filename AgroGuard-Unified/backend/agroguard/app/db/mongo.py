@@ -17,6 +17,7 @@ from app.core.config import get_settings
 
 HEALTH_UPDATES = "health_updates"
 IMAGE_BUCKET = "health_images"
+CHAT_MESSAGES = "chat_messages"
 
 
 @lru_cache(maxsize=1)
@@ -32,6 +33,10 @@ def get_database() -> AsyncDatabase:
 
 def health_updates() -> AsyncCollection:
     return get_database()[HEALTH_UPDATES]
+
+
+def chat_messages() -> AsyncCollection:
+    return get_database()[CHAT_MESSAGES]
 
 
 def image_bucket() -> AsyncGridFSBucket:

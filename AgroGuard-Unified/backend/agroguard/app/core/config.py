@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     # on the system prompt alone.
     llm_topic_guard_enabled: bool = True
     llm_topic_guard_model: str = "openai/gpt-oss-20b"
+    # The chat tries the local model first and falls back to Gemini when it is not
+    # running or fails. Leave AGROGUARD_GEMINI_API_KEY blank until you have one.
+    llm_local_enabled: bool = True
+    llm_local_endpoint: str = "http://127.0.0.1:11434/v1"
+    llm_local_model: str = "gemma4:latest"
+    llm_local_timeout_s: float = 120.0
+    gemini_api_key: SecretStr | None = None
+    gemini_endpoint: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    gemini_model: str = "gemini-2.5-flash"
     openweather_api_key: SecretStr | None = None
     openweather_base_url: str = "https://api.openweathermap.org"
 
@@ -63,7 +72,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    @field_validator("jwt_secret", "internal_service_key", mode="before")
+    @field_validator("jwt_secret", "internal_service_key", "gemini_api_key", mode="before")
     @classmethod
     def _blank_secret_is_unset(cls, value: object) -> object:
         return None if isinstance(value, str) and not value.strip() else value

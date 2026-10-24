@@ -24,9 +24,7 @@ class FakeProvider:
             self.guard_requests.append(body)
             if self.guard_status != 200:
                 return httpx.Response(self.guard_status)
-            return httpx.Response(
-                200, json={"choices": [{"message": {"content": self.label}}]}
-            )
+            return httpx.Response(200, json={"choices": [{"message": {"content": self.label}}]})
         self.chat_requests.append(body)
         chunk = {"choices": [{"delta": {"content": "Plant in June."}}]}
         return httpx.Response(200, text=f"data: {json.dumps(chunk)}\n\ndata: [DONE]\n\n")
@@ -35,6 +33,10 @@ class FakeProvider:
 @pytest.fixture
 def provider(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AGROGUARD_LLM_API_KEY", "test-key")
+    monkeypatch.setenv("AGROGUARD_LLM_LOCAL_ENABLED", "false")
+    monkeypatch.setenv("AGROGUARD_LLM_MODEL", "chat-model")
+    monkeypatch.setenv("AGROGUARD_LLM_TOPIC_GUARD_MODEL", "guard-model")
+    monkeypatch.setenv("AGROGUARD_GEMINI_API_KEY", "")
     get_settings.cache_clear()
     fake = FakeProvider()
     transport = httpx.MockTransport(fake.handler)
@@ -124,8 +126,7 @@ async def test_topic_check_can_be_disabled(provider, monkeypatch: pytest.MonkeyP
 @pytest.mark.asyncio
 async def test_long_history_is_trimmed(provider) -> None:
     history = [
-        {"role": "user" if i % 2 == 0 else "assistant", "content": f"turn {i}"}
-        for i in range(31)
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"turn {i}"} for i in range(31)
     ]
     await _collect(history)
 

@@ -13,6 +13,7 @@ import re
 from httpx import AsyncClient, HTTPError
 
 from app.core.config import get_settings
+from app.services.chat_providers import ChatProvider
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ def _transcript(messages: list[dict]) -> str:
     return "<conversation>\n" + "\n".join(lines) + "\n</conversation>"
 
 
-async def is_farming_related(messages: list[dict], api_key: str) -> bool:
+async def is_farming_related(messages: list[dict], provider: ChatProvider) -> bool:
     """True unless the classifier positively labels the latest message OTHER."""
     settings = get_settings()
     if not settings.llm_topic_guard_enabled or not messages:
@@ -94,13 +95,8 @@ async def is_farming_related(messages: list[dict], api_key: str) -> bool:
     if messages[-1]["role"] != "user":
         return True
 
-    url = f"{settings.llm_endpoint.rstrip('/')}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
     payload = {
-        "model": settings.llm_topic_guard_model,
+        "model": provider.guard_model,
         "messages": [
             {"role": "system", "content": CLASSIFIER_PROMPT},
             {"role": "user", "content": _transcript(messages)},
@@ -110,13 +106,14 @@ async def is_farming_related(messages: list[dict], api_key: str) -> bool:
         # gpt-oss models reason before answering and that reasoning counts
         # toward max_tokens, so leave room for it and keep it short.
         "max_tokens": 300,
-        "reasoning_effort": "low",
-        "include_reasoning": False,
     }
+    if provider.guard_extras:
+        payload["reasoning_effort"] = "low"
+        payload["include_reasoning"] = False
 
     try:
         async with AsyncClient(timeout=10) as client:
-            response = await client.post(url, json=payload, headers=headers)
+            response = await client.post(provider.url, json=payload, headers=provider.headers())
             response.raise_for_status()
             label = (
                 response.json().get("choices", [{}])[0].get("message", {}).get("content", "")

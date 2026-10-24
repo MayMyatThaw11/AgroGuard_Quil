@@ -611,3 +611,16 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   .ndvi-correlation-grid { grid-template-columns: 1fr; }
   .ndvi-map { height: 280px; }
 }
+
+.chat-layout { display: flex; flex: 1; gap: 1rem; min-height: 0; }
+.chat-main { display: flex; flex: 1; min-width: 0; flex-direction: column; }
+.chat-history-pane { display: none; flex: 0 0 16rem; max-height: calc(100vh - 12rem); flex-direction: column; gap: .5rem; overflow-y: auto; padding: .75rem; }
+.chat-history-pane.open { display: flex; }
+@media (max-width: 900px) {
+  .chat-layout { flex-direction: column; }
+  .chat-history-pane { flex: none; max-height: 14rem; }
+}
+
+.chat-history-toggle { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border: 1px solid rgba(128,128,128,.35); border-radius: .65rem; background: transparent; color: inherit; cursor: pointer; }
+.chat-history-toggle:hover { background: rgba(128,128,128,.12); }
+.chat-history-title { margin: 0 0 .25rem; font-size: 1rem; font-weight: 700; }

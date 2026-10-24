@@ -3,6 +3,7 @@ import json
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.core.config import get_settings
 from app.main import app
 
 
@@ -14,8 +15,18 @@ def _parse_sse_data(body: str) -> list[dict]:
     ]
 
 
+@pytest.fixture
+def no_chat_models(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AGROGUARD_LLM_LOCAL_ENABLED", "false")
+    monkeypatch.setenv("AGROGUARD_GEMINI_API_KEY", "")
+    monkeypatch.setenv("AGROGUARD_LLM_API_KEY", "")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 @pytest.mark.asyncio
-async def test_chat_returns_valid_sse_json_without_api_key() -> None:
+async def test_chat_returns_valid_sse_json_without_api_key(no_chat_models) -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
@@ -25,7 +36,7 @@ async def test_chat_returns_valid_sse_json_without_api_key() -> None:
 
     assert response.status_code == 200
     events = _parse_sse_data(response.text)
-    assert events[-1] == {"content": "", "done": True}
+    assert events[-1] == {"content": "", "done": True, "provider": None}
     assert events[0]["done"] is False
     assert "How is my crop?" in events[0]["content"]
 
