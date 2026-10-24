@@ -54,7 +54,7 @@ export function useFarmMapPick({ engine, selectionRef, onSelection, onDismissRou
         const centre = siteCentre(target.id);
         if (centre && !fromMap) engine.fly({ center: [centre.lon, centre.lat], zoom: 16, duration: 2600 });
       } else if (target.kind === 'coord') {
-        engine.fly({ center: [target.lon, target.lat], zoom: 12, duration: 2800 });
+        engine.fly({ center: [target.lon, target.lat], zoom: 15, duration: 2800 });
       } else {
         engine.fly({ center: [target.country.lon, target.country.lat], zoom: 6.4, duration: 2800 });
       }

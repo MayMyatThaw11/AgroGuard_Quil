@@ -1068,4 +1068,10 @@ export const FIL: Dictionary = {
   'farmMap.sim.err.pidSetpoint': 'Maglagay ng lebel ng tubig na papanatilihin, 1 hanggang 30 cm.',
   'farmMap.sim.err.pidMax': 'Ilagay ang limitasyon ng bomba sa mm bawat araw.',
   'farmMap.sim.err.pidAbove': 'Dapat mas mababa ang lebel ng tubig kaysa sa pilapil.',
+  'farmMap.photo.button': 'Humanap ng lugar mula sa larawan',
+  'farmMap.photo.hint': 'Binabasa ang location tag ng JPEG na larawang kinunan sa telepono. Walang ina-upload.',
+  'farmMap.photo.found': 'Lokasyon ng larawan {lat}, {lon}',
+  'farmMap.photo.noGps': 'Walang location tag ang larawang ito. Maraming app ang nag-aalis nito kapag ibinabahagi ang larawan; ipadala ang orihinal, o buksan ang lokasyon para sa kamera.',
+  'farmMap.photo.notJpeg': 'JPEG na larawan lang ang may mababasang location tag dito.',
+  'farmMap.search.shortLink': 'Hindi mababasa rito ang maiikling link ng Google (maps.app.goo.gl). Buksan ang link, saka kopyahin ang buong address mula sa address bar ng browser.',
 };

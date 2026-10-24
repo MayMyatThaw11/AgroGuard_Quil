@@ -1068,4 +1068,10 @@ export const VI: Dictionary = {
   'farmMap.sim.err.pidSetpoint': 'Nhập mức nước cần giữ, từ 1 đến 30 cm.',
   'farmMap.sim.err.pidMax': 'Nhập giới hạn máy bơm theo mm mỗi ngày.',
   'farmMap.sim.err.pidAbove': 'Mức nước cần giữ phải thấp hơn bờ ruộng.',
+  'farmMap.photo.button': 'Tìm vị trí từ một bức ảnh',
+  'farmMap.photo.hint': 'Đọc thẻ vị trí của ảnh JPEG chụp bằng điện thoại. Không tải gì lên.',
+  'farmMap.photo.found': 'Vị trí ảnh {lat}, {lon}',
+  'farmMap.photo.noGps': 'Ảnh này không có thẻ vị trí. Nhiều ứng dụng xóa thẻ khi chia sẻ ảnh; hãy gửi bản gốc hoặc bật định vị cho máy ảnh.',
+  'farmMap.photo.notJpeg': 'Ở đây chỉ ảnh JPEG mới có thẻ vị trí đọc được.',
+  'farmMap.search.shortLink': 'Không đọc được liên kết rút gọn của Google (maps.app.goo.gl). Hãy mở liên kết rồi sao chép địa chỉ đầy đủ từ thanh địa chỉ của trình duyệt.',
 };

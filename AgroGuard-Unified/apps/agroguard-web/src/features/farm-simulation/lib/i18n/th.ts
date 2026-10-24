@@ -1068,4 +1068,10 @@ export const TH: Dictionary = {
   'farmMap.sim.err.pidSetpoint': 'ใส่ระดับน้ำที่จะคงไว้ 1 ถึง 30 ซม.',
   'farmMap.sim.err.pidMax': 'ใส่ขีดจำกัดปั๊มเป็นมม. ต่อวัน',
   'farmMap.sim.err.pidAbove': 'ระดับน้ำที่คงไว้ต้องต่ำกว่าคันนา',
+  'farmMap.photo.button': 'หาตำแหน่งจากรูปถ่าย',
+  'farmMap.photo.hint': 'อ่านแท็กตำแหน่งของรูป JPEG ที่ถ่ายด้วยโทรศัพท์ ไม่มีการอัปโหลดใดๆ',
+  'farmMap.photo.found': 'ตำแหน่งรูป {lat}, {lon}',
+  'farmMap.photo.noGps': 'รูปนี้ไม่มีแท็กตำแหน่ง หลายแอปลบแท็กเมื่อแชร์รูป ให้ส่งไฟล์ต้นฉบับ หรือเปิดตำแหน่งสำหรับกล้อง',
+  'farmMap.photo.notJpeg': 'ที่นี่มีเฉพาะรูป JPEG ที่อ่านแท็กตำแหน่งได้',
+  'farmMap.search.shortLink': 'อ่านลิงก์ Google แบบสั้น (maps.app.goo.gl) ที่นี่ไม่ได้ เปิดลิงก์แล้วคัดลอกที่อยู่เต็มจากแถบที่อยู่ของเบราว์เซอร์',
 };

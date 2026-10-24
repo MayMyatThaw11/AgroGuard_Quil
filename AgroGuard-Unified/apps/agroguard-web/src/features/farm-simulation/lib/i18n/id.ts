@@ -1068,4 +1068,10 @@ export const ID: Dictionary = {
   'farmMap.sim.err.pidSetpoint': 'Isi tinggi air yang dijaga, 1 sampai 30 cm.',
   'farmMap.sim.err.pidMax': 'Isi batas pompa dalam mm per hari.',
   'farmMap.sim.err.pidAbove': 'Tinggi air yang dijaga harus lebih rendah dari pematang.',
+  'farmMap.photo.button': 'Cari lokasi dari foto',
+  'farmMap.photo.hint': 'Membaca tag lokasi foto JPEG yang diambil di ponsel. Tidak ada yang diunggah.',
+  'farmMap.photo.found': 'Lokasi foto {lat}, {lon}',
+  'farmMap.photo.noGps': 'Foto ini tidak punya tag lokasi. Banyak aplikasi menghapusnya saat foto dibagikan; kirim aslinya, atau nyalakan lokasi untuk kamera.',
+  'farmMap.photo.notJpeg': 'Hanya foto JPEG yang membawa tag lokasi yang bisa dibaca di sini.',
+  'farmMap.search.shortLink': 'Tautan pendek Google (maps.app.goo.gl) tidak bisa dibaca di sini. Buka tautannya, lalu salin alamat lengkap dari bilah alamat peramban.',
 };

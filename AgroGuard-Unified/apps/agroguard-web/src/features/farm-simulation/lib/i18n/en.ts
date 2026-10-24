@@ -1067,6 +1067,12 @@ export const EN = {
   'farmMap.sim.err.pidSetpoint': 'Enter a water level to hold, 1 to 30 cm.',
   'farmMap.sim.err.pidMax': 'Enter the pump limit in mm per day.',
   'farmMap.sim.err.pidAbove': 'The water level to hold must be lower than the bund.',
+  'farmMap.photo.button': 'Find a place from a photo',
+  'farmMap.photo.hint': 'Reads the location tag of a JPEG photo taken on your phone. Nothing is uploaded.',
+  'farmMap.photo.found': 'Photo location {lat}, {lon}',
+  'farmMap.photo.noGps': 'This photo has no location tag. Many apps remove it when a photo is shared; send the original, or turn on location for the camera.',
+  'farmMap.photo.notJpeg': 'Only JPEG photos carry a readable location tag here.',
+  'farmMap.search.shortLink': 'Short Google links (maps.app.goo.gl) cannot be read here. Open the link, then copy the full address from the browser\'s address bar.',
 } as const;
 
 export type Key = keyof typeof EN;

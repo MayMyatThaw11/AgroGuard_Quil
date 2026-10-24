@@ -5,12 +5,47 @@ import type { Farm, Poi, PoiType } from './farmMapTypes.ts';
 import type { SearchResult } from './farmMapViewTypes.ts';
 
 const COORDINATES = /^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/;
+const NUMBER = /(-?\d+(?:\.\d+)?)/.source;
+const PIN = new RegExp(`!3d${NUMBER}!4d${NUMBER}`);
+const VIEWPORT = new RegExp(`@${NUMBER},${NUMBER}`);
+const PARAM = new RegExp(`[?&](?:q|ll|query|center|destination)=${NUMBER}(?:,|%2C)(?:%20|\\s)*${NUMBER}`, 'i');
+const DMS = /(\d{1,3})\s*°\s*(?:(\d{1,2})\s*['′]\s*)?(?:(\d{1,2}(?:\.\d+)?)\s*["″]\s*)?([NSEW])/gi;
+const SHORT_LINK = /^https?:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|g\.co\/kgs)\//i;
+
+export function mapLinkProblem(query: string): 'short' | null {
+  return SHORT_LINK.test(query.trim()) ? 'short' : null;
+}
+
+function fromLink(text: string): [number, number] | null {
+  const hit = text.match(PIN) ?? text.match(PARAM) ?? text.match(VIEWPORT);
+  return hit ? [+hit[1], +hit[2]] : null;
+}
+
+function fromDms(text: string): [number, number] | null {
+  const parts = [...text.matchAll(DMS)].map((m) => {
+    const value = +m[1] + (m[2] ? +m[2] / 60 : 0) + (m[3] ? +m[3] / 3600 : 0);
+    return { value: /[SW]/i.test(m[4]) ? -value : value, axis: /[NS]/i.test(m[4]) ? 'lat' : 'lon' };
+  });
+  const lat = parts.find((p) => p.axis === 'lat');
+  const lon = parts.find((p) => p.axis === 'lon');
+  return lat && lon ? [lat.value, lon.value] : null;
+}
+
+function safeDecode(text: string): string {
+  try {
+    return decodeURI(text);
+  } catch {
+    return text;
+  }
+}
 
 export function parseCoordinates(query: string): SearchResult[] | null {
-  const m = query.trim().match(COORDINATES);
-  if (!m) return null;
-  const lat = +m[1];
-  const lon = +m[2];
+  const text = query.trim();
+  if (mapLinkProblem(text)) return [];
+  const plain = text.match(COORDINATES);
+  const found: [number, number] | null = plain ? [+plain[1], +plain[2]] : /^https?:\/\//i.test(text) ? fromLink(safeDecode(text)) : fromDms(text);
+  if (!found) return null;
+  const [lat, lon] = found;
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return [];
   return [{ kind: 'coord', id: 'c', title: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, sub: 'Go to coordinates', lat, lon, score: 0 }];
 }
