@@ -39,6 +39,7 @@ from .. import (
     fleet,
     flows,
     fumigation,
+    harvests,
     jobs,
     knowledge,
     live,
@@ -1955,6 +1956,74 @@ async def parcel_season_run(
     _see(caller, farm_id)
     plan = req.model_dump(mode="json")
     return await asyncio.to_thread(_record_call, season_run.run, farm_id, parcel_id, plan)
+
+
+class HarvestReq(BaseModel):
+    parcel: str = Field(min_length=1, max_length=60)
+    harvested_on: date
+    transplant_date: date | None = None
+    method: Literal["whole_field_weighed", "crop_cut", "mill_receipt"]
+    fresh_kg: float = Field(gt=0, le=10_000_000)
+    moisture_pct: float | None = Field(default=None, ge=5, le=40)
+    cut_area_m2: float | None = Field(default=None, gt=0, le=1_000_000)
+    variety: str | None = Field(default=None, max_length=80)
+    plan: SeasonPlanReq | None = None
+    recorded_by: str = Field(min_length=1, max_length=80)
+
+    @model_validator(mode="after")
+    def _consistent(self) -> HarvestReq:
+        if self.harvested_on > datetime.now(UTC).date():
+            raise ValueError("harvested_on is in the future")
+        if self.method == "crop_cut" and self.cut_area_m2 is None:
+            raise ValueError("a crop cut needs cut_area_m2, the area that was cut")
+        return self
+
+
+@router.get("/farms/{farm_id}/harvests")
+async def farms_harvests(
+    farm_id: str,
+    limit: int = Query(100, ge=1, le=MAX_RECORDS_PAGE),
+    offset: int = Query(0, ge=0),
+    include_voided: bool = False,
+    caller: Caller | None = _READER,
+) -> dict[str, Any]:
+    _see(caller, farm_id)
+    rows = await asyncio.to_thread(harvests.farm_harvests, farm_id, include_voided)
+    return {
+        "farm_id": farm_id,
+        "harvests": rows[offset : offset + limit],
+        "total": len(rows),
+        "offset": offset,
+        "limit": limit,
+    }
+
+
+@router.post("/farms/{farm_id}/harvests")
+async def farms_add_harvest(
+    farm_id: str, req: HarvestReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    _named(caller, req.recorded_by)
+    _own(caller, farm_id)
+    body = req.model_dump(mode="json", exclude={"recorded_by"})
+    return await asyncio.to_thread(_record_call, harvests.record, farm_id, body, req.recorded_by)
+
+
+@router.patch("/farms/{farm_id}/harvests/{harvest_id}")
+async def farms_correct_harvest(
+    farm_id: str, harvest_id: str, req: CorrectReq, caller: Caller = _AS_MANAGER
+) -> dict[str, Any]:
+    return await _correct(caller, farm_id, harvest_id, req, harvests.correct, HarvestReq)
+
+
+@router.delete("/farms/{farm_id}/harvests/{harvest_id}")
+async def farms_void_harvest(
+    farm_id: str,
+    harvest_id: str,
+    reason: str = Query(min_length=1, max_length=200),
+    voided_by: str = Query(min_length=1, max_length=80),
+    caller: Caller = _AS_MANAGER,
+) -> dict[str, Any]:
+    return await _void(caller, farm_id, harvest_id, reason, voided_by, harvests.void)
 
 
 @router.get("/contracts/{farm_id}/site-context")

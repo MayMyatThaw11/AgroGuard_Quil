@@ -8,7 +8,7 @@ import json
 from datetime import date
 from typing import Any
 
-from . import certificates, fumigation, live, lots, safety
+from . import certificates, fumigation, harvests, live, lots, safety
 from .config import get_settings
 from .ledger import get_ledger
 from .onboard import _INPUTS, _banned_match
@@ -91,6 +91,11 @@ def build(
             lot
             for lot in lots.farm_lots_raw(farm_id, include_voided=True)
             if parcel_id in lot["parcels"]
+        ],
+        "harvests": [
+            {**{k: v for k, v in h.items() if k != "plan"}, "plan_recorded": bool(h.get("plan"))}
+            for h in harvests.farm_harvests(farm_id, include_voided=True)
+            if h["parcel"] == parcel_id and _in_season(h["harvested_on"], start, end)
         ],
         "gate_history": gates,
     }
