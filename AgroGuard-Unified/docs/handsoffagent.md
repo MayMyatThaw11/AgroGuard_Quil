@@ -19,7 +19,7 @@ Update this file at every later commit that changes status.
 11. Current-weather effects in the 3D view and on the map, plus a clearly labelled preview picker.
 12. Easy for non-developers: plain language, jargon behind an "About this view" disclosure, a zone note in words beside every heat or frost effect (colour is never the only signal).
 13. A minimal four-step first-use guide, skippable, reopenable from a help button, in all 7 languages (en, fil, id, km, my, th, vi).
-14. Flood risk and above/below sea level shown in the view (design below, not built yet).
+14. Flood risk and above/below sea level shown in the view (built; see Phase status).
 15. Screenshots are shown to the owner only after the gate is green and every bug is fixed: 1440 and 375 px, light and dark, several terrains, weather previews.
 
 ## Phase status
@@ -33,8 +33,8 @@ Update this file at every later commit that changes status.
 | 3b Visual inputs (dial, wheels, tiles, month picker) | done | 2e4bc9a |
 | 4 Neighbourhood capture and 6 environment profile | done | b40eee7 |
 | Hand-off file and screenshot script | done | 702678d |
-| Plain-language HUD and first-use guide (req 12, 13) | done except the water what-if step (added with flood) | see git log |
-| Flood and sea level in the view (req 14) | not started | |
+| Plain-language HUD and first-use guide (req 12, 13) | done (guide has 4 steps) | d52c037 |
+| Flood and sea level in the view (req 14) | done, gate green (663 frontend tests, backend, ruff, typecheck) | see git log |
 | 7 Weather components and map overlay | not started | |
 | 3c Effects catalogue and its test (req 10) | not started | |
 | 8 Performance budgets and notes | not started | |
@@ -74,12 +74,8 @@ Use throwaway data. Never touch the real data folder.
 
 ## Pending work, in order
 
-1. (done) Plain-language HUD and first-use guide: `lib/farmview/plainHud.ts` (terrain words, height line, distance words), `guideSeen.ts`, `FarmViewGuide.tsx` (3 steps now), zone notes in `RollerPicker`, `Day` dial caption, how-to hint in the plan. When the flood what-if lands, add a fourth guide step (water what-if) in all 7 locales. Esc closes the guide before the view. Guide CSS classes use the `aq-fv-guide` prefix because `aq-fm-guide` already belongs to `GuideHud`.
-2. Flood and sea level (req 14).
-   - Plain height line: "{m} m above sea level", "below sea level" (new key) or near sea level; reuse `farmMap.own.aboveSea` and `farmMap.own.nearSea`.
-   - Own farms: call `getRisk(target.id)` (`/contracts/{id}/risk`) and show "Modelled flood risk, next 30 days: {level}" using `FLOOD_WORD`, plus `within_dem_error` and the nearest river. Example farms: no flood risk, only measured elevation facts.
-   - Low-lying note when elevation is at most `SCREENING.lowlandM` and a coast or river is near.
-   - A "what if water stood this deep on the field" wheel (0 to 3 m, step 0.25) driving a translucent plane at `mainBase + depth`. Labelled a what-if, not a forecast.
+1. (done) Plain-language HUD and first-use guide: `lib/farmview/plainHud.ts` (terrain words, height line, distance words), `guideSeen.ts`, `FarmViewGuide.tsx` (4 steps, the fourth is the water what-if), zone notes in `RollerPicker`, `Day` dial caption, how-to hint in the plan. Esc closes the guide before the view. Guide CSS classes use the `aq-fv-guide` prefix because `aq-fm-guide` already belongs to `GuideHud`.
+2. (done) Flood and sea level (req 14): `lib/farmview/flood.ts` (`FLOOD_WORD`, `WHAT_IF` 0 to 3 m step 0.25, `lowLyingNotes` reusing `favors()` watch notes for river and elevation, `waterLevelY`), `components/fieldsim/FloodPanel.tsx` (disclosure "Flood and water": modelled 30-day level for own farms from `useRisk` in `useFarmFacts.ts`, DEM-error note, low-lying notes, what-if `RollerPicker`), and a translucent `WaterPlane` in `FarmView.tsx` at the pad height plus the chosen depth. Example farms get a note that flood risk is modelled for own farms only. The what-if uses 30 m relief, so edges are approximate and it is labelled not a forecast. Tests: `tests/farm-simulation/flood_view.test.ts`. Still to do: re-shoot the 375 px layout with the panel open (HUD `max-height: 55%` and scroll was added but not re-shot).
 3. Weather (phase 7): `Weather.tsx` (rain and drizzle by AMS class, lightning capped at 3 per second, cloud shadows, clouds, fog, wind sway, night), preview picker labelled "Preview, not current weather", `MapWeatherOverlay.tsx` at zoom 9 and above. Data: `useWeatherNow`, `toWeatherNow`, `effectsFor`. Weather labels need i18n (`weatherLabel` is English only). `weatherOf()` in `farmMapWeather.ts` is a hash and must never drive an effect.
 4. Effects catalogue (phase 3c): `lib/inputs/effects.ts` with at least 30 entries `{id, group, trigger, meaning, reducedMotion, lowPower, file}` and a test (count, unique ids, trigger and meaning present, referenced file contains `fx-<id>`). About 20 exist in CSS (wheel: heat-glow, limit-pulse, frost-edge, band-glow, band-bloom, magnetic-snap, elastic-stop, detent-tick, odometer-roll, tile-press; dial: arc-sweep-in, window-breathe, rain-tick-fall, event-pop, comet-trail, heat-haze, water-fill, canopy-fill, day-flip, sun-marker; plus staged-reveal and water-flow in `Neighbourhood.tsx`). To build: click-ripple, field-pulse, hover-lift, map-rain, cloud-shadows, daylight-tint, lightning-flash, haze-depth, wind-sway, rain-ripples, light-shafts, heat-shimmer, check-draw, count-up.
 5. Performance (phase 8): at most 120 draw calls; instance caps (trees 6000 + 8000, rice 4000 per field, weeds 1200), halved under 640 px or `hardwareConcurrency` of 4 or less; dpr 1 on phones. Record frame times only on named real hardware.
@@ -94,14 +90,15 @@ Use throwaway data. Never touch the real data folder.
 - Open-Meteo free tier can return 429 (cache and stale copies cover it) and its licence is non-commercial; decide before commercial use.
 - Two WebGL contexts on phones (MapLibre plus the view). Hide the map canvas while the view is open if memory is short.
 - Apify is not connected in the build environment, so no Apify data is used. It needs authorisation first; do not claim it.
+- Decision support: the farm map is a decision-support layer, not an autopilot. Own-farm decisions (flood level, ground-the-day, water to add) surface in the Open field monitor and Route to market; example farms get facts only. A golden set and regression gate for those own-farm decisions in `verify:farm-map` was proposed and is not built.
 - Native-speaker review is still needed for all new strings in my, vi, th, fil, id, km.
 
 ## File map
 
 Under `apps/agroguard-web/src/features/farm-simulation/`:
 
-- `lib/farmview/`: `farmTarget.ts`, `terrain.ts`, `neighbourhood.ts`, `profile.ts`, `weatherFx.ts`, `fieldLayout.ts`, `seasonField.ts`, `captureOmt.ts`.
-- `components/fieldsim/`: `FarmView.tsx` (entry, camera, HUD), `FieldLayer.tsx`, `fieldKit.ts`, `groundData.ts`, `useGround.ts`, `Neighbourhood.tsx`, `neighbourhoodGeometry.ts`, `OutlineFields.tsx`, `useNeighbourhood.ts`, `useFarmFacts.ts`.
+- `lib/farmview/`: `flood.ts`, `plainHud.ts`, `guideSeen.ts`, `farmTarget.ts`, `terrain.ts`, `neighbourhood.ts`, `profile.ts`, `weatherFx.ts`, `fieldLayout.ts`, `seasonField.ts`, `captureOmt.ts`.
+- `components/fieldsim/`: `FarmView.tsx` (entry, camera, HUD), `FloodPanel.tsx`, `FarmViewGuide.tsx`, `FieldLayer.tsx`, `fieldKit.ts`, `groundData.ts`, `useGround.ts`, `Neighbourhood.tsx`, `neighbourhoodGeometry.ts`, `OutlineFields.tsx`, `useNeighbourhood.ts`, `useFarmFacts.ts`.
 - `components/inputs/`: `RollerPicker.tsx`, `Odometer.tsx`, `ChoiceTiles.tsx`, `SeasonDial.tsx`, `SeasonDayPicker.tsx`. Math in `lib/inputs/` (`dialMath.ts`, `calendar.ts`, `motion.ts`).
 - `components/farmmap/`: `FarmMapView.tsx` (opens and closes the view, restores the camera), `SeasonTimeline.tsx`, `SeasonSection.tsx`, `FarmDetail.tsx`, `OwnFarmDetail.tsx` ("Open 3D view" button).
 - `lib/api.ts`: `getNearestVolcano`, `getWeatherNow`, `getRisk`. `lib/fieldsim/`: `localFrame.ts`, `models.ts` (`TRI_BUDGET`), `replicaTheme.ts`.

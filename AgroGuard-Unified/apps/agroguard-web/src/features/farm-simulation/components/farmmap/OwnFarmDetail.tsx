@@ -11,6 +11,7 @@ import { statusLabel } from '../../lib/farmmap/farmMapText.ts';
 import { activeLocale, tr, useT, type Key } from '../../lib/i18n.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
+import { FLOOD_WORD } from '../../lib/farmview/flood.ts';
 import { OpsForecastChart } from '../ops/OpsForecastChart.tsx';
 import { DetailSection, KV, More, UpdatedLine } from './detailParts.tsx';
 import { FlowView } from './FlowView.tsx';
@@ -67,7 +68,6 @@ const Tile: React.FC<{ label: string; value: string; unit?: string; level: Prove
   </div>
 );
 
-const FLOOD_WORD: Record<'low' | 'watch' | 'high' | 'unknown', Key> = { low: 'farmMap.common.low', watch: 'farmMap.status.watch', high: 'farmMap.common.high', unknown: 'farmMap.status.unknown' };
 
 const pct = (v: number | null | undefined) => (v == null ? '?' : `${Math.round(v * 100)} %`);
 

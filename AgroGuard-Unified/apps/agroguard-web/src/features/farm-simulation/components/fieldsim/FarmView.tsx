@@ -13,6 +13,7 @@ import { sunPosition, weedDensity } from '../../lib/farmview/seasonField.ts';
 import { OMT_ATTRIBUTION } from '../../lib/farmview/captureOmt.ts';
 import { buildProfile, type Chip } from '../../lib/farmview/profile.ts';
 import { HEIGHT_KEY, distanceWord, heightLine, terrainKey } from '../../lib/farmview/plainHud.ts';
+import { lowLyingNotes, waterLevelY } from '../../lib/farmview/flood.ts';
 import { browserStorage, guideSeen, markGuideSeen } from '../../lib/farmview/guideSeen.ts';
 import { FAR_HALF_KM, NEIGHBOURHOOD_HALF_KM, RELIEF_ATTRIBUTION, clampCamera, clearView, fogDensity, heightAt, ringPlan, slopeStats } from '../../lib/farmview/terrain.ts';
 import { nearest, type NearFeature } from '../../lib/farmmap/surroundings.ts';
@@ -27,10 +28,11 @@ import { BUND_WIDTH_M, useFieldTextures } from './fieldKit.ts';
 import { ReplicaModels } from './ReplicaModels.tsx';
 import { useGround, type Patch } from './useGround.ts';
 import { FarmViewGuide } from './FarmViewGuide.tsx';
+import { FloodPanel } from './FloodPanel.tsx';
 import { Neighbourhood } from './Neighbourhood.tsx';
 import { OutlineFields } from './OutlineFields.tsx';
 import { useNeighbourhood, type Capture } from './useNeighbourhood.ts';
-import { useVolcano } from './useFarmFacts.ts';
+import { useRisk, useVolcano } from './useFarmFacts.ts';
 
 const MAX_PLANTS = 4000;
 const MAX_PLANTS_OTHER = 400;
@@ -137,6 +139,13 @@ const CameraLimits: React.FC<{ eye: boolean; groundAt: (x: number, z: number) =>
   return null;
 };
 
+const WaterPlane: React.FC<{ y: number }> = ({ y }) => (
+  <mesh position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={6}>
+    <planeGeometry args={[NEIGHBOURHOOD_HALF_KM * 2000, NEIGHBOURHOOD_HALF_KM * 2000]} />
+    <meshStandardMaterial color={REPLICA_COLOR.water} transparent opacity={0.6} depthWrite={false} roughness={0.2} />
+  </mesh>
+);
+
 const GroundPatches: React.FC<{ patches: readonly Patch[] }> = ({ patches }) => (
   <>
     {patches.map((patch) => (
@@ -166,6 +175,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const detach = useRef<() => void>(() => {});
   const [lost, setLost] = useState(false);
   const [eye, setEye] = useState(false);
+  const [depth, setDepth] = useState(0);
   const [guideOpen, setGuideOpen] = useState(() => !guideSeen(browserStorage()));
   const closeGuide = () => {
     markGuideSeen(browserStorage());
@@ -188,17 +198,25 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const origin = frame?.origin ?? target.centre;
   const volcano = useVolcano(origin.lat, origin.lon);
   const demField = ground.dem.near ?? ground.dem.far;
-  const profile = useMemo(() => {
+  const elevationM = useMemo(() => {
     const elevation = demField ? heightAt(demField, origin.lat, origin.lon) : null;
+    return elevation === null ? null : Math.round(elevation);
+  }, [demField, origin.lat, origin.lon]);
+  const nearHits = useMemo(() => {
     const features: NearFeature[] = hood.features.map((f) => ({ layer: f.layer, cls: f.cls ?? '', name: f.name, ele: typeof f.props.ele === 'number' ? f.props.ele : null, geometry: f.geometry }));
+    return nearest(origin.lat, origin.lon, features, NEIGHBOURHOOD_HALF_KM);
+  }, [origin.lat, origin.lon, hood.features]);
+  const risk = useRisk(target.id, target.kind === 'own');
+  const floodNotes = useMemo(() => lowLyingNotes(nearHits, elevationM), [nearHits, elevationM]);
+  const profile = useMemo(() => {
     return buildProfile({
-      elevationM: elevation === null ? null : Math.round(elevation),
+      elevationM,
       slope: demField ? slopeStats(demField, origin.lat, origin.lon, NEIGHBOURHOOD_HALF_KM * 1000) : null,
-      nearest: nearest(origin.lat, origin.lon, features, NEIGHBOURHOOD_HALF_KM),
+      nearest: nearHits,
       volcano: volcano.status === 'ready' && volcano.value.volcano && volcano.value.km !== null ? { km: volcano.value.km, name: volcano.value.volcano.name } : null,
       volcanoPeak: hood.data?.volcano != null,
     });
-  }, [demField, origin.lat, origin.lon, hood.features, hood.data, volcano]);
+  }, [demField, elevationM, nearHits, origin.lat, origin.lon, hood.data, volcano]);
 
   const run = season?.run;
   const plan = season ? run?.years[season.year]?.plan : undefined;
@@ -292,6 +310,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           <directionalLight position={lightPos} intensity={sun.elevationDeg > -6 ? 2.2 : 0.5} color={sun.elevationDeg < 12 ? REPLICA_COLOR.sunLow : REPLICA_COLOR.sunDay} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-framing.span} shadow-camera-right={framing.span} shadow-camera-top={framing.span} shadow-camera-bottom={-framing.span} shadow-camera-far={900} />
           <GroundPatches patches={ground.patches} />
           {hood.data && ground.status !== 'loading' ? <Neighbourhood data={hood.data} groundAt={ground.groundAt} profile={profile} seed={target.id} /> : null}
+          {depth > 0 ? <WaterPlane y={waterLevelY(mainBase, depth)} /> : null}
           {outlined ? <OutlineFields rings={placed.map((p) => p.ring)} groundAt={ground.groundAt} /> : null}
           {(outlined ? [] : layouts).map(({ placed: p, layout, seasonal }) => {
             const stage: RiceStage | null = seasonal ? stageForDvs(dvs) : riceStageFromName(p.field.stage);
@@ -361,6 +380,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
             <span>{t('farmMap.replica.flat')}</span>
           </div>
         </details>
+        <FloodPanel own={target.kind === 'own'} risk={risk} notes={floodNotes} depth={depth} onDepth={setDepth} />
       </div>
       <div className="aq-fm-replica-credits">
         {hood.data ? <span>{OMT_ATTRIBUTION}</span> : null}

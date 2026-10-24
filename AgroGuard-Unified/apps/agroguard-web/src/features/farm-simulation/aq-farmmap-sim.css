@@ -376,7 +376,7 @@
   display: grid;
   place-items: center;
   padding: var(--aq-space-4);
-  background: rgba(20, 30, 25, 0.38);
+  background: color-mix(in srgb, var(--aq-stone-900) 40%, transparent);
 }
 
 .aq-fv-guide-card {
@@ -450,7 +450,7 @@
 
 @media (max-width: 639px) {
   .aq-fm-replica { right: 0; border-radius: 0; }
-  .aq-fm-replica-hud { top: calc(var(--aq-space-4) + 52px); max-width: calc(100% - 2 * var(--aq-space-4)); font-size: 11px; }
+  .aq-fm-replica-hud { top: calc(var(--aq-space-4) + 52px); max-width: calc(100% - 2 * var(--aq-space-4)); max-height: 55%; overflow-y: auto; font-size: 11px; }
   .aq-fm-replica-view-label { display: none; }
   .aq-fm-replica-credits { bottom: 64px; }
 }
@@ -496,4 +496,17 @@
 @media (max-width: 639px) {
   .aq-fm-sim-body { flex-direction: column; align-items: stretch; }
   .aq-fm-sim-body .aq-dial { align-self: center; }
+}
+
+.aq-fm-replica-flood p {
+  margin: 0;
+}
+
+.aq-fm-note.is-strong {
+  color: var(--aq-text-strong);
+  font-weight: 600;
+}
+
+.aq-fm-note.is-strong[data-level='high'] {
+  color: var(--aq-clay-700);
 }

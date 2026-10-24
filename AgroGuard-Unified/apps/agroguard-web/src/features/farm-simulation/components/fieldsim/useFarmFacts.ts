@@ -1,4 +1,4 @@
-import { getNearestVolcano, getWeatherNow, type VolcanoNear, type WeatherNowEnvelope } from '../../lib/api.ts';
+import { getNearestVolcano, getRisk, getWeatherNow, type FarmRisk, type VolcanoNear, type WeatherNowEnvelope } from '../../lib/api.ts';
 import { useLoaded, type Loaded } from '../../lib/farmmap/farmLive.ts';
 
 const WEATHER_TTL_MS = 10 * 60 * 1000;
@@ -30,4 +30,8 @@ export function useWeatherNow(lat: number, lon: number): Loaded<WeatherNowEnvelo
     weatherCache.set(key, { at: Date.now(), value });
     return value;
   }, [lat, lon]);
+}
+
+export function useRisk(farmId: string, enabled: boolean): Loaded<FarmRisk | null> {
+  return useLoaded(() => (enabled ? getRisk(farmId) : Promise.resolve(null)), [farmId, enabled]);
 }

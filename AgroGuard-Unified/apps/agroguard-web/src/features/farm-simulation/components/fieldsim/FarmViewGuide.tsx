@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CornerUpLeft, Layers, Move3d, type LucideIcon } from 'lucide-react';
+import { CornerUpLeft, Layers, Move3d, Waves, type LucideIcon } from 'lucide-react';
 import { useT, type Key } from '../../lib/i18n.ts';
 
 interface Step {
@@ -11,6 +11,7 @@ interface Step {
 const STEPS: readonly Step[] = [
   { Icon: Move3d, title: 'farmMap.farmView.guide.look.title', body: 'farmMap.farmView.guide.look.body' },
   { Icon: Layers, title: 'farmMap.farmView.guide.land.title', body: 'farmMap.farmView.guide.land.body' },
+  { Icon: Waves, title: 'farmMap.farmView.guide.water.title', body: 'farmMap.farmView.guide.water.body' },
   { Icon: CornerUpLeft, title: 'farmMap.farmView.guide.leave.title', body: 'farmMap.farmView.guide.leave.body' },
 ];
 
