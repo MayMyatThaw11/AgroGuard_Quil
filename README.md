@@ -15,6 +15,15 @@ Two folders, published together:
   landing-page gateway this workspace's own `gateway/` superseded. Kept for
   reference; not part of the active startup path.
 
+## Autonomous Backend Architecture & Agent Specification
+
+For Claude and autonomous agents building or extending the backend:
+- Read **[`agentsupport.md`](agentsupport.md)** — the unified technical specification covering:
+  - **Obsidian-Style Local-First File Backend**: Plain Markdown entity database, YAML front matter schema, and `AGENTS.md` context control.
+  - **Multi-Agent Council Protocol**: Deterministic veto gates for Lou (telemetry), Alpha (agronomy), and Qill (3x ROI ceiling).
+  - **Neural Network Training & CV Pipeline**: MobileNetV3/YOLO disease detection, unsupervised Isolation Forest OOD filtering, and ONNX edge runtime export.
+  - **BigQuery AI/ML Integration**: SQL-based `AI.FORECAST`, `AI.DETECT_ANOMALIES`, and `VECTOR_SEARCH` cloud analytics.
+
 ## Recreating the Farm Simulation (AgriQill) backend environment
 
 `AgroGuard-Unified/backend/agriquill` has no committed virtual environment
