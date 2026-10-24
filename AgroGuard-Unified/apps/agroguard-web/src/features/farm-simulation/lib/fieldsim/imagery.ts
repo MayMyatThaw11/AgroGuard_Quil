@@ -7,8 +7,8 @@ export interface BBox {
   maxLon: number;
 }
 
-const tileX = (lon: number, z: number) => ((lon + 180) / 360) * 2 ** z;
-const tileY = (lat: number, z: number) => {
+export const tileX = (lon: number, z: number) => ((lon + 180) / 360) * 2 ** z;
+export const tileY = (lat: number, z: number) => {
   const r = (lat * Math.PI) / 180;
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** z;
 };
