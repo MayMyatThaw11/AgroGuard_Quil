@@ -75,7 +75,7 @@ from ..data import (
     regions,
 )
 from ..data.soil import fetch_soil
-from ..data.weather import fetch_weather, issued_rain
+from ..data.weather import fetch_current, fetch_weather, issued_rain
 from ..ledger import Ledger, get_ledger
 from ..store import RecordConflict
 
@@ -321,6 +321,24 @@ async def territory_profile(
         "latency_ms": elapsed_ms,
         "cached_target_ms": 800,
     }
+
+
+@router.get("/weather/now")
+async def weather_now(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    caller: Caller = _CALLER,
+) -> dict[str, Any]:
+    return await asyncio.to_thread(fetch_current, lat, lon)
+
+
+@router.get("/volcano/nearest")
+async def volcano_nearest(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    caller: Caller = _CALLER,
+) -> dict[str, Any]:
+    return await asyncio.to_thread(sitecontext.volcano_near, lat, lon)
 
 
 class LintReq(BaseModel):

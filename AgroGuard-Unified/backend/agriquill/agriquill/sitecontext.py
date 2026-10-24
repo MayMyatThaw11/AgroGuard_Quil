@@ -16,7 +16,7 @@ from . import crops
 from .cache import TTLCache
 from .config import get_settings
 from .resilience import Breaker, CircuitOpen, guarded
-from .store import RecordCache, log_fetch, now_iso, sha256, source_ref
+from .store import RecordCache, log_fetch, missing, now_iso, sha256, source_ref
 
 Point = tuple[float, float]
 
@@ -400,6 +400,40 @@ def nearest_volcano(points: Sequence[Point], pack: Mapping[str, Any]) -> dict[st
     if best is None:
         raise ValueError("no sample points")
     return {"km": round(best[0], 1), "volcano": best[1], "spread_km": _spread(per_point)}
+
+
+def volcano_near(lat: float, lon: float) -> dict[str, Any]:
+    pack = load_volcanoes()
+    if pack is None:
+        return {
+            "volcano": None,
+            "km": None,
+            "missing": [missing("volcano", "GVP volcano pack missing: run job gvp_volcano_sync")],
+            "source": None,
+        }
+    box, margin = pack["box"], pack["box"]["margin_deg"]
+    if not (
+        box["south"] - margin <= lat <= box["north"] + margin
+        and box["west"] - margin <= lon <= box["east"] + margin
+    ):
+        return {
+            "volcano": None,
+            "km": None,
+            "missing": [missing("volcano", "place lies outside the packed ASEAN box and margin")],
+            "source": None,
+        }
+    hit = nearest_volcano([(lat, lon)], pack)
+    return {
+        "volcano": hit["volcano"],
+        "km": hit["km"],
+        "missing": [],
+        "source": {
+            "provider": GVP,
+            "url": pack["source_url"],
+            "retrieved_at": pack["fetched_at"],
+            "sha256": pack["sha256"],
+        },
+    }
 
 
 def sync_volcanoes(client: httpx.Client | None = None, out: Path = VOLCANO_PACK) -> dict[str, Any]:

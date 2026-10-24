@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     http_timeout_s: float = 30.0
     soil_cache_ttl_s: float = 180 * 24 * 3600.0
     weather_cache_ttl_s: float = 3600.0
+    weather_now_ttl_s: float = 900.0
     sim_day_count: int = 120
     wind_ceiling_ms: float = 5.5
     spray_wind_advisory_ms: float = 3.0

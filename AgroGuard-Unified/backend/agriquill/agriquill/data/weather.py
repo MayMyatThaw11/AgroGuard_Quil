@@ -180,6 +180,122 @@ def fetch_hourly(
     return through("openmeteo_hourly", key, fresh, fetch)
 
 
+CURRENT = (
+    "temperature_2m",
+    "relative_humidity_2m",
+    "precipitation",
+    "rain",
+    "weather_code",
+    "cloud_cover",
+    "wind_speed_10m",
+    "wind_direction_10m",
+    "wind_gusts_10m",
+    "is_day",
+    "visibility",
+)
+CURRENT_UNITS = {
+    "temperature_2m": "°C",
+    "precipitation": "mm",
+    "wind_speed_10m": "m/s",
+    "wind_gusts_10m": "m/s",
+}
+CURRENT_PROVIDER = "Open-Meteo forecast API (current conditions)"
+OPENMETEO_LICENCE = "Open-Meteo free API is non-commercial; commercial use needs a subscription"
+
+
+def parse_current(raw: dict[str, Any]) -> dict[str, Any]:
+    block = raw["current"]
+    units = raw.get("current_units", {})
+    for name, unit in CURRENT_UNITS.items():
+        if units.get(name) != unit:
+            raise ValueError(f"{name} unit {units.get(name)!r}, expected {unit!r}")
+    values = {name: block.get(name) for name in CURRENT}
+    return {
+        "current": values,
+        "units": {name: units.get(name) for name in CURRENT},
+        "time": block["time"],
+        "interval_s": block.get("interval"),
+        "timezone": raw.get("timezone"),
+        "utc_offset_seconds": raw.get("utc_offset_seconds", 0),
+        "elevation_m": raw.get("elevation"),
+        "missing": [
+            missing(name, "not reported by Open-Meteo for this place and time")
+            for name, value in values.items()
+            if value is None
+        ],
+    }
+
+
+def _current_envelope(
+    parsed: dict[str, Any], url: str, retrieved_at: str, meta: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        "provider": CURRENT_PROVIDER,
+        "provenance": "RETRIEVED",
+        **parsed,
+        "stale": meta["stale"],
+        "licence": OPENMETEO_LICENCE,
+        "source": source_ref(CURRENT_PROVIDER, url, retrieved_at, meta["sha256"]),
+    }
+
+
+def fetch_current(lat: float, lon: float, client: httpx.Client | None = None) -> dict[str, Any]:
+    s = get_settings()
+    lat2, lon2 = round(lat, 2), round(lon, 2)
+    params = {
+        "latitude": str(lat2),
+        "longitude": str(lon2),
+        "current": ",".join(CURRENT),
+        "wind_speed_unit": "ms",
+        "timezone": "auto",
+    }
+    key = f"{lat2}:{lon2}"
+    url = str(httpx.URL(s.openmeteo_endpoint, params=params))
+
+    def fresh() -> dict[str, Any] | None:
+        cached = _RECORDS.get("openmeteo_current", key)
+        if cached and not cached["stale"]:
+            return _current_envelope(
+                cached["payload"], cached["url"], cached["retrieved_at"], cached
+            )
+        return None
+
+    def fetch() -> dict[str, Any]:
+        cached = _RECORDS.get("openmeteo_current", key)
+        try:
+            own = client or httpx.Client(
+                timeout=s.http_timeout_s, transport=obs.TimedTransport("open-meteo")
+            )
+            try:
+                response = own.get(s.openmeteo_endpoint, params=params)
+                response.raise_for_status()
+            finally:
+                if client is None:
+                    own.close()
+            parsed = parse_current(response.json())
+        except (httpx.HTTPError, ValueError, KeyError) as exc:
+            detail = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
+            reason = f"Open-Meteo unavailable: {detail}"
+            if cached:
+                out = _current_envelope(
+                    cached["payload"], cached["url"], cached["retrieved_at"], cached
+                )
+                out["stale_reason"] = reason
+                return out
+            return {
+                "provider": CURRENT_PROVIDER,
+                "current": None,
+                "missing": [missing("current", reason)],
+                "source": None,
+            }
+        digest = sha256(response.content)
+        _RECORDS.put("openmeteo_current", key, parsed, url, digest, s.weather_now_ttl_s)
+        log_fetch("openmeteo_current", key, digest)
+        return _current_envelope(parsed, url, now_iso(), {"sha256": digest, "stale": False})
+
+    return through("openmeteo_current", key, fresh, fetch)
+
+
 ARCHIVE_ENDPOINT = "https://archive-api.open-meteo.com/v1/archive"
 ARCHIVE_PROVIDER = "Open-Meteo historical weather API (hourly reanalysis)"
 
