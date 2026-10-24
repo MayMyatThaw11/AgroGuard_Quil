@@ -63,6 +63,7 @@
   --aq-text-faint: var(--aq-stone-400);
   --aq-text-on-accent: #ffffff;
   --aq-accent: var(--aq-leaf-500);
+  --aq-accent-fill: var(--aq-leaf-700);
   --aq-accent-hover: var(--aq-leaf-600);
   --aq-accent-press: var(--aq-leaf-700);
   --aq-accent-tint: var(--aq-leaf-100);

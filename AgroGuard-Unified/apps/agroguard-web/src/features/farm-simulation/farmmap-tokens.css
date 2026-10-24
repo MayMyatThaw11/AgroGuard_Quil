@@ -55,6 +55,12 @@
     min-height: 44px;
   }
 
+  .aq-root.aq-farmmap select.aq-input,
+  .aq-root.aq-farmmap input.aq-input,
+  .aq-root.aq-farmmap .aq-fm-select {
+    min-height: 44px;
+  }
+
   .aq-root.aq-farmmap .aq-fm-close {
     right: 56px;
   }

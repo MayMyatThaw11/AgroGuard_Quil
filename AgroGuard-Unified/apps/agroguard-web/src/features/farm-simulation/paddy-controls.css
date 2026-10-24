@@ -30,17 +30,17 @@
 }
 
 .aq-btn-primary {
-  background: var(--aq-accent);
+  background: var(--aq-accent-fill);
   color: var(--aq-text-on-accent);
   box-shadow: var(--aq-shadow-sm);
 }
 
 .aq-btn-primary:hover:not(:disabled) {
-  background: var(--aq-accent-hover);
+  background: var(--aq-leaf-800);
 }
 
 .aq-btn-primary:active:not(:disabled) {
-  background: var(--aq-accent-press);
+  background: var(--aq-leaf-800);
 }
 
 .aq-btn-secondary {
@@ -131,7 +131,7 @@
 
 .aq-badge.is-water {
   background: var(--aq-water-100);
-  color: var(--aq-water-500);
+  color: var(--aq-sky-500);
 }
 
 .aq-input-wrap {

@@ -823,5 +823,5 @@ textarea::placeholder {
 .provenance-modelled { background: var(--status-simulated-bg); color: var(--status-simulated); border-color: var(--status-simulated); }
 .provenance-inferred { background: var(--status-warning-bg); color: var(--status-warning); border-color: var(--status-warning); }
 .provenance-fixture { background: var(--surface-hover); color: var(--text-tertiary); border-color: var(--border-strong); }
-.provenance-unavailable { background: transparent; color: var(--text-disabled); border-color: var(--border-default); }
+.provenance-unavailable { background: transparent; color: var(--text-tertiary); border-color: var(--border-default); }
 
