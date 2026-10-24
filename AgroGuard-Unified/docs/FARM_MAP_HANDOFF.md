@@ -2,6 +2,8 @@
 
 The farm map feature (code name AgriQill) runs on branch `farm-simulation`. The full plan is in BUILD_PLAN_BACKEND.md and BUILD_PLAN_FRONTEND.md at the workspace root. Agent rules are in `AGENTS.md` and `CLAUDE.md`. The phase gate is `npm run verify:farm-map`, together with the `verify` skill.
 
+For the farm view work (single-farm 3D view, neighbourhood, weather, visual inputs), read `docs/handsoffagent.md` first.
+
 ## Done
 - **Phase A** (435b056): your onboarded farm on the farm map.
   - minimal panel with an honest status
