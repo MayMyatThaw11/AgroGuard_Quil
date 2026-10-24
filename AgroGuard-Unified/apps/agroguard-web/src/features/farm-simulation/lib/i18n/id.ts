@@ -1121,4 +1121,7 @@ export const ID: Dictionary = {
   'farmMap.harvest.recordSeason': 'Catat panen musim ini',
   'farmMap.harvest.season.measured': 'Panen Anda: {engine} galat rata-rata {abs} %, musim yang dinilai: {n}',
   'farmMap.harvest.season.scored': 'Dinilai terhadap panen tercatat; model tetap belum dikalibrasi.',
+  'farmMap.replica.eye': 'Berdiri di pematang',
+  'farmMap.replica.overview': 'Gambaran umum',
+  'farmMap.replica.plantSize': 'Ukuran tanaman hanya ilustrasi: fase dan tutupan mengikuti model, tinggi tidak.',
 };

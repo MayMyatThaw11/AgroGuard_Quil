@@ -1,8 +1,8 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Canvas, useFrame, type RootState } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, type RootState } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
-import { X } from 'lucide-react';
+import { Eye, Map as MapIcon, X } from 'lucide-react';
 import type { SeasonEvent, SeasonReplay } from '../../lib/api.ts';
 import { SAT_ATTRIBUTION, SAT_MAX_ZOOM } from '../../lib/farmmap/basemapTheme.ts';
 import { engineDays } from '../../lib/farmmap/seasonPlayback.ts';
@@ -18,6 +18,7 @@ import { CanvasErrorBoundary } from '../farm3d/CanvasErrorBoundary.tsx';
 const DRACO = '/draco/';
 const BUND_WIDTH_M = 0.5;
 const MAX_PLANTS = 4000;
+const EYE_HEIGHT_M = 1.6;
 const MAX_WEEDS = 1200;
 const LOD1_ABOVE = 2500;
 const TEXTURE = { mud: '/models/farmmap/mud_wet.jpg', dry: '/models/farmmap/soil_dry.jpg', clay: '/models/farmmap/bund_clay.jpg' };
@@ -144,6 +145,29 @@ const Plants: React.FC<{ stage: RiceStage; lod: 0 | 1; points: readonly XZ[]; sc
   );
 };
 
+interface ViewControls {
+  target: THREE.Vector3;
+  update: () => void;
+}
+
+const ViewPreset: React.FC<{ eye: boolean; ring: readonly XZ[]; extent: number }> = ({ eye, ring, extent }) => {
+  const camera = useThree((state) => state.camera);
+  const controls = useThree((state) => state.controls) as ViewControls | null;
+  useEffect(() => {
+    if (!controls) return;
+    if (eye) {
+      const corner = ring.reduce((best, p) => (p[0] + p[1] > best[0] + best[1] ? p : best));
+      camera.position.set(corner[0], EYE_HEIGHT_M, corner[1]);
+      controls.target.set(0, EYE_HEIGHT_M * 0.4, 0);
+    } else {
+      camera.position.set(extent * 0.55, extent * 0.6, extent * 0.9);
+      controls.target.set(0, 0, 0);
+    }
+    controls.update();
+  }, [eye, ring, extent, camera, controls]);
+  return null;
+};
+
 const Instanced: React.FC<{ geometry: THREE.BufferGeometry; material: THREE.Material; points: readonly XZ[]; scale: number }> = ({ geometry, material, points, scale }) => {
   const ref = useRef<THREE.InstancedMesh>(null);
   useEffect(() => {
@@ -236,6 +260,7 @@ export const FieldReplica: React.FC<FieldReplicaProps> = ({ run, year, day, boun
   const plan = run.years[year]?.plan;
   const row = engineDays(run, year, 'own')[day];
   const [lost, setLost] = useState(false);
+  const [eye, setEye] = useState(false);
   const detach = useRef<() => void>(() => {});
 
   const layout = useMemo(() => {
@@ -345,13 +370,19 @@ export const FieldReplica: React.FC<FieldReplicaProps> = ({ run, year, day, boun
               <meshBasicMaterial color={REPLICA_COLOR.mist} transparent opacity={0.28} depthWrite={false} />
             </mesh>
           ) : null}
-          <OrbitControls target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.1} minDistance={ext * 0.1} maxDistance={ext * 4} />
+          <OrbitControls makeDefault target={[0, 0, 0]} maxPolarAngle={eye ? Math.PI / 2 : Math.PI / 2.1} minDistance={eye ? 1 : ext * 0.1} maxDistance={ext * 4} />
+          <ViewPreset eye={eye} ring={layout.ring} extent={ext} />
         </Canvas>
       </CanvasErrorBoundary>
       <button type="button" className="aq-icon-btn aq-fm-replica-close" aria-label={t('farmMap.replica.close')} onClick={onClose}><X size={16} aria-hidden="true" /></button>
+      <button type="button" className="aq-btn aq-btn-secondary aq-fm-replica-view" aria-pressed={eye} onClick={() => setEye((v) => !v)}>
+        {eye ? <MapIcon size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
+        {eye ? t('farmMap.replica.overview') : t('farmMap.replica.eye')}
+      </button>
       <div className="aq-fm-replica-hud" role="status">
         <b>{row?.date ?? '—'} · {t(`farmMap.replica.stage.${stage}` as 'farmMap.replica.stage.seedling')}</b>
         <span>{t('farmMap.replica.water', { mm: Math.round(ponded), bund: Math.round(bundM * 1000) })}</span>
+        <span>{t('farmMap.replica.plantSize')}</span>
         {plan.trench && plan.fish ? <span>{t('farmMap.replica.trench', { depth: plan.trench.depth_cm, width: plan.trench.width_cm })}</span> : null}
         <span>{t('farmMap.replica.design', { bund: plan.bund_height_cm })}</span>
         <span>{t('farmMap.replica.spacing', { display: layout.spacing.toFixed(2), real: layout.real ? layout.real.toFixed(2) : '—' })}</span>

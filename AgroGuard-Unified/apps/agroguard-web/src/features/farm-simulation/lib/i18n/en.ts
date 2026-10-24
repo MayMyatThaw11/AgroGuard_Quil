@@ -1120,6 +1120,9 @@ export const EN = {
   'farmMap.harvest.recordSeason': 'Record this season\'s harvest',
   'farmMap.harvest.season.measured': 'Your harvests: {engine} {abs} % mean error, seasons scored: {n}',
   'farmMap.harvest.season.scored': 'Scored against your recorded harvests; the engines stay uncalibrated.',
+  'farmMap.replica.eye': 'Stand on the bund',
+  'farmMap.replica.overview': 'Overview',
+  'farmMap.replica.plantSize': 'Plant size is illustrative: stage and cover follow the model, height does not.',
 } as const;
 
 export type Key = keyof typeof EN;

@@ -1121,4 +1121,7 @@ export const TH: Dictionary = {
   'farmMap.harvest.recordSeason': 'บันทึกการเก็บเกี่ยวของฤดูนี้',
   'farmMap.harvest.season.measured': 'การเก็บเกี่ยวของคุณ: {engine} คลาดเคลื่อนเฉลี่ย {abs} % จำนวนฤดูที่ให้คะแนน: {n}',
   'farmMap.harvest.season.scored': 'ให้คะแนนจากการเก็บเกี่ยวที่บันทึกไว้ โมเดลยังไม่ได้ปรับเทียบ',
+  'farmMap.replica.eye': 'ยืนบนคันนา',
+  'farmMap.replica.overview': 'ภาพรวม',
+  'farmMap.replica.plantSize': 'ขนาดต้นข้าวเป็นภาพประกอบ: ระยะและความหนาแน่นตามโมเดล แต่ความสูงไม่ใช่',
 };

@@ -1121,4 +1121,7 @@ export const FIL: Dictionary = {
   'farmMap.harvest.recordSeason': 'Itala ang ani ng panahong ito',
   'farmMap.harvest.season.measured': 'Mga ani mo: {engine} karaniwang error na {abs} %, mga panahong namarkahan: {n}',
   'farmMap.harvest.season.scored': 'Namarkahan laban sa mga naitalang ani; hindi pa naka-calibrate ang mga makina.',
+  'farmMap.replica.eye': 'Tumayo sa pilapil',
+  'farmMap.replica.overview': 'Pangkalahatang tanaw',
+  'farmMap.replica.plantSize': 'Ilustrasyon lang ang laki ng halaman: sinusunod ng modelo ang yugto at takip, hindi ang taas.',
 };

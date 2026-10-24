@@ -1121,4 +1121,7 @@ export const VI: Dictionary = {
   'farmMap.harvest.recordSeason': 'Ghi thu hoạch của vụ này',
   'farmMap.harvest.season.measured': 'Vụ của bạn: {engine} sai số trung bình {abs} %, số vụ đã chấm: {n}',
   'farmMap.harvest.season.scored': 'Đã chấm theo các vụ thu hoạch đã ghi; các mô hình vẫn chưa hiệu chỉnh.',
+  'farmMap.replica.eye': 'Đứng trên bờ',
+  'farmMap.replica.overview': 'Toàn cảnh',
+  'farmMap.replica.plantSize': 'Kích thước cây chỉ minh họa: giai đoạn và độ phủ theo mô hình, chiều cao thì không.',
 };

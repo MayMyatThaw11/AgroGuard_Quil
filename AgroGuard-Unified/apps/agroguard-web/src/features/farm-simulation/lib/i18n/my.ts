@@ -1121,4 +1121,7 @@ export const MY: Dictionary = {
   'farmMap.harvest.recordSeason': 'ဤရာသီ၏ ရိတ်သိမ်းမှုကို မှတ်တမ်းတင်ရန်',
   'farmMap.harvest.season.measured': 'သင့်ရိတ်သိမ်းမှုများ: {engine} ပျမ်းမျှအမှား {abs} %၊ အမှတ်ပေးပြီးသော ရာသီအရေအတွက်: {n}',
   'farmMap.harvest.season.scored': 'မှတ်တမ်းတင်ထားသော ရိတ်သိမ်းမှုများဖြင့် အမှတ်ပေးပြီး၊ မော်ဒယ်များ ချိန်ညှိမထားသေးပါ။',
+  'farmMap.replica.eye': 'ကန်သင်းပေါ်တွင် ရပ်ရန်',
+  'farmMap.replica.overview': 'ခြုံငုံမြင်ကွင်း',
+  'farmMap.replica.plantSize': 'စပါးပင်အရွယ်အစားသည် သရုပ်ပြသာဖြစ်သည်၊ အဆင့်နှင့် ဖုံးလွှမ်းမှုသည် မော်ဒယ်အတိုင်းဖြစ်ပြီး အမြင့်မဟုတ်ပါ။',
 };

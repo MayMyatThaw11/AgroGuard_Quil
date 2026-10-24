@@ -1121,4 +1121,7 @@ export const KM: Dictionary = {
   'farmMap.harvest.recordSeason': 'កត់ត្រាការប្រមូលផលរដូវនេះ',
   'farmMap.harvest.season.measured': 'ការប្រមូលផលរបស់អ្នក៖ {engine} កំហុសមធ្យម {abs} % ចំនួនរដូវដែលបានផ្តល់ពិន្ទុ៖ {n}',
   'farmMap.harvest.season.scored': 'បានផ្តល់ពិន្ទុតាមការប្រមូលផលដែលបានកត់ត្រា ម៉ូដែលនៅតែមិនទាន់ក្រិត។',
+  'farmMap.replica.eye': 'ឈរលើដងស្រែ',
+  'farmMap.replica.overview': 'ទិដ្ឋភាពទូទៅ',
+  'farmMap.replica.plantSize': 'ទំហំដើមស្រូវជាតែរូបភាពបង្ហាញ៖ ដំណាក់កាលនិងគម្របតាមម៉ូដែល ប៉ុន្តែកម្ពស់មិនមែនទេ។',
 };
