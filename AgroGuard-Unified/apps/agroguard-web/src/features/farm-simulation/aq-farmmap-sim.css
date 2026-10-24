@@ -363,3 +363,21 @@
 @media (prefers-reduced-motion: reduce) {
   .aq-fm-replica-load svg { animation: none; }
 }
+
+.aq-fm-sim-body {
+  display: flex;
+  gap: var(--aq-space-8);
+  align-items: center;
+}
+
+.aq-fm-sim-side {
+  display: grid;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: var(--aq-space-4);
+}
+
+@media (max-width: 639px) {
+  .aq-fm-sim-body { flex-direction: column; align-items: stretch; }
+  .aq-fm-sim-body .aq-dial { align-self: center; }
+}

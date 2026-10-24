@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Box, Play, Plus, Scale, Trash2 } from 'lucide-react';
+import { Box, Droplets, FlaskConical, Gauge, Hand, Play, Plus, Repeat, Scale, SprayCan, Sprout, Trash2, Waves } from 'lucide-react';
 import { runSeason, type HarvestScore, type SeasonEvent, type SeasonReplay } from '../../lib/api.ts';
 import { ApiError, failedText } from '../../lib/apiError.ts';
 import type { ContractParcel } from '../../lib/contractFarm.ts';
@@ -8,6 +8,10 @@ import { ENGINE_LABEL, series } from '../../lib/farmmap/seasonPlayback.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
+import type { Band } from '../../lib/inputs/dialMath.ts';
+import { ChoiceTiles } from '../inputs/ChoiceTiles.tsx';
+import { RollerPicker, type Limit } from '../inputs/RollerPicker.tsx';
+import { SeasonDayPicker } from '../inputs/SeasonDayPicker.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
 import { SeasonChart } from './SeasonChart.tsx';
 import type { HarvestPrefill } from './HarvestRecords.tsx';
@@ -16,15 +20,50 @@ type Kind = SeasonEvent['kind'];
 const KINDS: Kind[] = ['irrigate', 'fertiliser', 'spray', 'weed', 'weed_emergence'];
 const t1 = (n: number) => (n / 1000).toLocaleString(activeLocale(), { maximumFractionDigits: 1 });
 
-const NumberField: React.FC<{ label: string; value: number | null; onChange: (v: number | null) => void; hint?: string; step?: number }> = ({ label, value, onChange, hint, step = 1 }) => (
-  <label className="aq-fm-trace-field">
-    <span className="aq-fm-kv-key">{label}</span>
-    <span className="aq-input-wrap">
-      <input className="aq-input" type="number" inputMode="decimal" step={step} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))} />
-    </span>
-    {hint ? <span className="aq-fm-note">{hint}</span> : null}
-  </label>
+interface NumberFieldProps {
+  label: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  hint?: string;
+  step?: number;
+  min?: number;
+  max?: number;
+  unit?: string;
+  big?: number;
+  band?: Band;
+  ceiling?: Limit;
+}
+
+const NumberField: React.FC<NumberFieldProps> = ({ label, value, onChange, hint, step = 1, min = 0, max = 1000, unit = '', big, band, ceiling }) => (
+  <RollerPicker label={label} unit={unit} value={value} min={min} max={max} step={step} big={big} band={band} ceiling={ceiling} hint={hint} onChange={onChange} onClear={() => onChange(null)} />
 );
+
+const EVENT_RANGE: Record<string, { max: number; step: number; unit: string }> = {
+  mm: { max: 300, step: 5, unit: 'mm' },
+  rate_kg_ha: { max: 600, step: 5, unit: 'kg/ha' },
+  n_pct: { max: 100, step: 1, unit: '%' },
+  rate_g_ai_ha: { max: 5000, step: 25, unit: 'g a.i./ha' },
+  dt50_days: { max: 200, step: 1, unit: 'd' },
+  phi_days: { max: 120, step: 1, unit: 'd' },
+  removed_pct: { max: 100, step: 5, unit: '%' },
+  density_m2: { max: 2000, step: 10, unit: '/m²' },
+  cousens_i: { max: 100, step: 0.5, unit: '%' },
+  cousens_a: { max: 100, step: 0.5, unit: '%' },
+};
+
+const KIND_ICON: Record<SeasonEvent['kind'], React.ReactNode> = {
+  irrigate: <Droplets size={15} />,
+  fertiliser: <FlaskConical size={15} />,
+  spray: <SprayCan size={15} />,
+  weed: <Hand size={15} />,
+  weed_emergence: <Sprout size={15} />,
+};
+
+const REGIME_ICON: Record<SeasonDraft['regime'], React.ReactNode> = {
+  continuous: <Waves size={15} />,
+  awd: <Repeat size={15} />,
+  pid: <Gauge size={15} />,
+};
 
 function blankEvent(kind: Kind, date: string): SeasonEvent {
   switch (kind) {
@@ -50,7 +89,10 @@ const EventFields: React.FC<{ event: SeasonEvent; onChange: (e: SeasonEvent) => 
       <span className="aq-input-wrap"><input className="aq-input" value={value} onChange={(e) => set({ [field]: e.target.value })} /></span>
     </label>
   );
-  const num = (key: Key, field: string, value: number | null) => <NumberField label={t(key)} value={value} onChange={(v) => set({ [field]: v })} step={0.1} />;
+  const num = (key: Key, field: string, value: number | null) => {
+    const r = EVENT_RANGE[field] ?? { max: 1000, step: 1, unit: '' };
+    return <NumberField label={t(key)} value={value} onChange={(v) => set({ [field]: v })} step={r.step} max={r.max} unit={r.unit} />;
+  };
   switch (event.kind) {
     case 'irrigate':
       return num('farmMap.sim.mm', 'mm', event.mm);
@@ -196,61 +238,53 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
       {failed ? <div className="aq-alert is-error" role="alert">{failed}</div> : null}
       <More key={String(planOpen)} label={t('farmMap.sim.plan')} defaultOpen={planOpen}>
         {parcels.length > 1 ? (
-          <label className="aq-fm-trace-field">
+          <div className="aq-fm-trace-field">
             <span className="aq-fm-kv-key">{t('farmMap.sim.parcel')}</span>
-            <span className="aq-input-wrap">
-              <select className="aq-input" value={parcel.id} onChange={(e) => setParcelId(e.target.value)}>
-                {parcels.map((p) => <option key={p.id} value={p.id}>{p.id}</option>)}
-              </select>
-            </span>
-          </label>
+            <ChoiceTiles label={t('farmMap.sim.parcel')} value={parcel.id} options={parcels.map((p) => ({ value: p.id, label: p.id }))} onChange={setParcelId} />
+          </div>
         ) : null}
-        <label className="aq-fm-trace-field">
-          <span className="aq-fm-kv-key">{t('farmMap.sim.transplant')}</span>
-          <span className="aq-input-wrap"><input className="aq-input" type="date" value={draft.transplant_date} onChange={(e) => set({ transplant_date: e.target.value })} /></span>
-        </label>
-        <NumberField label={t('farmMap.sim.duration')} value={draft.duration_days} onChange={(v) => set({ duration_days: v })} />
-        <NumberField label={t('farmMap.sim.nursery')} value={draft.seedbed_days} onChange={(v) => set({ seedbed_days: v })} />
-        <NumberField label={t('farmMap.sim.hills')} value={draft.hills_per_m2} onChange={(v) => set({ hills_per_m2: v })} />
-        <NumberField label={t('farmMap.sim.plants')} value={draft.plants_per_hill} onChange={(v) => set({ plants_per_hill: v })} hint={t('farmMap.sim.spacingHint', { hills: ORYZA_HINTS.hillsPerM2, plants: ORYZA_HINTS.plantsPerHill, days: ORYZA_HINTS.seedbedDays })} />
-        <label className="aq-fm-trace-field">
+        <SeasonDayPicker label={t('farmMap.sim.transplant')} value={draft.transplant_date} onChange={(date) => set({ transplant_date: date })} spanDays={draft.duration_days} />
+        <NumberField label={t('farmMap.sim.duration')} value={draft.duration_days} onChange={(v) => set({ duration_days: v })} min={60} max={200} unit="d" big={10} />
+        <NumberField label={t('farmMap.sim.nursery')} value={draft.seedbed_days} onChange={(v) => set({ seedbed_days: v })} max={60} unit="d" />
+        <NumberField label={t('farmMap.sim.hills')} value={draft.hills_per_m2} onChange={(v) => set({ hills_per_m2: v })} max={100} unit="/m²" />
+        <NumberField label={t('farmMap.sim.plants')} value={draft.plants_per_hill} onChange={(v) => set({ plants_per_hill: v })} max={20} unit="/hill" hint={t('farmMap.sim.spacingHint', { hills: ORYZA_HINTS.hillsPerM2, plants: ORYZA_HINTS.plantsPerHill, days: ORYZA_HINTS.seedbedDays })} />
+        <div className="aq-fm-trace-field">
           <span className="aq-fm-kv-key">{t('farmMap.sim.regime')}</span>
-          <span className="aq-input-wrap">
-            <select className="aq-input" value={draft.regime} onChange={(e) => set({ regime: e.target.value as SeasonDraft['regime'] })}>
-              <option value="continuous">{t('farmMap.sim.continuous')}</option>
-              <option value="awd">{t('farmMap.sim.awd')}</option>
-              <option value="pid">{t('farmMap.sim.pid')}</option>
-            </select>
-          </span>
-        </label>
+          <ChoiceTiles
+            label={t('farmMap.sim.regime')}
+            value={draft.regime}
+            options={(['continuous', 'awd', 'pid'] as const).map((r) => ({ value: r, label: t(`farmMap.sim.${r}` as Key), icon: REGIME_ICON[r] }))}
+            onChange={(regime) => set({ regime })}
+          />
+        </div>
         {draft.regime === 'pid' ? (
           <>
-            <NumberField label={t('farmMap.sim.pidSetpoint')} value={draft.pid_setpoint_cm} onChange={(v) => set({ pid_setpoint_cm: v })} />
-            <NumberField label={t('farmMap.sim.pidMax')} value={draft.pid_max_mm_day} onChange={(v) => set({ pid_max_mm_day: v })} />
+            <NumberField label={t('farmMap.sim.pidSetpoint')} value={draft.pid_setpoint_cm} onChange={(v) => set({ pid_setpoint_cm: v })} min={1} max={30} unit="cm" ceiling={draft.bund_height_cm === null ? undefined : { at: draft.bund_height_cm - 0.01, span: 10 }} />
+            <NumberField label={t('farmMap.sim.pidMax')} value={draft.pid_max_mm_day} onChange={(v) => set({ pid_max_mm_day: v })} min={1} max={300} step={5} unit="mm/d" />
             <More label={t('farmMap.sim.pidGains')}>
-              <NumberField label="Kp" value={draft.pid_kp} onChange={(v) => set({ pid_kp: v ?? 0 })} step={0.05} />
-              <NumberField label="Ki" value={draft.pid_ki} onChange={(v) => set({ pid_ki: v ?? 0 })} step={0.01} />
-              <NumberField label="Kd" value={draft.pid_kd} onChange={(v) => set({ pid_kd: v ?? 0 })} step={0.05} />
+              <NumberField label="Kp" value={draft.pid_kp} onChange={(v) => set({ pid_kp: v ?? 0 })} step={0.05} max={5} />
+              <NumberField label="Ki" value={draft.pid_ki} onChange={(v) => set({ pid_ki: v ?? 0 })} step={0.01} max={2} />
+              <NumberField label="Kd" value={draft.pid_kd} onChange={(v) => set({ pid_kd: v ?? 0 })} step={0.05} max={5} />
               <p className="aq-fm-note">{t('farmMap.sim.pidHint')}</p>
             </More>
           </>
         ) : null}
-        {draft.regime === 'awd' ? <NumberField label={t('farmMap.sim.awdThreshold')} value={draft.awd_threshold_cm} onChange={(v) => set({ awd_threshold_cm: v })} /> : null}
-        <NumberField label={t('farmMap.sim.reflood')} value={draft.reflood_cm} onChange={(v) => set({ reflood_cm: v })} />
-        <NumberField label={t('farmMap.sim.bund')} value={draft.bund_height_cm} onChange={(v) => set({ bund_height_cm: v })} hint={t('farmMap.sim.bundHint', { min: FAO_HINTS.bundMinCm, rec: FAO_HINTS.bundRecommendedCm })} />
+        {draft.regime === 'awd' ? <NumberField label={t('farmMap.sim.awdThreshold')} value={draft.awd_threshold_cm} onChange={(v) => set({ awd_threshold_cm: v })} min={-40} max={0} unit="cm" /> : null}
+        <NumberField label={t('farmMap.sim.reflood')} value={draft.reflood_cm} onChange={(v) => set({ reflood_cm: v })} max={50} unit="cm" ceiling={draft.bund_height_cm === null ? undefined : { at: draft.bund_height_cm - 0.01, span: 10 }} />
+        <NumberField label={t('farmMap.sim.bund')} value={draft.bund_height_cm} onChange={(v) => set({ bund_height_cm: v })} min={5} max={150} unit="cm" big={10} band={{ min: FAO_HINTS.bundMinCm }} hint={t('farmMap.sim.bundHint', { min: FAO_HINTS.bundMinCm, rec: FAO_HINTS.bundRecommendedCm })} />
         <label className="aq-fm-check-row">
           <input type="checkbox" checked={draft.fish} onChange={(e) => set({ fish: e.target.checked, trench: e.target.checked ? draft.trench ?? { depth_cm: 0, width_cm: 0, share_pct: 0 } : null })} /> {t('farmMap.sim.fish')}
         </label>
         {draft.fish && draft.trench ? (
           <>
-            <NumberField label={t('farmMap.sim.trenchDepth')} value={draft.trench.depth_cm} onChange={(v) => set({ trench: { ...draft.trench!, depth_cm: v ?? 0 } })} />
-            <NumberField label={t('farmMap.sim.trenchWidth')} value={draft.trench.width_cm} onChange={(v) => set({ trench: { ...draft.trench!, width_cm: v ?? 0 } })} />
-            <NumberField label={t('farmMap.sim.trenchShare')} value={draft.trench.share_pct} onChange={(v) => set({ trench: { ...draft.trench!, share_pct: v ?? 0 } })} hint={t('farmMap.sim.trenchHint', { w1: FAO_HINTS.trenchWidthCm[0], w2: FAO_HINTS.trenchWidthCm[1], d1: FAO_HINTS.trenchDepthCm[0], d2: FAO_HINTS.trenchDepthCm[1], s1: FAO_HINTS.refugeSharePct[0], s2: FAO_HINTS.refugeSharePct[1] })} />
+            <NumberField label={t('farmMap.sim.trenchDepth')} value={draft.trench.depth_cm} onChange={(v) => set({ trench: { ...draft.trench!, depth_cm: v ?? 0 } })} max={200} step={5} unit="cm" band={{ min: FAO_HINTS.trenchDepthCm[0], max: FAO_HINTS.trenchDepthCm[1] }} />
+            <NumberField label={t('farmMap.sim.trenchWidth')} value={draft.trench.width_cm} onChange={(v) => set({ trench: { ...draft.trench!, width_cm: v ?? 0 } })} max={400} step={10} unit="cm" band={{ min: FAO_HINTS.trenchWidthCm[0], max: FAO_HINTS.trenchWidthCm[1] }} />
+            <NumberField label={t('farmMap.sim.trenchShare')} value={draft.trench.share_pct} onChange={(v) => set({ trench: { ...draft.trench!, share_pct: v ?? 0 } })} max={50} step={0.5} unit="%" band={{ min: FAO_HINTS.refugeSharePct[0], max: FAO_HINTS.refugeSharePct[1] }} hint={t('farmMap.sim.trenchHint', { w1: FAO_HINTS.trenchWidthCm[0], w2: FAO_HINTS.trenchWidthCm[1], d1: FAO_HINTS.trenchDepthCm[0], d2: FAO_HINTS.trenchDepthCm[1], s1: FAO_HINTS.refugeSharePct[0], s2: FAO_HINTS.refugeSharePct[1] })} />
           </>
         ) : null}
         <p className="aq-fm-note"><a href={FAO_HINTS.source} target="_blank" rel="noreferrer">{t('farmMap.sim.faoSource')}</a></p>
-        <NumberField label={t('farmMap.sim.percolation')} value={draft.percolation_mm_day} onChange={(v) => set({ percolation_mm_day: v })} step={0.1} />
-        <NumberField label={t('farmMap.sim.soilNStart')} value={draft.soil_n_kg_ha} onChange={(v) => set({ soil_n_kg_ha: v })} />
+        <NumberField label={t('farmMap.sim.percolation')} value={draft.percolation_mm_day} onChange={(v) => set({ percolation_mm_day: v })} max={100} step={0.5} unit="mm/d" />
+        <NumberField label={t('farmMap.sim.soilNStart')} value={draft.soil_n_kg_ha} onChange={(v) => set({ soil_n_kg_ha: v })} max={1000} step={5} unit="kg/ha" />
         <fieldset className="aq-fm-years">
           <legend className="aq-fm-kv-key">{t('farmMap.sim.years')}</legend>
           {years.map((y) => (
@@ -264,20 +298,16 @@ export const SeasonSection: React.FC<SeasonSectionProps> = ({ farmId, parcels, o
           <div key={`${event.kind}-${i}`} className="aq-fm-event">
             <div className="aq-fm-event-head">
               <b>{t(`farmMap.sim.kind.${event.kind}` as Key)}</b>
-              <input className="aq-input" type="date" aria-label={t('farmMap.sim.date')} value={event.date} onChange={(e) => set({ events: draft.events.map((x, j) => (j === i ? { ...x, date: e.target.value } : x)) })} />
               <button type="button" className="aq-icon-btn" aria-label={t('farmMap.sim.remove')} onClick={() => set({ events: draft.events.filter((_, j) => j !== i) })}>
                 <Trash2 size={14} aria-hidden="true" />
               </button>
             </div>
+            <SeasonDayPicker label={t('farmMap.sim.date')} value={event.date} onChange={(date) => set({ events: draft.events.map((x, j) => (j === i ? { ...x, date } : x)) })} />
             <EventFields event={event} onChange={(next) => set({ events: draft.events.map((x, j) => (j === i ? next : x)) })} />
           </div>
         ))}
         <div className="aq-fm-event-add">
-          <span className="aq-input-wrap">
-            <select className="aq-input" aria-label={t('farmMap.sim.kindLabel')} value={newKind} onChange={(e) => setNewKind(e.target.value as Kind)}>
-              {KINDS.map((k) => <option key={k} value={k}>{t(`farmMap.sim.kind.${k}` as Key)}</option>)}
-            </select>
-          </span>
+          <ChoiceTiles label={t('farmMap.sim.kindLabel')} value={newKind} options={KINDS.map((k) => ({ value: k, label: t(`farmMap.sim.kind.${k}` as Key), icon: KIND_ICON[k] }))} onChange={setNewKind} />
           <AqButton onClick={() => set({ events: [...draft.events, blankEvent(newKind, draft.transplant_date)] })}><Plus size={14} aria-hidden="true" />{t('farmMap.sim.addEvent')}</AqButton>
         </div>
         {errors.map((e) => <p key={e} className="aq-fm-note is-error">{t(e)}</p>)}
