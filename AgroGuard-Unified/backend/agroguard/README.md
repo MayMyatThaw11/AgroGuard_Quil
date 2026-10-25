@@ -70,6 +70,46 @@ model's Markdown into lists and bold labels and hides stray symbols.
 
 Tests: `python -m pytest tests/test_chat_guardrails.py`.
 
+## MCP servers
+
+AgroGuard can connect to external MCP servers (Model Context Protocol) and use
+their tools. List them in the private `.env` as a JSON array:
+
+```dotenv
+AGROGUARD_MCP_SERVERS=[{"name":"farmmap","command":["C:/path/to/agriquill/.venv/Scripts/python.exe","-m","agriquill.mcp.server"]}]
+```
+
+```dotenv
+AGROGUARD_MCP_SERVERS=[{"name":"remote","transport":"http","url":"http://127.0.0.1:8765/mcp"}]
+```
+
+| Field | Default | Purpose |
+|---|---|---|
+| `name` | | How the server is addressed in the URLs below |
+| `transport` | `stdio` | `stdio` runs `command` as a subprocess, `http` posts to `url` |
+| `command` | `[]` | argv of a stdio server, e.g. `python -m agriquill.mcp.server` |
+| `url` | `""` | Streamable-HTTP endpoint (the farm map serves `/mcp` with the `mcp` extra installed) |
+| `timeout_s` | `20` | Per-request timeout |
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `AGROGUARD_MCP_CHAT_DENY` | `["lorawan_actuate","drone_spray_guard"]` | Tools the chat model is never offered |
+| `AGROGUARD_MCP_SERVERS` | `[]` | The servers above; an empty array turns the feature off |
+
+With servers configured, `POST /api/v1/chat` offers their tools to the model and
+runs the calls before it writes the answer (two tool rounds, then a final answer
+without tools). If a server is unreachable the chat answers normally without its
+tools. The farm map still refuses actuation over HTTP and needs
+`--allow-actuation` on stdio, so the deny list is a second guard, not the only one.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/mcp/servers` | Configured servers and whether each answers |
+| `GET /api/v1/mcp/servers/{name}/tools` | Tools one server publishes |
+| `POST /api/v1/mcp/servers/{name}/tools/{tool}` | Call a tool with `{"arguments": {...}}` |
+
+Tests: `python -m pytest tests/test_mcp_client.py tests/test_mcp_api.py tests/test_mcp_chat.py`
+
 ## Available endpoints
 
 | Endpoint | Purpose |

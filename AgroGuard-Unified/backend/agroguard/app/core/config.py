@@ -1,8 +1,25 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import BaseModel, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class MCPServerConfig(BaseModel):
+    """One external MCP server AgroGuard can connect to.
+
+    stdio: command is the argv of the server process, e.g.
+      ["..\\agriquill\\.venv\\Scripts\\python", "-m", "agriquill.mcp.server"]
+    http: url is the streamable-HTTP endpoint, e.g. "http://127.0.0.1:8765/mcp"
+      (the agriquill server serves that only when the fastmcp extra is installed).
+    """
+
+    name: str
+    transport: Literal["stdio", "http"] = "stdio"
+    command: list[str] = []
+    url: str = ""
+    headers: dict[str, str] = {}
+    timeout_s: float = 20.0
 
 
 class Settings(BaseSettings):
@@ -56,6 +73,14 @@ class Settings(BaseSettings):
     agriquill_api_url: str = "http://localhost:8010"
     agriquill_bridge_token: SecretStr | None = None
     agriquill_bridge_reporter: str = "agroguard-bridge"
+
+    # External MCP servers (AGROGUARD_MCP_SERVERS is a JSON array of
+    # MCPServerConfig). Empty means the MCP client is off.
+    mcp_servers: list[MCPServerConfig] = []
+    # Tool names the chat model is never offered, even when a server lists them.
+    # AgriQill refuses actuation over HTTP and needs --allow-actuation on stdio,
+    # so this is the unattended-chat guard, not the only barrier.
+    mcp_chat_deny: list[str] = ["lorawan_actuate", "drone_spray_guard"]
 
     jwt_secret: SecretStr | None = None
     jwt_ttl_minutes: int = 720

@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator, Callable
 from httpx import AsyncClient, HTTPStatusError, RequestError
 
 from app.core.config import get_settings
+from app.services import mcp_chat
 from app.services.chat_providers import ChatProvider, configured_providers
 from app.services.topic_guard import is_farming_related, refusal_message, reply_language
 
@@ -164,6 +165,12 @@ async def stream_chat(
         try:
             if not await is_farming_related(messages, provider):
                 yield refusal_message(latest, language)
+                return
+            direct = await mcp_chat.answer_with_tools(provider, _build_messages(messages, language))
+            if direct is not None:
+                if on_provider is not None:
+                    on_provider(provider.label)
+                yield direct
                 return
             async for content in _stream_from(provider, messages, language):
                 if not started and on_provider is not None:
