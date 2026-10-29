@@ -129,6 +129,7 @@ def post_listing(farmer: str, body: dict[str, Any]) -> dict[str, Any]:
     record = {
         "id": f"lst-{uuid.uuid4().hex[:12]}",
         "farmer": farmer,
+        "farmer_name": body.get("farmer_name"),
         "producer_id": body.get("producer_id"),
         "produce": produce,
         "qty_kg": kg,
@@ -163,6 +164,7 @@ def post_preorder(buyer: str, buyer_kind: str, body: dict[str, Any]) -> dict[str
     record = {
         "id": f"pre-{uuid.uuid4().hex[:12]}",
         "buyer": buyer,
+        "buyer_name": body.get("buyer_name"),
         "buyer_kind": buyer_kind,
         "channel": channel_for(buyer_kind),
         "produce": produce,

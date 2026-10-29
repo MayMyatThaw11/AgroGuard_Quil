@@ -1,10 +1,24 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+AccountType = Literal["farmer", "buyer"]
+BuyerKind = Literal["household", "retail", "restaurant", "cooperative", "processor"]
 
 
 class DemoLoginRequest(BaseModel):
     email: str
+    account_type: AccountType | None = None
+    buyer_kind: BuyerKind | None = None
+
+    @model_validator(mode="after")
+    def buyer_needs_kind(self) -> "DemoLoginRequest":
+        if self.account_type == "buyer" and self.buyer_kind is None:
+            raise ValueError("a buyer account needs a buyer_kind")
+        if self.account_type == "farmer":
+            self.buyer_kind = None
+        return self
 
 
 class TokenResponse(BaseModel):
@@ -13,12 +27,16 @@ class TokenResponse(BaseModel):
     user_id: int
     email: str
     display_name: str
+    account_type: str = "farmer"
+    buyer_kind: str | None = None
 
 
 class MeResponse(BaseModel):
     id: int
     email: str
     display_name: str
+    account_type: str = "farmer"
+    buyer_kind: str | None = None
 
 
 class EntitlementsResponse(BaseModel):

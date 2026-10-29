@@ -18,7 +18,15 @@ router = APIRouter(tags=["auth"])
 DEMO_USERS = {
     "free@demo.com": ("Free Demo", "free"),
     "pro@demo.com": ("Pro Demo", "pro"),
+    "buyer@demo.com": ("Buyer Demo", "free"),
 }
+DEMO_ACCOUNTS = {"buyer@demo.com": ("buyer", "cooperative")}
+
+
+def account_for(email: str, payload: DemoLoginRequest) -> tuple[str, str | None]:
+    if payload.account_type is not None:
+        return payload.account_type, payload.buyer_kind
+    return DEMO_ACCOUNTS.get(email, ("farmer", None))
 
 
 @router.post("/auth/demo-login", response_model=TokenResponse)
@@ -32,13 +40,21 @@ async def demo_login(
     if email not in DEMO_USERS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Use free@demo.com or pro@demo.com.",
+            detail="Use free@demo.com, pro@demo.com or buyer@demo.com.",
         )
     display_name, plan = DEMO_USERS[email]
+    account_type, buyer_kind = account_for(email, payload)
     await session.execute(
         insert(User)
-        .values(email=email, display_name=display_name)
-        .on_conflict_do_nothing(index_elements=["email"])
+        .values(
+            email=email,
+            display_name=display_name,
+            account_type=account_type,
+            buyer_kind=buyer_kind,
+        )
+        .on_conflict_do_update(
+            index_elements=["email"], set_={"account_type": account_type, "buyer_kind": buyer_kind}
+        )
     )
     user = (await session.execute(select(User).where(User.email == email))).scalar_one()
     period_end = datetime.now(UTC) + timedelta(days=365) if plan == "pro" else None
@@ -49,13 +65,21 @@ async def demo_login(
     )
     await session.commit()
     return TokenResponse(
-        access_token=sign_token(user.id, user.display_name),
+        access_token=sign_token(user.id, user.display_name, user.account_type, user.buyer_kind),
         user_id=user.id,
         email=user.email,
         display_name=user.display_name,
+        account_type=user.account_type,
+        buyer_kind=user.buyer_kind,
     )
 
 
 @router.get("/me", response_model=MeResponse)
 async def me(user: Annotated[User, Depends(current_user)]) -> MeResponse:
-    return MeResponse(id=user.id, email=user.email, display_name=user.display_name)
+    return MeResponse(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        account_type=user.account_type,
+        buyer_kind=user.buyer_kind,
+    )

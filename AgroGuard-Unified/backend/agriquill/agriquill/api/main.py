@@ -85,13 +85,15 @@ def _ledger() -> Ledger:
     return get_ledger(get_settings().ledger_path)
 
 
-ROLES = frozenset({"crew", "manager"})
+ROLES = frozenset({"crew", "manager", "buyer"})
 
 
 class Caller(NamedTuple):
     name: str | None
     roles: frozenset[str]
     farms: frozenset[str] | None = None
+    account: str | None = None
+    buyer_kind: str | None = None
 
 
 User = tuple[str, str, frozenset[str], frozenset[str] | None]
@@ -149,7 +151,9 @@ def _agroguard_caller(authorization: str | None) -> Caller | None:
     except HTTPException:
         return None
     name = str(claims.get("name") or f"agroguard-user-{claims['sub']}")
-    return Caller(name, frozenset({"crew"}), frozenset())
+    roles = frozenset({"buyer"}) if claims.get("role") == "buyer" else frozenset({"crew"})
+    kind = claims.get("buyer_kind") if "buyer" in roles else None
+    return Caller(name, roles, frozenset(), f"ag:{claims['sub']}", kind)
 
 
 def _reader(
@@ -165,7 +169,7 @@ def _reader(
         ) from exc
     for name, code, roles, farms in users:
         if _same(token, code):
-            return Caller(name, roles, farms)
+            return Caller(name, roles, farms, f"code:{name}")
     shared = settings.write_token
     if shared is not None and _same(token, shared.get_secret_value()):
         return Caller(None, ROLES)
@@ -2243,7 +2247,7 @@ def _install_error_contract(app: FastAPI) -> None:
 def create_app() -> FastAPI:
     app = FastAPI(title="AgriQill API", version="0.1.0", lifespan=_lifespan)
     router.include_router(market_api.public)
-    router.include_router(market_api.gated)
+    router.include_router(market_api.build(_CALLER))
     app.include_router(router, prefix="/api/v1")
     _install_error_contract(app)
 

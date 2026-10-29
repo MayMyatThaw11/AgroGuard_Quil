@@ -31,12 +31,18 @@ def _secret() -> bytes:
     return secret.get_secret_value().encode()
 
 
-def sign_token(user_id: int, name: str | None = None) -> str:
+def sign_token(
+    user_id: int, name: str | None = None, role: str | None = None, buyer_kind: str | None = None
+) -> str:
     now = int(time.time())
     header = _b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
     claims = {"sub": str(user_id), "iat": now, "exp": now + get_settings().jwt_ttl_minutes * 60}
     if name:
         claims["name"] = name
+    if role and role != "farmer":
+        claims["role"] = role
+    if buyer_kind:
+        claims["buyer_kind"] = buyer_kind
     body = _b64(json.dumps(claims, separators=(",", ":")).encode())
     signature = hmac.new(_secret(), f"{header}.{body}".encode(), hashlib.sha256).digest()
     return f"{header}.{body}.{_b64(signature)}"
