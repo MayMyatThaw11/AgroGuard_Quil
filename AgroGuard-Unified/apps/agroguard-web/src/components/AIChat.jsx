@@ -23,23 +23,16 @@ export default function AIChat() {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
-  const conversationRef = useRef(conversationId());
+  // Every visit and refresh starts a new chat; the last one stays in the history list.
+  const conversationRef = useRef(null);
+  if (conversationRef.current === null) {
+    rememberConversation(conversationId());
+    conversationRef.current = startNewConversation();
+  }
   const [showHistory, setShowHistory] = useState(() => window.innerWidth >= 900);
   const [conversations, setConversations] = useState([]);
   // Use a ref to accumulate streamed text — immune to StrictMode double-calls
   const streamedTextRef = useRef('');
-
-  // Bring back the messages saved for this conversation
-  useEffect(() => {
-    let alive = true;
-    loadHistory(conversationRef.current).then((saved) => {
-      if (alive && saved.length > 0) {
-        rememberConversation(conversationRef.current);
-        setMessages((prev) => [prev[0], ...saved]);
-      }
-    });
-    return () => { alive = false; };
-  }, []);
 
   const resetChat = () => {
     conversationRef.current = startNewConversation();
