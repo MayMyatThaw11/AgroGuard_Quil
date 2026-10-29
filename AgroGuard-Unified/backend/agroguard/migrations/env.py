@@ -10,7 +10,9 @@ from app.db.base import Base
 
 config = context.config
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# alembic reads this value through configparser, where a literal % must be written %%.
+# A URL-encoded password (for example %40 for @) would otherwise raise an error.
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
