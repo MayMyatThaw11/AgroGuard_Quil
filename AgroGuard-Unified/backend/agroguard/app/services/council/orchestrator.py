@@ -148,10 +148,18 @@ class CouncilOrchestrator:
             preset in ("pre_harvest_rain", "rain_penalty", "grade_threat")
             or (stage == "Ripening" and rain >= 20.0)
         )
+        is_regional_glut = (
+            preset in ("regional_glut", "post_hype_glut", "cobweb_glut", "market_glut")
+            or str(context.get("glut_risk_level", "")).upper() in ("HIGH", "CRITICAL")
+            or float(context.get("cobweb_glut_risk_index", 0.0)) >= 0.65
+        )
 
         if is_sensor_crack:
             triage = "TYPE_1_SENSOR_FAULT"
             confidence = 0.95
+        elif is_regional_glut:
+            triage = "TYPE_3_SYSTEMIC_CRISIS"
+            confidence = 0.94
         elif is_monsoon_blight or is_fertilizer_spike:
             triage = "TYPE_2_LOCALIZED_STRESS"
             confidence = 0.91
@@ -599,6 +607,62 @@ class CouncilOrchestrator:
                 check_in_hours=48,
                 expected_telemetry_shift="Water depth stabilizes between -10.0 cm and -15.0 cm; diesel pump runtime zero.",
                 expected_visual_crop_response="Deep green tillers with strong crown root anchoring; zero signs of moisture stress.",
+            )
+
+        elif is_regional_glut:
+            final_decision = (
+                f"COUNCIL ADJUDICATION (TYPE 3 SYSTEMIC CRISIS / REGIONAL GLUT): Agent Qill issues ECONOMIC_VETO against speculative planting expansion on {field_id}. "
+                f"Regional acreage rush threatens a 40-70% post-hype price collapse below production costs. Mandate staggered planting cohorts, "
+                f"lock 40% forward-contract pre-sales, and reserve cooperative dry/cold storage space to protect smallholder solvency."
+            )
+            sku_id = "COOP-FORWARD-CONTRACT"
+            unit_cost = 18.0
+            roi_multiple = 20.1
+            action_type = "LOCK_FORWARD_HARVEST_LOT"
+
+            field_to_edge = FieldToEdgeBridge(
+                alpha_visual_check_for_farmer="Stagger planting schedule across 3 plot cohorts spaced 14 days apart. Intercrop 30% of field with leguminous buffer crops.",
+                lou_bayesian_recalibration_rule="Integrate regional market demand telemetry; fuse township acreage rush index with localized yield potential.",
+            )
+            edge_to_market = EdgeToMarketBridge(
+                lou_verified_telemetry_proof="Township acreage saturation verified; projected harvest volume breaches local depot bottleneck. Off-taker forward hedge active.",
+                qill_buyer_grade_compliance_status="COMPLIANT",
+            )
+            farmer_card = FarmerActionCardAlpha(
+                t_plus_6h_zero_cost_task="Divide plot into 3 staggered planting cohorts; halt simultaneous seeding across entire acreage ($0 cash).",
+                exact_field_zone=f"{field_id} planting blocks and seedbeds",
+                tools_needed="Cohort layout markers / string lines ($0 cash)",
+            )
+            iot_command = IoTDownlinkCommandLou(
+                target_node_ids=["Node-1", "Node-2", "Node-3", "Node-4"],
+                new_wake_interval_sec=1800,
+                anomaly_threshold_patch="GLUT_MONITORING=TRUE;HARVEST_WINDOW_OFFSET=14D",
+            )
+            market_intent = IRLMarketIntentQill(
+                action_type="LOCK_FORWARD_HARVEST_LOT",
+                counterparty_id="COOP-REGIONAL-OFFTAKER",
+                protected_margin_usd_ha=round(crop_val * 0.40, 2),
+            )
+            time_horizon = TimeHorizonActionPlan(
+                t_plus_6_hours_field_triage_alpha=TPlus6HoursFieldTriage(
+                    exact_farmer_action="Divide field into 3 staggered planting cohorts spaced 14 days apart; do not sow entire acreage simultaneously.",
+                    where_to_look_in_field=f"{field_id} planting blocks",
+                    cash_required_usd=0.0,
+                ),
+                t_plus_7_days_system_and_inputs_lou=TPlus7DaysSystemAndInputs(
+                    targeted_intervention="Lock forward sales contract for 40% of anticipated volume with regional cooperative miller or aggregator.",
+                    sensor_and_model_recalibration="Track regional weather and degree-day accumulation to time staggered cohort maturity.",
+                    budget_allocated_usd_ha=18.0,
+                ),
+                harvest_horizon_margin_protection_qill=HarvestHorizonMarginProtection(
+                    yield_grade_protection_plan="Pre-sales forward contracting and staggered harvest avoid panic liquidation at harvest glut bottom.",
+                    buyer_and_cashflow_move="Lock floor pricing with regional buyer before copycat harvest volume floods local trading yards.",
+                ),
+            )
+            closed_loop = ClosedLoopVerificationHook(
+                check_in_hours=48,
+                expected_telemetry_shift="Staggered planting cohort plan confirmed; forward contract agreement logged with cooperative.",
+                expected_visual_crop_response="First cohort established; remaining cohorts scheduled for delayed sowing.",
             )
 
         else:

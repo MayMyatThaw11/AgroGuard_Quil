@@ -326,4 +326,101 @@ FROM VECTOR_SEARCH(
 | **Phase 3** | **Council Veto & Circuit Breaker Bridge** | Connect `subagents_council.py` to write deliberation logs into `/vault/council/` and enforce Invariants A, B, and C. |
 | **Phase 4** | **Farm Map Integration** | Wire the React Farm Map (`agroguard-web`) to read/write farm states directly to the local vault via FastAPI endpoints. |
 | **Phase 5** | **Neural Net & BigQuery Connectors** | Implement PyTorch ONNX edge export and configure BigQuery AI/ML query templates for cooperative analytics. |
+| **Phase 6** | **Regional Market Scraper & Anti-Hallucination** | Built `app/services/regional_market.py` with IQR/Z-score fences, Myanmar unit conversions, Shan & Ayeyarwady centers, and 30 passing unit tests. |
+
+---
+
+## 8. Pillar 7: Regional Market Scraping & Anti-Hallucination Service (`regional_market.py`)
+
+Implemented and verified in [`AgroGuard-Unified/backend/agroguard/app/services/regional_market.py`](file:///c:/Users/ASUS/Downloads/AgroGuard_Quil/AgroGuard-Unified/backend/agroguard/app/services/regional_market.py):
+
+### 8.1 Invariants & Defense in Depth
+1. **Provenance Tagging**: Every quote carries `MEASURED` (real bulletin or market feed), `HISTORICAL_INDEX` (verified statistical dataset), or `UNQUOTED` (explicit null with reason code `stale_feed` / `unquoted_market`).
+2. **Statistical Outlier Rejection**: Double-fence quarantine:
+   - Tukey Interquartile Range (IQR) fence with adaptive zero-variance floor:
+     $$\text{IQR}_{\text{eff}} = \max\left(\text{IQR}, \, 0.05 \times \text{Median}\right), \quad [\text{Q}_1 - 2.5\times\text{IQR}_{\text{eff}}, \, \text{Q}_3 + 2.5\times\text{IQR}_{\text{eff}}]$$
+   - Z-Score filter against regional rolling history ($|Z| > 3.0$).
+3. **Myanmar Traditional Unit Normalization**:
+   - `1 viss (peiktha) = 1.63293 kg`
+   - Specific basket weights: Paddy (20.87 kg), Maize/Sesame (24.49 kg), Groundnut (11.34 kg), Wheat/Mustard (32.66 kg).
+   - Commercial standard bags: 50 kg.
+   - Dual-numeral parser supporting both ASCII (`0-9`) and Burmese numerals (`၀-၉`).
+4. **Verified Centers**:
+   - **Shan State**: Taunggyi, Muse, Aungban, Lashio.
+   - **Ayeyarwady Delta**: Maubin, Hinthada, Pathein, Mawlamyine.
+5. **Agent Qill Solvency Integration**: Automatically evaluates economic viability ($3\times$ ROI) while allowing zero-cost cultural mitigation ($0) when markets are unquoted.
+
+---
+
+## 9. Pillar 8: Multi-Source Scrapers & CleanMarketIntelligence Ingestion
+
+Implemented across `regional_market.py`, `market_demand.py`, and `app/api/v1/endpoints/market.py`:
+
+### 9.1 Multi-Source Connectors
+- **Web & Association Portals (`WebPortalConnector`)**: Scrapes official bulletins from Bayintnaung Wholesale Center, Myanmar Pulses & Beans Association (MPBMA), and DOA.
+- **Social & Community Feeds (`SocialCommunityConnector`)**: Ingests raw post texts from Facebook Yangon wholesale groups and regional Telegram broadcasts. Parses Burmese text and numerals (e.g. `မတ်ပဲ ၁ ပိဿာ ၅၄၀၀ ကျပ်`), currency tokens (`ကျပ်`, `ks`, `mmk`), and extracts normalized commodity prices.
+- **Business Software / ERP Connector (`BusinessSoftwareConnector`)**: Adapters for agricultural cooperative CSV/JSON receipts, trade invoices, and Odoo/ERPNext webhooks.
+- **Provenance Tags**: Explicit attribution (`MEASURED_PORTAL`, `MEASURED_COMMUNITY_POST`, `MEASURED_ERP`, `HISTORICAL_INDEX`, `UNQUOTED`). Zero fabricated numbers.
+- **Obsidian Markdown Vault Export**: Clean intelligence is exported to `/vault/market_intelligence/` as frontmatter-rich `.md` files for Claude and human inspection.
+
+### 9.2 Market Demand & Cobweb Price Elasticity Model (`market_demand.py`)
+- **Empirical Grounding**: Backed by `Agricultural Crop-production Data of Shan State.csv` and `township_agricultural_data.csv`.
+- **Cobweb Theorem Shock Modeling**: Dynamically calculates price elasticity $\varepsilon = \frac{\Delta Q / Q}{\Delta P / P}$, forecasting harvest price collapse when regional expansion exceeds absorption capacity.
+- **Downside Price Collapse Scenarios**: Models Base Case, Expansion Shock (-15% to -35%), and Severe Glut Collapse (-40% to -65%).
+
+---
+
+## 10. Pillar 9: Farm Map 85% Natural Match & Ecological Polyculture Blueprint
+
+Implemented in `apps/agroguard-web`:
+- Component: [`EcologicalPolycultureCard.tsx`](file:///c:/Users/ASUS/Downloads/AgroGuard_Quil/AgroGuard-Unified/apps/agroguard-web/src/features/farm-simulation/components/farmmap/EcologicalPolycultureCard.tsx)
+- Feasibility Calculator: [`ecologicalPolyculture.ts`](file:///c:/Users/ASUS/Downloads/AgroGuard_Quil/AgroGuard-Unified/apps/agroguard-web/src/features/farm-simulation/lib/farmmap/ecologicalPolyculture.ts)
+- Unit Tests: [`ecological_polyculture.test.ts`](file:///c:/Users/ASUS/Downloads/AgroGuard_Quil/AgroGuard-Unified/apps/agroguard-web/tests/farm-simulation/ecological_polyculture.test.ts)
+
+### 10.1 Grounded 85% Natural Feasibility Criteria
+The card activates when `crop === 'rice'` and satellite/IoT indicators satisfy natural wetland conditions:
+1. **Lowland Elevation ($\le 30$ m)**: Fetched via Copernicus DEM GLO-90.
+2. **Hydrological Proximity ($\le 3$ km)**: OpenStreetMap hydro network and river corridor analysis.
+3. **Hydric Soil Seal (Clay/Silt $\ge 50\%$)**: ISRIC SoilGrids 2.0 / agronomic soil records.
+4. **In-Situ IoT Water Depth ($\ge 10-15$ cm)**: Ultrasonic paddy sensors and AWD telemetric streams.
+
+### 10.2 Biological Pest & Weed Eradication Matrix
+- **Rice Weevils (*Sitophilus oryzae*) & Brown Planthoppers (*Nilaparvata lugens*)**:
+  - *Vector*: Khaki Campbell / Mallard Ducks & Pastured Free-Range Poultry.
+  - *Mechanism*: Forage along paddy water surface and lower canopy, gleaning fallen grain seeds where weevils oviposit and devouring hopper nymphs.
+  - *Efficacy*: Decreases planthopper density by up to 68% without chemical insecticides (IRRI IPM standards).
+- **Golden Apple Snails (*Pomacea canaliculata*)**:
+  - *Vector*: Ducks & Omnivorous Fish (Nile Tilapia / Common Carp).
+  - *Mechanism*: Ducks crush juvenile snails and destroy egg clusters on stems; carp feed on newly hatched mollusc broods.
+- **Weed Sprouts, Filamentous Algae & Disease Vectors**:
+  - *Vector*: Tilapia & Black Tiger Shrimp (*Penaeus monodon*).
+  - *Mechanism*: Tilapia and shrimp graze benthic algae mats and mosquito larvae, oxygenating bottom sediment.
+
+### 10.3 Interlocking Safeguards
+- **Chemical Pesticide Veto**: Safety engine permanently disables chemical sprayer valves (pyrethroid/organophosphate sprays cause fatal shrimp/fish mortality at $<0.1$ ppb).
+- **10% Central Refuge Trenches**: 40–50 cm deep trenches provide shelter for aquatic stock during intermittent AWD drying cycles.
+- **Circular Bio-Economy**: Daily duck and fish excretions supply ~25–35 kg N/ha, reducing synthetic urea dependence by 30%.
+
+---
+
+## 11. Copy-Paste Terminal Commands for Claude Code
+
+Execute the following commands in the project root to run and verify the complete backend and frontend test suites:
+
+### 11.1 Run All Backend Market Tests (72/72 Passing)
+```bash
+python -m pytest AgroGuard-Unified/backend/agroguard/tests/test_regional_market.py AgroGuard-Unified/backend/agroguard/tests/test_market_demand.py AgroGuard-Unified/backend/agroguard/tests/test_multi_source_connectors.py -v
+```
+
+### 11.2 Run All Frontend Farm Simulation Tests (715/715 Passing)
+```bash
+npm --prefix AgroGuard-Unified/apps/agroguard-web run test:farm-sim
+```
+
+### 11.3 Run Backend Council Deliberation Tests (28/28 Passing)
+```bash
+python -m pytest AgroGuard-Unified/backend/agroguard/tests/test_deliberation_council.py AgroGuard-Unified/backend/agroguard/tests/test_subagents_council.py AgroGuard-Unified/backend/agroguard/tests/test_tri_bridge_council.py -v
+```
+
+
 

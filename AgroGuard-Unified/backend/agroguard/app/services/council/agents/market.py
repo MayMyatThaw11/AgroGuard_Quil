@@ -66,6 +66,12 @@ class MarketAgent:
             stage == "Ripening" and rain >= 20.0
         )
 
+        # Rule 5: Regional market glut / post-hype overplanting crash
+        is_regional_glut = preset in ("regional_glut", "post_hype_glut", "cobweb_glut", "market_glut") or (
+            str(context.get("glut_risk_level", "")).upper() in ("HIGH", "CRITICAL")
+            or float(context.get("cobweb_glut_risk_index", 0.0)) >= 0.65
+        )
+
         if is_sensor_crack:
             stance = "KILL"
             arg = (
@@ -76,6 +82,17 @@ class MarketAgent:
             econ_roi = "Cost of Inaction: $0. Cost of False-Alarm Intervention: -$422/ha. Net Savings: +$422/ha."
             supply_angle = "Preserving cooperative diesel reserves ensures fuel availability for mechanical harvesting operations."
             commercial_model = "Hardware-as-a-Service ($3/ha/season) includes automated spatial anomaly filters to prevent erroneous pumping."
+        elif is_regional_glut:
+            stance = "RESTRUCTURE"
+            arg = (
+                f"Regional market demand alert: Local planting rush has expanded township acreage significantly beyond "
+                f"regional off-taker and drying depot capacity. Holding unhedged spot volume risks a catastrophic 40-70% price "
+                f"collapse below the ${crop_val * 0.55:.1f}/ha regional production cost benchmark. ECONOMIC_VETO on speculative acreage expansion."
+            )
+            impact = "Mandate 40% forward-contracting, staggered planting cohorts, and cooperative storage reservation to preserve solvent margins."
+            econ_roi = "Cost of Inaction (Unhedged Glut Dump): -$380/ha margin loss. Cost of Hedged Strategy: $18/ha. Net Advantage: +$362/ha."
+            supply_angle = "Forward-contracts certified volume with regional millers/exporters to secure floor pricing before harvest glut hits."
+            commercial_model = "Cooperative Aggregation SLA guaranteeing floor price protection against regional spot collapse."
         elif is_monsoon_blight:
             stance = "RESTRUCTURE"
             arg = (
