@@ -43,7 +43,9 @@ async function open(page, farm, keepGuide = false) {
   await page.keyboard.press('Enter');
   await page.waitForTimeout(5000);
   await page.getByRole('button', { name: /Open 3D view/ }).first().click();
-  await page.waitForSelector('.aq-fm-replica[data-ready="true"]', { timeout: 90000 }).catch(() => console.log(`${farm}: not ready in time`));
+  await page.waitForSelector('.aq-fm-replica[data-ready="true"]', { timeout: 90000 }).catch(() => {
+    throw new Error(`${farm}: 3D view not ready in 90s, no screenshot taken`);
+  });
   await page.waitForTimeout(keepGuide ? 1500 : 3500);
 }
 
