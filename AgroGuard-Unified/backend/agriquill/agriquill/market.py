@@ -120,9 +120,30 @@ def counted_kg(produce: str, qty_kg: int, area_ha: float | None) -> int:
     return min(qty_kg, cap)
 
 
+def _contributions(raw: Any, kg: int) -> list[dict[str, Any]]:
+    if not raw:
+        return []
+    rows = [
+        {"member": str(r.get("member") or "").strip()[:80], "qty_kg": int(r.get("qty_kg") or 0)}
+        for r in raw
+    ]
+    if (
+        any(not r["member"] or r["qty_kg"] <= 0 for r in rows)
+        or sum(r["qty_kg"] for r in rows) != kg
+    ):
+        raise ValueError("member amounts must be positive and add up to the listed kg")
+    return rows
+
+
 def post_listing(farmer: str, body: dict[str, Any]) -> dict[str, Any]:
     produce, kg = _produce(body), _kg(body)
     town, lat, lon = _place(body)
+    producer_id = body.get("producer_id")
+    if producer_id:
+        from . import producers
+
+        producers.require_act(farmer, str(producer_id))
+    contributions = _contributions(body.get("contributions"), kg)
     area = body.get("area_ha")
     area_ha = float(area) if area not in (None, "") else None
     ask = body.get("ask_mmk_kg")
@@ -130,7 +151,8 @@ def post_listing(farmer: str, body: dict[str, Any]) -> dict[str, Any]:
         "id": f"lst-{uuid.uuid4().hex[:12]}",
         "farmer": farmer,
         "farmer_name": body.get("farmer_name"),
-        "producer_id": body.get("producer_id"),
+        "producer_id": producer_id,
+        "contributions": contributions,
         "produce": produce,
         "qty_kg": kg,
         "counted_kg": counted_kg(produce, kg, area_ha),
@@ -146,7 +168,12 @@ def post_listing(farmer: str, body: dict[str, Any]) -> dict[str, Any]:
         "created_at": now_iso(),
     }
     _purge(town, produce)
-    return _save(LISTING, record)
+    saved = _save(LISTING, record)
+    if producer_id:
+        from . import producers
+
+        producers.log_listing(str(producer_id), farmer, saved["id"])
+    return saved
 
 
 def channel_for(buyer_kind: str) -> str:

@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
-from . import haul, market
+from . import haul, market, producers
 from .config import get_settings
 
 
@@ -46,6 +46,10 @@ def _run(fn: Callable[..., Any], *args: Any) -> Any:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except haul.NotSelected as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except producers.NearbyProfile as exc:
+        raise HTTPException(
+            status_code=409, detail={"message": str(exc), "profile": exc.profile}
+        ) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc).strip("'")) from exc
     except ValueError as exc:
@@ -98,7 +102,7 @@ def _candidates(buyer: str, preorder_id: str) -> list[dict[str, Any]]:
     return rows
 
 
-def build(caller_dep: Any) -> APIRouter:
+def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
     r = APIRouter(prefix="/market", dependencies=[Depends(require_market)])
 
     @r.get("/status")
@@ -161,5 +165,45 @@ def build(caller_dep: Any) -> APIRouter:
     @r.post("/offers/{offer_id}/pickup", status_code=201)
     async def pickup(offer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
         return haul.farmer_view(_run(haul.book_pickup, _farmer(caller), offer_id))
+
+    @r.post("/producers", status_code=201)
+    async def create_producer(
+        body: dict[str, Any] = _BODY, caller: Any = caller_dep
+    ) -> dict[str, Any]:
+        if "buyer" in caller.roles:
+            return _run(producers.create, account_of(caller), caller.buyer_kind or "", body)
+        return _run(producers.create, _farmer(caller), None, body)
+
+    @r.get("/producers/mine")
+    async def my_producers(caller: Any = caller_dep) -> list[dict[str, Any]]:
+        return producers.mine(account_of(caller))
+
+    @r.patch("/producers/{producer_id}")
+    async def update_producer(
+        producer_id: str, body: dict[str, Any] = _BODY, caller: Any = caller_dep
+    ) -> dict[str, Any]:
+        return _run(producers.update, account_of(caller), producer_id, body)
+
+    @r.post("/producers/{producer_id}/members")
+    async def join_group(
+        producer_id: str, body: dict[str, Any] = _BODY, caller: Any = caller_dep
+    ) -> dict[str, Any]:
+        return _run(producers.add_member, account_of(caller), producer_id, body)
+
+    @r.post("/producers/{producer_id}/claim")
+    async def claim(
+        producer_id: str, body: dict[str, Any] = _BODY, caller: Any = reader_dep
+    ) -> dict[str, Any]:
+        account = account_of(caller) if caller is not None and caller.account else None
+        code, pin = str(body.get("code") or ""), str(body.get("pin") or "")
+        return _run(producers.claim, account, producer_id, code, pin)
+
+    @r.post("/producers/{producer_id}/revoke-manager")
+    async def revoke(producer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
+        return _run(producers.revoke_manager, account_of(caller), producer_id)
+
+    @r.get("/producers/{producer_id}/activity")
+    async def activity(producer_id: str, caller: Any = caller_dep) -> list[dict[str, Any]]:
+        return _run(producers.activity, account_of(caller), producer_id)
 
     return r

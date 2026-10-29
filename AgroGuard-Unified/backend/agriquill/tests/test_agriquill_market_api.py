@@ -177,3 +177,42 @@ def test_outlook_route_answers() -> None:
 
 def test_bad_body_is_422() -> None:
     assert post_listing(kg=0).status_code == 422
+
+
+def test_coop_registers_farmer_who_claims_from_a_phone_without_account() -> None:
+    body = {
+        "kind": "household",
+        "name": "Daw Hla's family",
+        "lat": 17.2,
+        "lon": 96.1,
+        "township": "Hmawbi",
+        "crops": [{"produce": "tomato", "area_ha": 1.0, "harvest_month": 3}],
+        "consent": {"by": "Co-op", "read_aloud": True, "text_version": "v1"},
+    }
+    made = client.post(f"{BASE}/producers", json=body, headers=BUYER)
+    assert made.status_code == 201
+    created = made.json()
+    again = client.post(f"{BASE}/producers", json=body, headers=BUYER)
+    assert again.status_code == 409
+    assert again.json()["detail"]["profile"]["name"] == "Daw Hla's family"
+    claimed = client.post(
+        f"{BASE}/producers/{created['id']}/claim",
+        json={"code": created["claim_code"], "pin": "4321"},
+    )
+    phone = {"X-AgriQuill-Producer-Token": claimed.json()["device_token"]}
+    listing = {
+        "produce": "tomato",
+        "qty_kg": 200,
+        "ready_on": READY,
+        "town": "Hmawbi",
+        "lat": 17.2,
+        "lon": 96.1,
+    }
+    posted = client.post(
+        f"{BASE}/listings", json={**listing, "producer_id": created["id"]}, headers=phone
+    )
+    assert posted.status_code == 201
+    bad = client.post(
+        f"{BASE}/listings", json=listing, headers={"X-AgriQuill-Producer-Token": "nope"}
+    )
+    assert bad.status_code == 401

@@ -53,6 +53,7 @@ from .. import (
     ops,
     pending,
     personas,
+    producers,
     safety,
     season_run,
     seasons,
@@ -159,8 +160,14 @@ def _agroguard_caller(authorization: str | None) -> Caller | None:
 def _reader(
     token: str | None = Header(None, alias="X-AgriQuill-Write-Token"),
     authorization: str | None = Header(None),
+    producer_token: str | None = Header(None, alias="X-AgriQuill-Producer-Token"),
 ) -> Caller | None:
     settings = get_settings()
+    if producer_token:
+        device = producers.account_for_token(producer_token)
+        if device is None:
+            raise HTTPException(status_code=401, detail="this phone's farm key is not valid")
+        return Caller(None, frozenset({"crew"}), frozenset(), device)
     try:
         users = parse_users(_user_entries(settings))
     except ValueError as exc:
@@ -2247,7 +2254,7 @@ def _install_error_contract(app: FastAPI) -> None:
 def create_app() -> FastAPI:
     app = FastAPI(title="AgriQill API", version="0.1.0", lifespan=_lifespan)
     router.include_router(market_api.public)
-    router.include_router(market_api.build(_CALLER))
+    router.include_router(market_api.build(_CALLER, _READER))
     app.include_router(router, prefix="/api/v1")
     _install_error_contract(app)
 
