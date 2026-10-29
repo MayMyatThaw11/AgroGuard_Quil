@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     # the source must never open a production server.
     builtin_user: SecretStr | None = SecretStr("Farm Manager:FARMSIM-2026:manager,crew:*")
     public_farms: str = "farm_ayeyarwady_demo"
+    farm_market_enabled: bool = False
     # The AgroGuard API that counts each signed-in user's simulated farms. Unset means no quota
     # (development only: production refuses to run simulations without it).
     agroguard_url: str | None = None

@@ -7,11 +7,13 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api.v1.endpoints.mcp import router as mcp_router
 from app.core.config import get_settings
+from app.core.security import current_user
 from app.services import mcp_client
 from tests.fake_mcp_server import command
 
 app = FastAPI()
 app.include_router(mcp_router, prefix="/api/v1")
+app.dependency_overrides[current_user] = lambda: object()
 
 
 def _configure(monkeypatch: pytest.MonkeyPatch, servers: list[dict]) -> None:

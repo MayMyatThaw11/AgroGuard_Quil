@@ -45,6 +45,7 @@ from .. import (
     knowledge,
     live,
     lots,
+    market_api,
     ml,
     modelcard,
     obs,
@@ -2241,6 +2242,8 @@ def _install_error_contract(app: FastAPI) -> None:
 
 def create_app() -> FastAPI:
     app = FastAPI(title="AgriQill API", version="0.1.0", lifespan=_lifespan)
+    router.include_router(market_api.public)
+    router.include_router(market_api.gated)
     app.include_router(router, prefix="/api/v1")
     _install_error_contract(app)
 

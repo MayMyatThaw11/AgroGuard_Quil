@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.config import MCPServerConfig, Settings, get_settings
+from app.core.security import current_user
 from app.schemas.mcp import (
     MCPServerStatus,
     MCPToolCallRequest,
@@ -11,7 +12,7 @@ from app.schemas.mcp import (
 from app.services import mcp_client
 from app.services.mcp_client import MCPError
 
-router = APIRouter(tags=["mcp"])
+router = APIRouter(tags=["mcp"], dependencies=[Depends(current_user)])
 
 
 def _server(settings: Settings, name: str) -> MCPServerConfig:
@@ -71,6 +72,11 @@ async def mcp_call_tool(
     settings: Annotated[Settings, Depends(get_settings)],
 ):
     cfg = _server(settings, name)
+    if tool in settings.mcp_chat_deny:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Tool {tool!r} is not allowed over this API.",
+        )
     try:
         result = await mcp_client.call_tool(cfg, tool, body.arguments)
     except MCPError as exc:
