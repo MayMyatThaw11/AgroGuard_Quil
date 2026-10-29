@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import { logout, useEntitlements } from '../lib/session.js'
 import PlanChip from './PlanChip.jsx'
+import Logo from './Logo.jsx'
 
 const navItems = [
   { key: 'nav.landing', icon: Home, path: '/' },
@@ -45,8 +46,11 @@ function Sidebar({ mobileSidebarOpen, collapsed, onClose, onToggleCollapsed }) {
     >
       <div className={`flex shrink-0 items-start justify-between border-b border-myanglow-sage/70 px-5 py-4 ${rail('lg:justify-center lg:px-0')}`}>
         <div className={rail('lg:hidden')}>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.5em] text-myanglow-medium">AgroGuard</p>
-          <h2 className="mt-1.5 text-2xl font-semibold text-myanglow-navy">{t('sidebar.title')}</h2>
+          <div className="flex items-center gap-3">
+            <Logo className="h-12 w-12" rounded="rounded-xl" />
+            <p className="text-base font-bold uppercase tracking-[0.35em] text-myanglow-medium">AgroGuard</p>
+          </div>
+          <h2 className="mt-3 text-2xl font-semibold text-myanglow-navy">{t('sidebar.title')}</h2>
           <p className="mt-1 text-sm leading-6 text-slate-500">
             {t('sidebar.subtitle')}
           </p>

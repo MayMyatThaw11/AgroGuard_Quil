@@ -24,6 +24,7 @@ import {
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from './lib/session.js'
+import Logo from './components/Logo.jsx'
 
 const capabilities = [
   {
@@ -145,9 +146,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
         </button>
 
         <div className="relative">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-myanglow-forest text-white shadow-lg shadow-myanglow-forest/20">
-            <Leaf size={22} />
-          </div>
+          <Logo className="h-14 w-14" />
           <p className="mt-5 text-xs font-semibold uppercase tracking-[0.35em] text-myanglow-medium">AgroGuard account</p>
           <h2 className="mt-2 text-3xl font-semibold text-myanglow-navy">
             {mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset your password'}
@@ -233,9 +232,7 @@ function LandingPage() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <nav className="flex min-h-28 w-full items-center justify-between py-8 sm:py-9">
             <div className="flex items-center gap-4">
-              <div className="grid h-14 w-14 place-items-center rounded-[1.2rem] bg-myanglow-forest text-white shadow-lg shadow-myanglow-forest/20">
-                <Leaf size={26} />
-              </div>
+              <Logo className="h-16 w-16" rounded="rounded-[1.2rem]" />
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.5em] text-myanglow-medium">AgroGuard</p>
                 <p className="mt-1 text-sm text-slate-500">Intelligence for every field</p>
