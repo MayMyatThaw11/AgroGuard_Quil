@@ -557,8 +557,11 @@ def test_market_rest_api_endpoints():
     from fastapi.testclient import TestClient
     from app.api.v1.endpoints.market import router as market_router
 
+    from app.core.security import current_user
+
     app = FastAPI()
     app.include_router(market_router)
+    app.dependency_overrides[current_user] = lambda: object()
     client = TestClient(app)
 
     # 1. Supported crops

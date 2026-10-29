@@ -59,9 +59,9 @@ def test_resolve_market_centers():
     assert resolve_market_center("Henzada") == (Region.AYEYARWADY, "Hinthada")
     assert resolve_market_center("Pathein") == (Region.AYEYARWADY, "Pathein")
     assert resolve_market_center("Bassein") == (Region.AYEYARWADY, "Pathein")
-    assert resolve_market_center("Mawlamyine/Delta co-op") == (Region.AYEYARWADY, "Mawlamyine/Delta co-op")
-    assert resolve_market_center("Delta co-op") == (Region.AYEYARWADY, "Mawlamyine/Delta co-op")
-    assert resolve_market_center("Mawlamyine") == (Region.AYEYARWADY, "Mawlamyine/Delta co-op")
+    assert resolve_market_center("Mawlamyine/Delta co-op") == (Region.MON, "Mawlamyine/Delta co-op")
+    assert resolve_market_center("Delta co-op") == (Region.MON, "Mawlamyine/Delta co-op")
+    assert resolve_market_center("Mawlamyine") == (Region.MON, "Mawlamyine/Delta co-op")
 
     # Unknown center
     assert resolve_market_center("Atlantis") == (None, None)
@@ -274,11 +274,13 @@ def test_provenance_measured_for_fresh_live_quote(market_service):
 
 
 def test_provenance_historical_index_fallback(market_service):
-    """When no live quote exists, default mode returns verified HISTORICAL_INDEX."""
-    q = market_service.get_quote("Taunggyi", "Wheat", live_only=False)
+    q = market_service.get_quote("Taunggyi", "Maize", live_only=False)
     assert q.provenance == ProvenanceTag.HISTORICAL_INDEX
     assert q.standardized is not None
-    assert 350.0 <= q.standardized.price_usd_per_tonne <= 370.0
+    assert q.standardized.price_usd_per_tonne == 281.5
+    wheat = market_service.get_quote("Taunggyi", "Wheat", live_only=False)
+    assert wheat.provenance == ProvenanceTag.UNQUOTED
+    assert wheat.unquoted_reason == UnquotedReason.MISSING_FEED_DATA
 
 
 def test_provenance_unquoted_when_live_only_and_feed_absent(market_service):
@@ -301,9 +303,9 @@ def test_provenance_unquoted_when_feed_stale(market_service):
     assert q_live.unquoted_reason == UnquotedReason.STALE_FEED
     assert q_live.standardized is None
 
-    # In fallback mode: gracefully falls back to HISTORICAL_INDEX
     q_hist = market_service.get_quote("Pathein", "Paw San", live_only=False)
-    assert q_hist.provenance == ProvenanceTag.HISTORICAL_INDEX
+    assert q_hist.provenance == ProvenanceTag.UNQUOTED
+    assert q_hist.unquoted_reason == UnquotedReason.MISSING_FEED_DATA
 
 
 def test_anti_hallucination_geographic_and_commodity_mismatch(market_service):
@@ -342,7 +344,7 @@ def test_qill_solvency_approved_within_3x_roi(market_service):
     # Pathein Paw San quote: $480/ton. Expected yield: 4.2 ton/ha.
     # Gross value: $2016.00/ha. At-risk revenue (25% loss): $504.00/ha.
     # 3x ROI Ceiling: $504 / 3.0 = $168.00/ha. Budget: $100/ha. Max viable spend = min(100, 168) = $100.
-    quote = market_service.get_quote("Pathein", "Paw San")
+    quote = market_service.ingest_raw_quote("Pathein", "Paw San", 480.0, "tonne", "USD")
     assessment = market_service.evaluate_qill_solvency(
         quote=quote,
         expected_yield_ton_ha=4.2,
@@ -403,12 +405,12 @@ def test_enrich_council_context_end_to_end_with_market_agent(market_service):
         "rain_forecast_48h_mm": 25.0,
     }
 
+    market_service.ingest_raw_quote("Maubin", "Paw San", 480.0, "tonne", "USD")
     enriched = market_service.enrich_council_context(context)
 
-    # 1. Grounded context verification
     assert enriched["spot_price_usd_ton"] == 480.0
-    assert enriched["crop_economic_value_usd_ha"] == 2016.0  # 4.2 * 480
-    assert enriched["market_provenance"] == ProvenanceTag.HISTORICAL_INDEX.value
+    assert enriched["crop_economic_value_usd_ha"] == 2016.0
+    assert enriched["market_provenance"] == ProvenanceTag.MEASURED.value
 
     # 2. MarketAgent evaluation
     market_assessment = MarketAgent.evaluate(enriched)
@@ -429,7 +431,8 @@ def test_market_summary_returns_all_regional_centers(market_service):
     assert set(shan_centers.keys()) == {"Taunggyi", "Muse", "Aungban", "Lashio"}
 
     ayeyarwady_centers = summary["Ayeyarwady"]
-    assert set(ayeyarwady_centers.keys()) == {"Maubin", "Hinthada", "Pathein", "Mawlamyine/Delta co-op"}
+    assert set(ayeyarwady_centers.keys()) == {"Maubin", "Hinthada", "Pathein"}
+    assert set(summary["Mon"].keys()) == {"Mawlamyine/Delta co-op"}
 
 
 # =========================================================================
@@ -448,8 +451,8 @@ def test_burmese_center_and_currency_resolution():
     assert resolve_market_center("မအူပင်") == (Region.AYEYARWADY, "Maubin")
     assert resolve_market_center("ဟင်္သာတ") == (Region.AYEYARWADY, "Hinthada")
     assert resolve_market_center("ပုသိမ်") == (Region.AYEYARWADY, "Pathein")
-    assert resolve_market_center("မော်လမြိုင်") == (Region.AYEYARWADY, "Mawlamyine/Delta co-op")
-    assert resolve_market_center("ဒယ်တာ") == (Region.AYEYARWADY, "Mawlamyine/Delta co-op")
+    assert resolve_market_center("မော်လမြိုင်") == (Region.MON, "Mawlamyine/Delta co-op")
+    assert resolve_market_center("ဒယ်တာ") == (Region.MON, "Mawlamyine/Delta co-op")
 
     # Currency tokens in Burmese
     assert standardize_currency_token("ကျပ်") == "MMK"
@@ -466,16 +469,13 @@ def test_burmese_center_and_currency_resolution():
 
 def test_hinthada_supports_brackish_aquaculture(market_service):
     """Verify Hinthada (Ayeyarwady Delta) supports brackish aquaculture and lowland paddy."""
-    q_prawn = market_service.get_quote("Hinthada", "Giant Freshwater Prawn")
-    assert q_prawn.provenance == ProvenanceTag.HISTORICAL_INDEX
-    assert q_prawn.is_valid is True
-    assert q_prawn.standardized is not None
+    q_prawn = market_service.ingest_raw_quote("Hinthada", "Giant Freshwater Prawn", 7200.0, "tonne", "USD")
+    assert q_prawn.provenance == ProvenanceTag.MEASURED
     assert q_prawn.standardized.price_usd_per_tonne == 7200.0
 
-    q_shrimp = market_service.get_quote("Hinthada", "Black Tiger Shrimp")
-    assert q_shrimp.provenance == ProvenanceTag.HISTORICAL_INDEX
-    assert q_shrimp.is_valid is True
-    assert q_shrimp.standardized.price_usd_per_tonne == 9500.0
+    q_shrimp = market_service.ingest_raw_quote("Hinthada", "Black Tiger Shrimp", 9500.0, "tonne", "USD")
+    assert q_shrimp.provenance == ProvenanceTag.MEASURED
+    assert market_service.get_quote("Hinthada", "Black Tiger Shrimp", live_only=True).is_valid
 
 
 def test_zero_variance_iqr_autocleaning_guard():
@@ -609,14 +609,8 @@ def test_local_datasets_yield_and_price_baselines(market_service):
     assert tgi_maize_yield is not None
     assert 2.0 <= tgi_maize_yield <= 5.5
 
-    # 2. Pathein historical price and yield data loaded
-    pathein_rice_yield = market_service.regional_yield_stats.get(("Pathein", "rice_pawsan"))
-    assert pathein_rice_yield is not None
-    assert 3.5 <= pathein_rice_yield <= 5.5
-
-    pathein_rice_hist = market_service.price_history.get(("Pathein", "rice_pawsan"))
-    assert pathein_rice_hist is not None
-    assert len(pathein_rice_hist) > 0
+    assert ("Pathein", "rice_pawsan") not in market_service.regional_yield_stats
+    assert market_service.price_history == {}
 
 
 def test_clean_numeric_price_various_formats():

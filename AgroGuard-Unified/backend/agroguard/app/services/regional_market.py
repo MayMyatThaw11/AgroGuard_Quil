@@ -56,6 +56,7 @@ class Region(str, Enum):
     SHAN = "Shan"
     AYEYARWADY = "Ayeyarwady"
     YANGON = "Yangon"
+    MON = "Mon"
 
 
 class CommodityCategory(str, Enum):
@@ -185,6 +186,8 @@ VERIFIED_REGIONAL_CENTERS: dict[Region, dict[str, dict[str, Any]]] = {
             ],
             "aliases": ["pathein", "bassein", "ပုသိမ်"],
         },
+    },
+    Region.MON: {
         "Mawlamyine/Delta co-op": {
             "name": "Mawlamyine/Delta co-op",
             "lat": 16.491,
@@ -331,7 +334,7 @@ VERIFIED_COMMODITIES: dict[str, dict[str, Any]] = {
         "region": Region.AYEYARWADY,
         "default_usd_tonne": 340.0,
         "price_corridor_usd_tonne": (200.0, 550.0),
-        "aliases": ["emata", "emata rice", "ဧည့်မထ", "rice", "paddy", "rice (paddy)", "summer paddy", "rain paddy"],
+        "aliases": ["emata", "emata rice", "ဧည့်မထ", "paddy", "rice (paddy)", "summer paddy", "rain paddy"],
     },
     # Ayeyarwady Brackish Aquaculture
     "black_tiger_shrimp": {
@@ -564,13 +567,12 @@ class MarketQuote(BaseModel):
         freshness_hours = 0.0
         is_stale = False
         if self.quote_timestamp:
-            try:
-                q_dt = datetime.fromisoformat(self.quote_timestamp.replace("Z", "+00:00"))
-                delta = (now - q_dt).total_seconds()
-                freshness_hours = max(0.0, round(delta / 3600.0, 1))
+            age = quote_age_seconds(self.quote_timestamp)
+            if age is None:
+                is_stale = True
+            else:
+                freshness_hours = max(0.0, round(age / 3600.0, 1))
                 is_stale = freshness_hours > (stale_threshold_days * 24.0)
-            except Exception:
-                freshness_hours = 0.0
 
         canon = self.commodity_canonical or self.commodity_raw
         spec = VERIFIED_COMMODITIES.get(canon, {})
@@ -663,6 +665,12 @@ class QillSolvencyAssessment(BaseModel):
 # HELPER FUNCTIONS: NORMALIZATION & CANONICAL MATCHING
 # =========================================================================
 
+MIN_ZSCORE_HISTORY = 10
+LOOKUP_FILE = "ASEAN_Crop_Prices_Lookup.csv"
+SHAN_FILE = "Agricultural Crop-production Data of Shan State.csv"
+VERIFIED_PRICE_SOURCE = "FAOSTAT_Cleaned"
+LAKH_WORDS = ("သိန်း", "lakhs", "lakh")
+UNRESOLVED_PHRASES = ("sweet potato",)
 BURMESE_DIGITS = str.maketrans("၀၁၂၃၄၅၆၇၈၉", "0123456789")
 
 
@@ -673,8 +681,15 @@ def clean_numeric_price(val: Any) -> float | None:
     if isinstance(val, (int, float)):
         return float(val) if math.isfinite(val) else None
     if isinstance(val, str):
+        text = val.strip()
+        multiplier = 1.0
+        for word in LAKH_WORDS:
+            if word in text.lower():
+                multiplier = 100_000.0
+                text = text.lower().replace(word, "")
+                break
         cleaned = (
-            val.strip()
+            text
             .translate(BURMESE_DIGITS)
             .replace(",", "")
             .replace("$", "")
@@ -685,7 +700,7 @@ def clean_numeric_price(val: Any) -> float | None:
             .strip()
         )
         try:
-            parsed = float(cleaned)
+            parsed = float(cleaned) * multiplier
             return parsed if math.isfinite(parsed) else None
         except ValueError:
             return None
@@ -725,9 +740,41 @@ def resolve_market_center(center: str) -> tuple[Region | None, str | None]:
     return None, None
 
 
+NUMBER = r"([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)"
+UNIT_WORDS = r"(?:viss|peiktha|ပိဿာ|basket|tin|တင်း|bag|အိတ်|pyi|ပြည်|tonne|ton|တန်|kg|ကီလို|lb|lbs)"
+
+
+def pick_price(text: str) -> float | None:
+    after = re.search(NUMBER + r"\s*(?:ကျပ်|ks|mmk|kyat|kyats|usd|\$|/-)", text, re.IGNORECASE)
+    if after:
+        return float(after.group(1).replace(",", ""))
+    before = re.search(r"(?:\$|usd|mmk|ks)\s*" + NUMBER, text, re.IGNORECASE)
+    if before:
+        return float(before.group(1).replace(",", ""))
+    without_sizes = re.sub(r"(?:^|\s)[0-9]{1,3}\s*" + UNIT_WORDS + r"(?=\s|$)", " ", text, flags=re.IGNORECASE)
+    numbers = [float(n.replace(",", "")) for n in re.findall(NUMBER, without_sizes)]
+    return max(numbers) if numbers else None
+
+
+def quote_age_seconds(timestamp: str | None) -> float | None:
+    if not timestamp:
+        return None
+    try:
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - parsed).total_seconds()
+
+
+def _has_word(text: str, phrase: str) -> bool:
+    return re.search(rf"(?<![\w]){re.escape(phrase)}(?![\w])", text) is not None
+
+
 def resolve_commodity(commodity: str, region: Region | None = None) -> tuple[str | None, dict[str, Any] | None]:
     norm = normalize_text(commodity)
-    if not norm:
+    if not norm or any(phrase in norm for phrase in UNRESOLVED_PHRASES):
         return None, None
 
     # Step 1: Direct exact match within region
@@ -751,21 +798,21 @@ def resolve_commodity(commodity: str, region: Region | None = None) -> tuple[str
         if region is not None and spec["region"] != region:
             continue
         c_norm = normalize_text(canonical)
-        if c_norm and (c_norm in norm or norm in c_norm):
+        if c_norm and _has_word(norm, c_norm):
             return canonical, spec
         for alias in spec["aliases"]:
             a_norm = normalize_text(alias)
-            if a_norm and (a_norm in norm or norm in a_norm):
+            if a_norm and _has_word(norm, a_norm):
                 return canonical, spec
 
     # Step 4: Substring / Token matching across all regions
     for canonical, spec in VERIFIED_COMMODITIES.items():
         c_norm = normalize_text(canonical)
-        if c_norm and (c_norm in norm or norm in c_norm):
+        if c_norm and _has_word(norm, c_norm):
             return canonical, spec
         for alias in spec["aliases"]:
             a_norm = normalize_text(alias)
-            if a_norm and (a_norm in norm or norm in a_norm):
+            if a_norm and _has_word(norm, a_norm):
                 return canonical, spec
 
     return None, None
@@ -915,8 +962,8 @@ class OutlierDetector:
         usd_per_tonne: float,
         commodity_canonical: str,
         historical_sample: list[float] | None = None,
+        baseline_usd: float | None = None,
     ) -> tuple[bool, str, dict[str, Any]]:
-        """Returns (is_outlier, reason, metrics)."""
         if not math.isfinite(usd_per_tonne) or usd_per_tonne <= 0:
             return True, "Corrupt or non-positive price value", {
                 "tested_usd": usd_per_tonne,
@@ -927,7 +974,7 @@ class OutlierDetector:
         if not spec:
             return True, f"Unknown commodity {commodity_canonical}", {"rule": "UNKNOWN_COMMODITY"}
 
-        baseline_median = float(spec["default_usd_tonne"])
+        baseline_median = float(baseline_usd if baseline_usd else spec["default_usd_tonne"])
         min_corr, max_corr = spec["price_corridor_usd_tonne"]
 
         # Rule 1: Absolute physical corridor
@@ -956,43 +1003,34 @@ class OutlierDetector:
                 "rule": "PRICE_SHOCK_MULTIPLIER",
             }
 
-        # Rule 3: IQR and Z-Score against historical sample if provided (at least 4 points)
-        if historical_sample and len(historical_sample) >= 4:
-            clean_sample = [float(x) for x in historical_sample if math.isfinite(x) and x > 0]
-            if len(clean_sample) >= 4:
-                s = pd.Series(clean_sample + [usd_per_tonne]).dropna()
-                q1 = float(s.quantile(0.25))
-                q3 = float(s.quantile(0.75))
-                iqr = q3 - q1
-                mean = float(s.mean())
-                std = float(s.std(ddof=1)) if s.std(ddof=1) > 0 else 0.0
+        history = [float(x) for x in historical_sample or [] if math.isfinite(x) and x > 0]
+        if len(history) >= 4:
+            s_hist = pd.Series(history)
+            q1 = float(s_hist.quantile(0.25))
+            q3 = float(s_hist.quantile(0.75))
+            effective_iqr = max(q3 - q1, 0.05 * baseline_median)
+            iqr_low = q1 - 1.5 * effective_iqr
+            iqr_high = q3 + 1.5 * effective_iqr
+            std = float(s_hist.std(ddof=1))
+            z_score = abs(usd_per_tonne - float(s_hist.mean())) / std if std > 1e-4 else 0.0
 
-                # Statistical autocleaning guard: Tukey fences require non-zero dispersion to prevent false
-                # outlier rejections on clustered / discrete benchmarks. If IQR is narrow or 0,
-                # use effective IQR floor of 5% of median baseline.
-                effective_iqr = max(iqr, 0.05 * baseline_median)
-                iqr_low = q1 - 1.5 * effective_iqr
-                iqr_high = q3 + 1.5 * effective_iqr
+            if usd_per_tonne < iqr_low or usd_per_tonne > iqr_high:
+                return True, (
+                    f"IQR Outlier: ${usd_per_tonne:.1f}/t is outside IQR range "
+                    f"[{iqr_low:.1f}, {iqr_high:.1f}] (Z-score: {z_score:.2f})"
+                ), {
+                    "tested_usd": usd_per_tonne,
+                    "iqr_bounds": (iqr_low, iqr_high),
+                    "z_score": z_score,
+                    "rule": "IQR_OUTLIER",
+                }
 
-                z_score = abs(usd_per_tonne - mean) / std if std > 1e-4 else 0.0
-
-                if usd_per_tonne < iqr_low or usd_per_tonne > iqr_high:
-                    return True, (
-                        f"IQR Outlier: ${usd_per_tonne:.1f}/t is outside IQR range "
-                        f"[{iqr_low:.1f}, {iqr_high:.1f}] (Z-score: {z_score:.2f})"
-                    ), {
-                        "tested_usd": usd_per_tonne,
-                        "iqr_bounds": (iqr_low, iqr_high),
-                        "z_score": z_score,
-                        "rule": "IQR_OUTLIER",
-                    }
-
-                if z_score > 3.0:
-                    return True, f"Z-Score Outlier: Z-score {z_score:.2f} > 3.0", {
-                        "tested_usd": usd_per_tonne,
-                        "z_score": z_score,
-                        "rule": "Z_SCORE_OUTLIER",
-                    }
+            if len(history) >= MIN_ZSCORE_HISTORY and z_score > 3.0:
+                return True, f"Z-Score Outlier: Z-score {z_score:.2f} > 3.0", {
+                    "tested_usd": usd_per_tonne,
+                    "z_score": z_score,
+                    "rule": "Z_SCORE_OUTLIER",
+                }
 
         return False, "Valid", {"tested_usd": usd_per_tonne, "baseline_median": baseline_median}
 
@@ -1161,20 +1199,9 @@ class WebPortalConnector:
 
                 cl_trans = cl.translate(BURMESE_DIGITS)
                 cl_clean = re.sub(r"(?:09|\+?959)[0-9\-\s]{7,11}", " ", cl_trans)
-                m_curr = re.search(r"([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)\s*(?:ကျပ်|ks|mmk|kyat|kyats|usd|\$|/-)", cl_clean, re.IGNORECASE)
-                m_curr_pre = re.search(r"(?:\$|usd|mmk|ks)\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)", cl_clean, re.IGNORECASE)
-                if m_curr:
-                    price_val = float(m_curr.group(1).replace(",", ""))
-                elif m_curr_pre:
-                    price_val = float(m_curr_pre.group(1).replace(",", ""))
-                else:
-                    cl_no_qty = re.sub(r"(?:^|\s)[0-9]{1,2}\s*(?:viss|peiktha|ပိဿာ|basket|tin|တင်း|bag|အိတ်|pyi|ပြည်|tonne|ton|တန်|kg|ကီလို)(?:\s|$)", " ", cl_clean, flags=re.IGNORECASE)
-                    m_num = re.search(r"([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)", cl_no_qty)
-                    if not m_num:
-                        m_num = re.search(r"([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)", cl_clean)
-                    if not m_num:
-                        continue
-                    price_val = float(m_num.group(1).replace(",", ""))
+                price_val = pick_price(cl_clean)
+                if price_val is None:
+                    continue
 
                 unit_token = "kg"
                 for u in ["viss", "peiktha", "ပိဿာ", "basket", "tin", "တင်း", "bag", "အိတ်", "pyi", "ပြည်", "tonne", "ton", "တန်", "kg", "ကီလို"]:
@@ -1624,105 +1651,52 @@ class RegionalMarketService:
         self.price_history: dict[tuple[str, str], list[float]] = {}
         self.regional_yield_stats: dict[tuple[str, str], float] = {}
         self.quarantine_log: list[OutlierQuarantineRecord] = []
+        self.baseline_sources: dict[tuple[str, str], str] = {}
+        self.load_errors: list[str] = []
         self.portal_connector = WebPortalConnector(self)
         self.community_connector = SocialCommunityConnector(self)
         self.erp_connector = BusinessSoftwareConnector(self)
         self._load_local_datasets()
 
     def _load_local_datasets(self) -> None:
-        """Load baseline data from local CSV datasets if present."""
-        # 1. ASEAN Crop Prices Lookup (Medians across crops)
-        asean_lookup_csv = self.data_dir / "ASEAN_Crop_Prices_Lookup.csv"
-        if asean_lookup_csv.exists():
+        lookup = self.data_dir / LOOKUP_FILE
+        if lookup.exists():
             try:
-                df = pd.read_csv(asean_lookup_csv)
+                df = pd.read_csv(lookup)
                 for _, row in df.iterrows():
-                    crop_en = str(row.get("crop_name_en", "")).strip()
-                    canon, _ = resolve_commodity(crop_en)
-                    if canon and pd.notna(row.get("myanmar_usd_tonne")):
-                        val = float(row["myanmar_usd_tonne"])
-                        # Populate across all regional centers that support this crop
-                        spec = VERIFIED_COMMODITIES.get(canon)
-                        if spec:
-                            reg = spec["region"]
-                            for center in VERIFIED_REGIONAL_CENTERS.get(reg, {}):
-                                self.historical_baselines[(center, canon)] = val
-            except Exception:
-                pass
+                    if str(row.get("price_source", "")).strip() != VERIFIED_PRICE_SOURCE:
+                        continue
+                    canon, spec = resolve_commodity(str(row.get("crop_name_en", "")).strip())
+                    if not canon or not spec or pd.isna(row.get("myanmar_usd_tonne")):
+                        continue
+                    for center in VERIFIED_REGIONAL_CENTERS.get(spec["region"], {}):
+                        self.historical_baselines[(center, canon)] = float(row["myanmar_usd_tonne"])
+                        self.baseline_sources[(center, canon)] = f"{LOOKUP_FILE} ({VERIFIED_PRICE_SOURCE})"
+            except Exception as exc:
+                self.load_errors.append(f"{LOOKUP_FILE}: {exc}")
 
-        # 2. Agricultural Crop-production Data of Shan State (Taunggyi, Muse, Lashio, Kalaw/Aungban)
-        shan_prod_csv = self.data_dir / "Agricultural Crop-production Data of Shan State.csv"
-        if shan_prod_csv.exists():
+        shan = self.data_dir / SHAN_FILE
+        if shan.exists():
             try:
-                df_shan = pd.read_csv(shan_prod_csv)
+                df_shan = pd.read_csv(shan)
                 yield_cols = [c for c in df_shan.columns if c.startswith("R20")]
                 ts_map = {"Taunggyi": "Taunggyi", "Muse": "Muse", "Lashio": "Lashio", "Kalaw": "Aungban"}
                 for _, row in df_shan.iterrows():
-                    ts = str(row.get("TS_NAME", "")).strip()
-                    center_name = ts_map.get(ts)
+                    center_name = ts_map.get(str(row.get("TS_NAME", "")).strip())
                     if not center_name:
                         continue
-                    cp = str(row.get("CP_NAME", "")).strip()
-                    canon_crop, _ = resolve_commodity(cp, Region.SHAN)
+                    canon_crop, _ = resolve_commodity(str(row.get("CP_NAME", "")).strip(), Region.SHAN)
                     if not canon_crop:
                         continue
                     y_vals = [float(row[c]) for c in yield_cols if pd.notna(row[c]) and float(row[c]) > 0]
                     if y_vals:
                         med_yield_baskets = float(pd.Series(y_vals).median())
                         basket_kg = CROP_BASKET_WEIGHT_KG.get(canon_crop, DEFAULT_BASKET_WEIGHT_KG)
-                        yield_ton_ha = round((med_yield_baskets * basket_kg * 2.47105) / 1000.0, 2)
-                        self.regional_yield_stats[(center_name, canon_crop)] = yield_ton_ha
-            except Exception:
-                pass
-
-        # 3. Township Agricultural Data (Pathein historical price series and yields)
-        township_csv = self.data_dir / "township_agricultural_data.csv"
-        if township_csv.exists():
-            try:
-                df_ts = pd.read_csv(township_csv)
-                temp_yields: dict[tuple[str, str], list[float]] = {}
-                for _, row in df_ts.iterrows():
-                    ts = str(row.get("township", "")).strip()
-                    _, c_center = resolve_market_center(ts)
-                    if not c_center:
-                        continue
-                    crop_name = str(row.get("best_crop", "")).strip()
-                    canon_crop, _ = resolve_commodity(crop_name)
-                    if not canon_crop:
-                        continue
-
-                    # Load price history
-                    p_val = row.get("local_grain_price")
-                    if pd.notna(p_val) and float(p_val) > 0:
-                        hist = self.price_history.setdefault((c_center, canon_crop), [])
-                        if len(hist) < 50:
-                            hist.append(float(p_val))
-                        if canon_crop == "rice_emata":
-                            pawsan_hist = self.price_history.setdefault((c_center, "rice_pawsan"), [])
-                            if len(pawsan_hist) < 50:
-                                pawsan_hist.append(float(p_val))
-
-                    # Collect yield statistics
-                    y_val = row.get("historic_yield_tons_per_ha")
-                    if pd.notna(y_val) and float(y_val) > 0:
-                        temp_yields.setdefault((c_center, canon_crop), []).append(float(y_val))
-                        if canon_crop == "rice_emata":
-                            temp_yields.setdefault((c_center, "rice_pawsan"), []).append(float(y_val))
-
-                for k, y_list in temp_yields.items():
-                    if y_list:
-                        self.regional_yield_stats[k] = round(float(pd.Series(y_list).median()), 2)
-            except Exception:
-                pass
-
-        # Populate defaults for any missing pairs
-        for reg, centers in VERIFIED_REGIONAL_CENTERS.items():
-            for center, c_spec in centers.items():
-                for canon, com_spec in VERIFIED_COMMODITIES.items():
-                    if com_spec["category"] in c_spec["supported_categories"]:
-                        key = (center, canon)
-                        if key not in self.historical_baselines:
-                            self.historical_baselines[key] = float(com_spec["default_usd_tonne"])
+                        self.regional_yield_stats[(center_name, canon_crop)] = round(
+                            (med_yield_baskets * basket_kg * 2.47105) / 1000.0, 2
+                        )
+            except Exception as exc:
+                self.load_errors.append(f"{SHAN_FILE}: {exc}")
 
     def clear_cache(self) -> None:
         self.feed_cache.clear()
@@ -1771,7 +1745,11 @@ class RegionalMarketService:
                 is_valid=False,
                 unquoted_reason=UnquotedReason.UNSUPPORTED_COMMODITY,
                 source=source,
-                notes=f"Commodity '{commodity}' is not verified for regional center '{canonical_center}' ({region.value}).",
+                notes=(
+                    "Say paddy or milled rice: plain rice is ambiguous."
+                    if _has_word(normalize_text(commodity), "rice")
+                    else f"Commodity '{commodity}' is not verified for regional center '{canonical_center}' ({region.value})."
+                ),
                 validation_stamp=ValidationStamp.UNVERIFIED_UNQUOTED,
                 confidence_score=0.0,
             )
@@ -1862,6 +1840,7 @@ class RegionalMarketService:
             usd_per_tonne=usd_tonne,
             commodity_canonical=canonical_commodity,
             historical_sample=effective_sample,
+            baseline_usd=self.historical_baselines.get((canonical_center, canonical_commodity)),
         )
         if is_outlier:
             rec = OutlierQuarantineRecord(
@@ -2036,10 +2015,9 @@ class RegionalMarketService:
 
                 # Extract price number (supporting commas and Burmese digits)
                 clause_trans = clause_s.translate(BURMESE_DIGITS)
-                m_num = re.search(r"([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)", clause_trans)
-                if not m_num:
+                price_val = pick_price(clause_trans)
+                if price_val is None:
                     continue
-                price_val = float(m_num.group(1).replace(",", ""))
 
                 # Extract unit
                 unit_token = "kg"
@@ -2128,15 +2106,8 @@ class RegionalMarketService:
         if cache_key in self.feed_cache:
             live_quote = self.feed_cache[cache_key]
             # Check staleness
-            is_stale = False
-            if live_quote.quote_timestamp:
-                try:
-                    q_time = datetime.fromisoformat(live_quote.quote_timestamp.replace("Z", "+00:00"))
-                    now = datetime.now(timezone.utc)
-                    if (now - q_time).total_seconds() > (max_age_days * 86400):
-                        is_stale = True
-                except Exception:
-                    is_stale = False
+            age = quote_age_seconds(live_quote.quote_timestamp)
+            is_stale = age is None or age > max_age_days * 86400
 
             if not is_stale and live_quote.is_valid:
                 return live_quote
@@ -2178,7 +2149,18 @@ class RegionalMarketService:
         # 3. Fallback to verified HISTORICAL_INDEX
         baseline_usd = self.historical_baselines.get(cache_key)
         if baseline_usd is None:
-            baseline_usd = float(com_spec["default_usd_tonne"])
+            return MarketQuote(
+                quote_id=f"UNQ-{canonical_center}-{canonical_commodity}",
+                region=region,
+                market_center=canonical_center,
+                commodity_raw=commodity,
+                commodity_canonical=canonical_commodity,
+                category=com_spec["category"],
+                provenance=ProvenanceTag.UNQUOTED,
+                is_valid=False,
+                unquoted_reason=UnquotedReason.MISSING_FEED_DATA,
+                notes="No live quote and no verified historical price for this crop and center.",
+            )
 
         std_price = convert_from_usd_per_tonne(
             usd_per_tonne=baseline_usd,
@@ -2194,7 +2176,7 @@ class RegionalMarketService:
             commodity_canonical=canonical_commodity,
             category=com_spec["category"],
             provenance=ProvenanceTag.HISTORICAL_INDEX,
-            quote_timestamp=datetime.now(timezone.utc).isoformat(),
+            quote_timestamp=None,
             raw_price=baseline_usd,
             raw_unit="tonne",
             raw_currency="USD",
@@ -2202,14 +2184,14 @@ class RegionalMarketService:
             is_valid=True,
             validation_stamp=ValidationStamp.HISTORICAL_BASELINE,
             confidence_score=0.70,
-            source="verified_historical_dataset",
-            notes="Derived from verified FAOSTAT/ASEAN/Shan historical baseline index.",
+            source=self.baseline_sources.get(cache_key, LOOKUP_FILE),
+            notes="Yearly FAOSTAT producer price; the lookup does not record which year.",
         )
 
     def get_market_summary(self, region: Region | None = None) -> dict[str, Any]:
         """Summary of active quotes across verified regional centers."""
         out: dict[str, Any] = {}
-        target_regions = [region] if region else [Region.SHAN, Region.AYEYARWADY, Region.YANGON]
+        target_regions = [region] if region else list(Region)
         for reg in target_regions:
             reg_dict: dict[str, Any] = {}
             for center, c_spec in VERIFIED_REGIONAL_CENTERS[reg].items():

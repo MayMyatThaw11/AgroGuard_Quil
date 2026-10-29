@@ -4,6 +4,7 @@ import asyncio
 import uuid
 from typing import Any
 
+from .. import regional_market
 from .agents.agriculture import AgricultureAgent
 from .agents.market import MarketAgent
 from .agents.tech import TechAgent
@@ -60,6 +61,8 @@ class CouncilOrchestrator:
 
     @classmethod
     async def deliberate(cls, context: dict[str, Any]) -> DeliberationResponse:
+        if "crop_economic_value_usd_ha" not in context and (context.get("market_center") or context.get("township")):
+            context = regional_market.regional_market_service.enrich_council_context(context)
         # -------------------------------------------------------------
         # Layer 1: Pre-Compute Deterministic Math & Grounding Facts
         # -------------------------------------------------------------
@@ -610,14 +613,23 @@ class CouncilOrchestrator:
             )
 
         elif is_regional_glut:
+            price_change = context.get("projected_price_change_at_harvest_pct")
+            drop = (
+                f"a projected {abs(float(price_change)):.0f}% price drop at harvest"
+                if price_change is not None
+                else "a price drop whose size is not measured yet"
+            )
+            unit_cost = 18.0
             final_decision = (
                 f"COUNCIL ADJUDICATION (TYPE 3 SYSTEMIC CRISIS / REGIONAL GLUT): Agent Qill issues ECONOMIC_VETO against speculative planting expansion on {field_id}. "
-                f"Regional acreage rush threatens a 40-70% post-hype price collapse below production costs. Mandate staggered planting cohorts, "
-                f"lock 40% forward-contract pre-sales, and reserve cooperative dry/cold storage space to protect smallholder solvency."
+                f"Regional acreage rush threatens {drop}. Mandate staggered planting cohorts, "
+                f"lock forward-contract pre-sales, and reserve cooperative dry/cold storage space to protect smallholder solvency. "
+                f"Forward-contract cost ${unit_cost:.0f}/ha is TO VERIFY."
             )
             sku_id = "COOP-FORWARD-CONTRACT"
-            unit_cost = 18.0
-            roi_multiple = 20.1
+            roi_multiple = (
+                round(crop_val * abs(float(price_change)) / 100.0 / unit_cost, 1) if price_change is not None else 0.0
+            )
             action_type = "LOCK_FORWARD_HARVEST_LOT"
 
             field_to_edge = FieldToEdgeBridge(

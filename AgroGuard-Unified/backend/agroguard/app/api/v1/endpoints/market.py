@@ -1,9 +1,10 @@
 """Market Demand & Regional Trading Hub REST Endpoints."""
 
 from typing import Any
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
+from app.core.security import current_user
 from app.services.market_demand import (
     CobwebGlutAnalysis,
     DemandProvenanceTag,
@@ -16,7 +17,7 @@ from app.services.regional_market import (
     regional_market_service,
 )
 
-router = APIRouter(prefix="/market", tags=["market"])
+router = APIRouter(prefix="/market", tags=["market"], dependencies=[Depends(current_user)])
 
 
 class MarketDemandRequest(BaseModel):

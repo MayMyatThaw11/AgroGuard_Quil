@@ -335,20 +335,25 @@ FROM VECTOR_SEARCH(
 Implemented and verified in [`AgroGuard-Unified/backend/agroguard/app/services/regional_market.py`](file:///c:/Users/ASUS/Downloads/AgroGuard_Quil/AgroGuard-Unified/backend/agroguard/app/services/regional_market.py):
 
 ### 8.1 Invariants & Defense in Depth
-1. **Provenance Tagging**: Every quote carries `MEASURED` (real bulletin or market feed), `HISTORICAL_INDEX` (verified statistical dataset), or `UNQUOTED` (explicit null with reason code `stale_feed` / `unquoted_market`).
-2. **Statistical Outlier Rejection**: Double-fence quarantine:
-   - Tukey Interquartile Range (IQR) fence with adaptive zero-variance floor:
-     $$\text{IQR}_{\text{eff}} = \max\left(\text{IQR}, \, 0.05 \times \text{Median}\right), \quad [\text{Q}_1 - 2.5\times\text{IQR}_{\text{eff}}, \, \text{Q}_3 + 2.5\times\text{IQR}_{\text{eff}}]$$
-   - Z-Score filter against regional rolling history ($|Z| > 3.0$).
+1. **Provenance Tagging**: Every quote carries `MEASURED` (real bulletin or market feed), `HISTORICAL_INDEX` (only rows of `ASEAN_Crop_Prices_Lookup.csv` whose `price_source` is `FAOSTAT_Cleaned`, with that file as the source and no invented date), or `UNQUOTED` (explicit null with a reason: `stale_feed`, `unquoted_market`, `missing_feed_data`, ...). Hardcoded `default_usd_tonne` values are never returned as prices. A timestamp without a timezone is read as UTC; an unreadable one counts as stale. See `backend/agroguard/app/data/PROVENANCE.md`.
+2. **Statistical Outlier Rejection**, all fences computed on the history **without** the tested price:
+   - Tukey fence: $\text{IQR}_{\text{eff}} = \max(\text{IQR}, 0.05 \times \text{baseline})$, bounds $[\text{Q}_1 - 1.5\,\text{IQR}_{\text{eff}}, \text{Q}_3 + 1.5\,\text{IQR}_{\text{eff}}]$, from 4 history points.
+   - Z-score ($|Z| > 3.0$) only from 10 history points: with fewer, no point can reach 3.
+   - Shock bounds 0.2x to 3.5x of the center's verified baseline when one exists, else the commodity default.
+   - The synthetic `township_agricultural_data.csv` feeds no price history or yields.
 3. **Myanmar Traditional Unit Normalization**:
-   - `1 viss (peiktha) = 1.63293 kg`
-   - Specific basket weights: Paddy (20.87 kg), Maize/Sesame (24.49 kg), Groundnut (11.34 kg), Wheat/Mustard (32.66 kg).
+   - `1 viss (peiktha) = 1.63293 kg`; paddy basket 46 lb = 20.87 kg.
+   - Basket weights for maize/sesame (24.49 kg), groundnut (11.34 kg) and wheat/mustard (32.66 kg) are TO VERIFY: no cited source yet.
    - Commercial standard bags: 50 kg.
-   - Dual-numeral parser supporting both ASCII (`0-9`) and Burmese numerals (`၀-၉`).
+   - ASCII and Burmese numerals (`၀-၉`); lakh (`သိန်း`, `lakh`) = 100,000.
+   - The 4,500 MMK/USD rate is a fixed setting, TO VERIFY and to be dated whenever it is used.
+   - Plain "rice" is rejected as ambiguous (say paddy or milled rice); "sweet potato" is not "potato".
 4. **Verified Centers**:
    - **Shan State**: Taunggyi, Muse, Aungban, Lashio.
-   - **Ayeyarwady Delta**: Maubin, Hinthada, Pathein, Mawlamyine.
-5. **Agent Qill Solvency Integration**: Automatically evaluates economic viability ($3\times$ ROI) while allowing zero-cost cultural mitigation ($0) when markets are unquoted.
+   - **Ayeyarwady Region**: Maubin, Hinthada, Pathein.
+   - **Mon State**: Mawlamyine.
+5. **Agent Qill Solvency Integration**: the council orchestrator calls `enrich_council_context` when a market center or township is given and no crop value is passed in. An `UNQUOTED` price allows zero-cost cultural mitigation only. The regional-glut branch states the measured `projected_price_change_at_harvest_pct`, or says the drop is not measured; its forward-contract cost is TO VERIFY.
+6. **Access**: every `/api/v1/market/*` and `/api/v1/mcp/*` route requires a signed-in user.
 
 ---
 
