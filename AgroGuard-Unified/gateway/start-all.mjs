@@ -50,17 +50,29 @@ console.log(`[setup] agroguard interpreter: ${agroguardPython}`)
 console.log(`[setup] agriquill interpreter: ${agriquillPython}`)
 const agriquillApiTarget = `http://127.0.0.1:${apps.agriquill.apiPort}`
 
-// Plant disease detection is its own service (the 5-group classifier in the
-// AgroGuard repo's plant_disease_detection/), started separately on :8001.
-// This workspace only proxies to it, so warn rather than fail when it's down:
-// everything else still works, only disease detection reports it unreachable.
+// Plant disease detection is its own service (the 5-group classifier in
+// plant_disease_detection/), served on :8001. It is started here too, from its
+// own .venv (or DISEASE_PYTHON in gateway/.env). It is optional: if it is already
+// running it is left alone, and if it has no interpreter or crashes, everything
+// else keeps working and only disease detection reports it unreachable.
+const diseaseDir = resolve(here, '..', 'plant_disease_detection')
+const diseasePort = new URL(apps.agroguard.diseaseApiUrl).port || '8001'
 const disease = await probe(apps.agroguard.diseaseApiUrl)
-console.log(
-  disease.up
-    ? `[setup] disease detection service: ${apps.agroguard.diseaseApiUrl} is up`
-    : `[setup] WARNING disease detection service not reachable at ${apps.agroguard.diseaseApiUrl}.\n` +
-        '        Start it from AgroGuard/plant_disease_detection: uvicorn app.main:app --port 8001 --reload',
-)
+const diseasePython =
+  process.env.DISEASE_PYTHON ||
+  resolve(diseaseDir, '.venv', win ? 'Scripts/python.exe' : 'bin/python')
+let startDisease = false
+if (disease.up) {
+  console.log(`[setup] disease detection service: ${apps.agroguard.diseaseApiUrl} is already up, leaving it running`)
+} else if (existsSync(diseasePython)) {
+  startDisease = true
+  console.log(`[setup] disease detection interpreter: ${diseasePython} (starting it on :${diseasePort})`)
+} else {
+  console.log(
+    `[setup] WARNING disease detection service not reachable at ${apps.agroguard.diseaseApiUrl} and no interpreter at ${diseasePython}.\n` +
+      '        Create plant_disease_detection/.venv (see its README) or set DISEASE_PYTHON in gateway/.env.',
+  )
+}
 
 function portOpen(port, host = '127.0.0.1') {
   return new Promise((done) => {
@@ -123,6 +135,15 @@ const processes = [
   },
   { name: 'gateway', command: process.execPath, args: [join(here, 'server.mjs')], cwd: here },
 ]
+if (startDisease) {
+  processes.push({
+    name: 'disease-api',
+    command: diseasePython,
+    args: ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', diseasePort],
+    cwd: diseaseDir,
+    optional: true,
+  })
+}
 
 const children = []
 let stopping = false
@@ -161,6 +182,7 @@ for (const spec of processes) {
   child.on('error', (error) => console.error(`[${spec.name}] failed to start: ${error.message}`))
   child.on('exit', (code) => {
     console.error(`[${spec.name}] exited with code ${code}`)
+    if (spec.optional) return
     stopAll(code ?? 1)
   })
   children.push(child)

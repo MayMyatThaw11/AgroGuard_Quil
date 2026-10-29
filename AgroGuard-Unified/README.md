@@ -270,9 +270,11 @@ typecheck` and `npm run test:farm-sim`.
   `backend/agroguard/.env.example`). Everything else (LLM, weather, Telegram)
   degrades gracefully to a fallback response if its key is blank.
 - **Plant disease detection**: the 5-group classifier service from the
-  AgroGuard repo (`AgroGuard/plant_disease_detection`), started on its own:
-  `uvicorn app.main:app --port 8001 --reload` from that folder. This
-  workspace doesn't start it — `npm run start` only warns if it's down, and
+  AgroGuard repo (`plant_disease_detection/`). `npm run start` starts it on
+  :8001 from `plant_disease_detection/.venv` (or the interpreter in
+  `DISEASE_PYTHON` in `gateway/.env`) and leaves it alone if it is already
+  running. It is optional: if it has no interpreter or stops, everything else
+  keeps running and only disease detection reports it unreachable.
   `npm run verify` checks it. AgroGuard's frontend proxies `/api/v1/ml/*` to it
   (`AGROGUARD_DISEASE_API_TARGET` overrides `http://localhost:8001`).
 - **NASA POWER and ISRIC SoilGrids** (Crop Suggestion map and "Detect my

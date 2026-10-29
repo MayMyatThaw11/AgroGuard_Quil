@@ -2,7 +2,7 @@
 // One stop command. Ctrl+C on `start.mjs` already stops everything cleanly;
 // this exists for when a terminal was closed instead of Ctrl+C'd and
 // processes were orphaned — it finds whatever is listening on this
-// workspace's four known ports and stops it, logging what it found.
+// workspace's five known ports and stops it, logging what it found.
 import { execSync, spawnSync } from 'node:child_process'
 
 const PORTS = {
@@ -10,6 +10,7 @@ const PORTS = {
   5173: 'agroguard-web',
   8000: 'agroguard-api',
   8010: 'agriquill-api',
+  8001: 'disease-api',
 }
 
 const win = process.platform === 'win32'
