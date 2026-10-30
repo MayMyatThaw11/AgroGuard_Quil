@@ -133,3 +133,48 @@ def test_surplus_route_is_for_food_businesses_only() -> None:
     ok = client.get(f"{BASE}/surplus", params=params, headers=BUYER)
     assert ok.status_code == 200 and isinstance(ok.json(), list)
     assert client.get(f"{BASE}/surplus", params=params, headers=FARMER).status_code == 403
+
+
+def test_cues_and_season_routes_require_the_farmer_and_candidates_carry_reliability() -> None:
+    _, pid = setup()
+    assert (
+        client.get(f"{BASE}/cues", params={"producer_id": pid}, headers=FARMER_B).status_code == 403
+    )
+    assert client.get(f"{BASE}/cues", params={"producer_id": pid}, headers=BUYER).status_code == 403
+    ok = client.get(f"{BASE}/cues", params={"producer_id": pid}, headers=FARMER)
+    assert ok.status_code == 200 and len(ok.json()) <= 1
+    season = client.get(f"{BASE}/producers/{pid}/season", headers=FARMER).json()
+    assert season["sold_kg"] == 0 and season["avg_mmk_kg"] is None
+    assert client.get(f"{BASE}/producers/{pid}/season", headers=FARMER_B).status_code == 403
+    listing = client.post(
+        f"{BASE}/listings",
+        json={
+            "produce": "tomato",
+            "qty_kg": 400,
+            "ready_on": "2027-03-15",
+            "town": "Hmawbi",
+            "lat": 17.1,
+            "lon": 96.05,
+            "producer_id": pid,
+        },
+        headers=FARMER,
+    ).json()
+    pre = client.post(
+        f"{BASE}/preorders",
+        json={
+            "produce": "tomato",
+            "qty_kg": 400,
+            "needed_by": "2027-03-20",
+            "town": "Hmawbi",
+            "lat": 17.1,
+            "lon": 96.05,
+        },
+        headers=BUYER,
+    ).json()
+    client.post(
+        f"{BASE}/preorders/{pre['id']}/offers",
+        json={"listing_id": listing["id"], "qty_kg": 400},
+        headers=FARMER,
+    )
+    rows = client.get(f"{BASE}/preorders/{pre['id']}/offers", headers=BUYER).json()
+    assert rows[0]["reliability"] == {"delivered": 0, "on_time": 0}

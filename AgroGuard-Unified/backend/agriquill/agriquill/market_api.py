@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
-from . import cropvalue, haul, market, market_signals, producers, reach, season_match
+from . import cropvalue, cues, haul, market, market_signals, producers, reach, season_match
 from .config import get_settings
 from .data import regions
 
@@ -101,6 +101,8 @@ def _candidates(buyer: str, preorder_id: str) -> list[dict[str, Any]]:
             "pickup": haul.pickup_for(offer["id"]),
         }
         if listing:
+            pid = listing.get("producer_id")
+            row["reliability"] = season_match.farmer_reliability(pid) if pid else None
             exact = offer["status"] in ("selected", "delivered")
             row.update(_transport(listing, order, offer, 0.0 if exact else 1.0))
             if exact:
@@ -187,6 +189,18 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
             expected = market_signals.expected_kg(record, listing["produce"])
             check = market_signals.gap(listing["qty_kg"], expected.get("kg"))
         return {**listing, "check": check}
+
+    @r.get("/cues")
+    async def producer_cues(
+        producer_id: str = Query(..., max_length=40),
+        since: str | None = Query(None, max_length=10),
+        caller: Any = caller_dep,
+    ) -> list[dict[str, Any]]:
+        return _run(cues.cues, _farmer(caller), producer_id, since)
+
+    @r.get("/producers/{producer_id}/season")
+    async def season(producer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
+        return _run(season_match.season_record, _farmer(caller), producer_id)
 
     @r.get("/surplus")
     async def surplus(

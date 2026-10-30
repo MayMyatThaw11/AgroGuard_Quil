@@ -371,3 +371,34 @@ def mine(buyer: str) -> list[dict[str, Any]]:
             }
         )
     return out
+
+
+def season_record(actor: str, producer_id: str) -> dict[str, Any]:
+    producers.require_act(actor, producer_id)
+    sold: dict[str, int] = {}
+    revenue = 0
+    priced_kg = 0
+    for offer in market.offers():
+        listing = haul._listing(offer)
+        if offer["status"] != "delivered" or listing.get("producer_id") != producer_id:
+            continue
+        order = market.get_preorder(offer["preorder_id"])
+        price = listing.get("ask_mmk_kg") or order.get("price_offer_mmk_kg")
+        kg = offer.get("received_kg") or 0
+        sold[order["produce"]] = sold.get(order["produce"], 0) + kg
+        if price:
+            revenue += kg * price
+            priced_kg += kg
+    town_avg = None
+    if sold:
+        record = producers.get(producer_id)
+        main = max(sold, key=lambda p: sold[p])
+        town_avg = prices.trend(main, record["lat"], record["lon"]).get("latest_mmk_kg")
+    reliability = farmer_reliability(producer_id)
+    return {
+        "sold_kg": sum(sold.values()),
+        "avg_mmk_kg": round(revenue / priced_kg) if priced_kg else None,
+        "town_avg_mmk_kg": town_avg,
+        "deliveries": reliability["delivered"],
+        "on_time": reliability["on_time"],
+    }
