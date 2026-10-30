@@ -24,6 +24,7 @@ import {
   type Trip,
 } from '../../lib/farmmap/market.ts';
 import { checkText, getSignals, hasKg, hasReady, kgText, readyText, type Signals } from '../../lib/farmmap/marketSignals.ts';
+import { prefillOffer } from '../../lib/farmmap/marketCues.ts';
 import { markPaid } from '../../lib/farmmap/seasonMatch.ts';
 import { latestHealthUpdate } from '../../lib/agroguard.ts';
 import { createProducer, loadActiveProducer, myProducers, saveActiveProducer, type Producer } from '../../lib/farmmap/producers.ts';
@@ -35,6 +36,7 @@ import { AqButton } from '../aq/aqPrimitives.tsx';
 import { DetailSection } from './detailParts.tsx';
 import { HaulShare } from './HaulShare.tsx';
 import { ProducerSetup } from './ProducerSetup.tsx';
+import { MarketCue, SeasonLine } from './MarketCue.tsx';
 import { ProducerSwitch } from './ProducerSwitch.tsx';
 import { SeasonMatchFarmer } from './SeasonMatch.tsx';
 import { TownOutlook, useWeight } from './TownOutlook.tsx';
@@ -111,7 +113,15 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
         setSignals(s);
         if (hasReady(s.ready_on)) setReady(s.ready_on.date);
         if (hasKg(s.expected_kg)) setKg(s.expected_kg.kg);
-      }, () => live && setSignals(null));
+      }, () => {
+        if (!live) return;
+        setSignals(null);
+        const mine = producers.find((p) => p.id === activeId);
+        if (!mine) return;
+        const fill = prefillOffer(mine, farm.crop);
+        setReady(fill.ready_on);
+        if (fill.kg) setKg(fill.kg);
+      });
     return () => {
       live = false;
     };
@@ -203,6 +213,8 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
 
       <ProducerSwitch producers={producers} activeId={activeId} onPick={pickProducer} onSetup={() => setSetup(true)} onChanged={loadProducers} />
 
+      {activeId ? <MarketCue producerId={activeId} /> : null}
+
       {outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} onAdvice={(a) => (a.id === 'presell-bulk' || a.id === 'reach-processors') && setChannel('bulk')} /> : <DetailSection className="is-loading"><span className="aq-fm-spin" aria-hidden="true" /></DetailSection>}
 
       {outlook?.market_open === false ? <DetailSection><p className="aq-fm-mk-quiet">{t('farmMap.signals.comingSoon')}</p></DetailSection> : null}
@@ -262,6 +274,8 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
           </div>
         ))}
       </DetailSection>
+
+      {activeId ? <SeasonLine producerId={activeId} /> : null}
 
       <SeasonMatchFarmer producer={producers.find((p) => p.id === activeId) ?? null} />
 

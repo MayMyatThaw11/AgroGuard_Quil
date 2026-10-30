@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route, Tractor, X } from 'lucide-react';
+import { Handshake, Route, Tractor, X } from 'lucide-react';
 import type { Farm, FarmStatus } from '../../lib/farmmap/farmMapTypes.ts';
 import { statusLabel } from '../../lib/farmmap/farmMapText.ts';
 import { useT } from '../../lib/i18n.ts';
@@ -11,12 +11,13 @@ interface FarmSelectionBarProps {
   rightOpen: boolean;
   onOpenField: (farmId: string) => void;
   onRoute: () => void;
+  onSell?: () => void;
   onClear: () => void;
 }
 
 const TONE: Record<FarmStatus, 'accent' | 'warning' | 'alert'> = { ok: 'accent', watch: 'warning', risk: 'alert' };
 
-export const FarmSelectionBar: React.FC<FarmSelectionBarProps> = ({ farm, leftOpen, rightOpen, onOpenField, onRoute, onClear }) => {
+export const FarmSelectionBar: React.FC<FarmSelectionBarProps> = ({ farm, leftOpen, rightOpen, onOpenField, onRoute, onSell, onClear }) => {
   const t = useT();
   const tone = TONE[farm.status];
   const monitorable = farm.crop === 'rice';
@@ -30,8 +31,14 @@ export const FarmSelectionBar: React.FC<FarmSelectionBarProps> = ({ farm, leftOp
           </span>
         </div>
         <AqBadge tone={tone}>{statusLabel(farm.status)}</AqBadge>
+        {onSell ? (
+          <AqButton variant="primary" onClick={onSell}>
+            <Handshake size={14} aria-hidden="true" />
+            {t('farmMap.market.sell')}
+          </AqButton>
+        ) : null}
         {monitorable ? (
-          <AqButton variant="primary" onClick={() => onOpenField(farm.id)}>
+          <AqButton variant={onSell ? 'secondary' : 'primary'} onClick={() => onOpenField(farm.id)}>
             <Tractor size={14} aria-hidden="true" />
             {t('farmMap.common.openMonitor')}
             <kbd className="aq-kbd">F</kbd>

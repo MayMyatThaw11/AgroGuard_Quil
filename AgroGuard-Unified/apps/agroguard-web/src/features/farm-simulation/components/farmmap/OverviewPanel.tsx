@@ -10,6 +10,7 @@ import { farmsRollup, type RollupFarm } from '../../lib/farmmap/ownFarms.ts';
 import { AqSectionLabel, AqStatTile } from '../aq/aqLayout.tsx';
 import { AqBadge } from '../aq/aqPrimitives.tsx';
 import { DetailSection, KV, More } from './detailParts.tsx';
+import { MarketStrip } from './MarketGlance.tsx';
 import { shareStyle, tintStyle } from './tint.ts';
 import { loadedHarvests, loadedRecords } from './useOwnFarms.ts';
 
@@ -103,6 +104,7 @@ export const OverviewPanel: React.FC<OverviewPanelProps> = ({ farms, stats, onPi
           <AqStatTile label={t('farmMap.over.alerts')} value={String(alerts)} tone={alerts ? 'alert' : 'default'} />
         </div>
       </DetailSection>
+      <MarketStrip />
       {hectares ? (
         <DetailSection>
           <AqSectionLabel aside={t('farmMap.over.share')}>{t('farmMap.over.crops')}</AqSectionLabel>

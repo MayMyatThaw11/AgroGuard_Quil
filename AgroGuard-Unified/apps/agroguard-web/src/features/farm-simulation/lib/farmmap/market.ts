@@ -199,6 +199,7 @@ export interface Candidate {
   farm_lat?: number;
   farm_lon?: number;
   pickup: (Pickup & { fare_mmk?: number }) | null;
+  reliability?: { delivered: number; on_time: number } | null;
   transport: TransportOption[];
   landed_basis: 'ask' | 'offer' | null;
   landed_low: number | null;

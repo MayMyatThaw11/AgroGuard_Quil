@@ -35,6 +35,8 @@ export interface Producer {
   manager: string | null;
   manager_revoked: boolean;
   has_pin: boolean;
+  township?: string;
+  village?: string;
   wants?: Want[];
   can_offer?: CanOffer[];
 }

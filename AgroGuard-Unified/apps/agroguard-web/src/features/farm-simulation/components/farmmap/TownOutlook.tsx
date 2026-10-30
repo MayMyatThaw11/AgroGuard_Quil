@@ -11,7 +11,7 @@ export const LEVEL_KEY: Record<OutlookLevel, Key> = {
   'no-buyers': 'farmMap.market.level.noBuyers',
   'no-data': 'farmMap.market.level.noData',
 };
-const VERDICT_KEY: Record<OutlookLevel, Key> = {
+export const VERDICT_KEY: Record<OutlookLevel, Key> = {
   short: 'farmMap.market.verdict.short',
   balanced: 'farmMap.market.verdict.balanced',
   glut: 'farmMap.market.verdict.glut',

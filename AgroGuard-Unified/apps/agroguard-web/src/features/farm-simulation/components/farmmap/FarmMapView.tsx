@@ -512,7 +512,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         />
       ) : null}
       {farm && !route && !farmView ? (
-        <FarmSelectionBar farm={farm} leftOpen={panels.left} rightOpen={panels.right} onOpenField={onOpenOps} onRoute={planner.open} onClear={() => pick(null)} />
+        <FarmSelectionBar farm={farm} leftOpen={panels.left} rightOpen={panels.right} onOpenField={onOpenOps} onRoute={planner.open} onSell={marketOn ? () => setMarketFarm(farm) : undefined} onClear={() => pick(null)} />
       ) : null}
       {season ? (
         <SeasonTimeline

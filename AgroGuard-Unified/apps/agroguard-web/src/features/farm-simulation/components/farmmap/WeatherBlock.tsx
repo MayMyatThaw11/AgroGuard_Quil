@@ -5,6 +5,7 @@ import { activeLocale, useT, type Translate } from '../../lib/i18n.ts';
 import { AqSectionLabel } from '../aq/aqLayout.tsx';
 import { DetailSection } from './detailParts.tsx';
 import { Glyph } from './Glyph.tsx';
+import { MarketLine } from './MarketGlance.tsx';
 
 function dayName(t: Translate, date: string, index: number): string {
   if (index === 0) return t('farmMap.wx.today');
@@ -50,6 +51,7 @@ export const WeatherBlock: React.FC<{ lat: number; lon: number }> = ({ lat, lon 
           </div>
         ))}
       </div>
+      <MarketLine />
     </DetailSection>
   );
 };

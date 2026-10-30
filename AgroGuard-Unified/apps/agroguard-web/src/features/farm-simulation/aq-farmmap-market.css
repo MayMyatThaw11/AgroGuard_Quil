@@ -733,3 +733,9 @@
   font: 500 13px/1.5 var(--aq-font-sans);
   background: var(--aq-surface-tile);
 }
+
+.aq-fm-mk-cue {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--aq-leaf-400) 16%, transparent), transparent 70%);
+}
+
+.aq-fm-wx-market { margin-top: var(--aq-space-3); }

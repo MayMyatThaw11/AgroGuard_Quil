@@ -17,6 +17,7 @@ import {
   type Outlook,
   type Produce,
 } from '../../lib/farmmap/market.ts';
+import { farmerRecordText } from '../../lib/farmmap/seasonMatch.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { AqButton } from '../aq/aqPrimitives.tsx';
 import { CandidateTransport } from './CandidateTransport.tsx';
@@ -57,6 +58,7 @@ const Candidates: React.FC<{ order: MyPreorder; place: BuyerPlace; onDirections:
             <span role="cell" className="aq-fm-mk-buyer-kind">{row.farmer_name ?? t('farmMap.buyer.farm')}</span>
             <span role="cell">{weight(row.qty_kg)}</span>
             <span role="cell" className="aq-fm-mk-quiet">{t('farmMap.buyer.ready', { date: day(row.ready_on) })}, {t('farmMap.market.away', { km: row.km })}</span>
+            {row.reliability ? <span role="cell" className="aq-fm-mk-quiet">{farmerRecordText(row.reliability, t)}</span> : null}
             <span role="cell">
               {row.status !== 'candidate' ? (
                 row.status === 'selected' && row.farm_lat !== undefined && row.farm_lon !== undefined ? (
