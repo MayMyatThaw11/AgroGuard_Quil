@@ -39,7 +39,7 @@ YIELD_STATUS = (
     "TO VERIFY: typical yields used only to cap a listing, replaced by FAO official yields"
 )
 STORABLE = frozenset({"rice", "maize", "pulses", "onion", "potato"})
-BULK_KINDS = frozenset({"cooperative", "processor", "restaurant"})
+BULK_KINDS = frozenset({"cooperative", "processor", "restaurant", "factory", "msme"})
 DIRECT_KINDS = frozenset({"household", "retail"})
 WINDOW_DAYS = 14
 NEARBY_KM = 60.0

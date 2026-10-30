@@ -207,3 +207,8 @@ def test_outlook_cache_is_per_day_not_per_week() -> None:
     listing(100, ready=saturday + timedelta(days=13))
     assert market.outlook("Hmawbi", "tomato", saturday.isoformat(), today=TODAY)["supply_kg"] == 100
     assert market.outlook("Hmawbi", "tomato", monday.isoformat(), today=TODAY)["supply_kg"] == 0
+
+
+@pytest.mark.parametrize("kind", ["factory", "msme"])
+def test_factories_and_msmes_buy_in_bulk(kind: str) -> None:
+    assert market.channel_for(kind) == "bulk"

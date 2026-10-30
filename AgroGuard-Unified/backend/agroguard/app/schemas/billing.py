@@ -4,7 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 AccountType = Literal["farmer", "buyer"]
-BuyerKind = Literal["household", "retail", "restaurant", "cooperative", "processor"]
+BuyerKind = Literal["household", "retail", "restaurant", "cooperative", "processor", "factory", "msme"]
 
 
 class DemoLoginRequest(BaseModel):

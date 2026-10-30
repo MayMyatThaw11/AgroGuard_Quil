@@ -44,3 +44,9 @@ def test_unknown_buyer_kind_is_rejected() -> None:
 
 def test_buyer_demo_user_exists() -> None:
     assert "buyer@demo.com" in DEMO_USERS
+
+
+@pytest.mark.parametrize("kind", ["factory", "msme"])
+def test_factory_and_msme_buyers_can_sign_up(kind: str) -> None:
+    req = DemoLoginRequest(email="free@demo.com", account_type="buyer", buyer_kind=kind)
+    assert account_for("free@demo.com", req) == ("buyer", kind)
