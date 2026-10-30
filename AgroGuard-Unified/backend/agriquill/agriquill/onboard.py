@@ -251,12 +251,26 @@ class ParcelExists(ValueError):
     pass
 
 
+def check_farm_size(rings: dict[str, list[list[float]]], existing_ha: float = 0.0) -> None:
+    from .config import SMALL_MEDIUM_MAX_HA
+    from .contract import ring_area_ha
+
+    total = existing_ha + sum(ring_area_ha(r) for r in rings.values())
+    if total > SMALL_MEDIUM_MAX_HA:
+        raise ValueError(
+            f"Farm Map is for farms up to {SMALL_MEDIUM_MAX_HA:.0f} ha for now; these fields add up to {total:.1f} ha"
+        )
+
+
 def add_parcels(farm_id: str, rings: dict[str, list[list[float]]], added_by: str) -> dict[str, Any]:
     loaded = live.load(farm_id)
     if loaded is None:
         raise KeyError(farm_id)
     text, verdict = loaded
     have = {p["id"]: p.get("boundary") for p in (verdict["contract"] or {}).get("parcels", [])}
+    from .contract import ring_area_ha
+
+    check_farm_size(rings, sum(ring_area_ha(r) for r in have.values() if r))
     for pid, ring in rings.items():
         if pid in have:
             raise ParcelExists(f"field {pid} already exists in {farm_id}")

@@ -26,6 +26,8 @@ BLANK_MEANS_UNSET = (
 )
 
 
+SMALL_MEDIUM_MAX_HA = 10.0
+
 class Settings(BaseSettings):
     # Fails closed: a forgotten variable means "production", where sign-in is
     # mandatory and the built-in demo sign-in is off. Local runs set

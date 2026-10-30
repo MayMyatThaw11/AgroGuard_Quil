@@ -7,7 +7,7 @@ import time
 import uuid
 from typing import Any
 
-from .config import get_settings
+from .config import SMALL_MEDIUM_MAX_HA, get_settings
 from .ledger import get_ledger
 from .store import RecordCache, now_iso
 
@@ -18,7 +18,7 @@ KINDS = frozenset({"individual", "household", "group"})
 CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
 CODE_LENGTH = 6
 SAME_PLACE_M = 50.0
-MAX_FARM_HA = 10.0
+MAX_FARM_HA = SMALL_MEDIUM_MAX_HA
 CLAIM_TRIES_PER_HOUR = 5
 PBKDF2_ROUNDS = 120_000
 PUBLIC_DECIMALS = 2

@@ -16,6 +16,7 @@ import type { PickTarget } from '../../lib/farmmap/engine/engineTypes.ts';
 import { usePaddySettingsStore } from '../../store/paddySettingsStore.ts';
 import { formatNumber } from '../aq/format.ts';
 import { AqBadge, AqButton } from '../aq/aqPrimitives.tsx';
+import { farmSizeBand } from '../../lib/farmmap/farmSize.ts';
 import { AqProgress, AqSectionLabel, AqStatTile } from '../aq/aqLayout.tsx';
 import { TechniqueFit } from '../site/TechniqueFit.tsx';
 import { FarmDecisions } from './FarmDecisions.tsx';
@@ -149,6 +150,7 @@ export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, on
         <div className="aq-fm-badges">
           <AqBadge>{t('farmMap.farm.illustrative')}</AqBadge>
           <AqBadge tone={tone}>{statusLabel(farm.status)}</AqBadge>
+          <AqBadge>{t(farmSizeBand(farm.area) === 'small' ? 'farmMap.size.small' : 'farmMap.size.smallMedium', { ha: farm.area })}</AqBadge>
           <AqBadge>{cropName}{stage ? ` · ${stage}` : ''}</AqBadge>
           {farm.organic ? <AqBadge tone="accent"><ShieldCheck size={12} aria-hidden="true" />{t('farmMap.farm.organic')}</AqBadge> : null}
         </div>

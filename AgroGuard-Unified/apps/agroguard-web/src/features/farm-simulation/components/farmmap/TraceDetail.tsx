@@ -4,6 +4,7 @@ import { addFarmFields, getAuthMe, onboardFarm } from '../../lib/api.ts';
 import { ApiError } from '../../lib/apiError.ts';
 import { suggestOutline, type OsmOutline } from '../../lib/farmmap/osmOutline.ts';
 import { MIN_CORNERS, TRACE_MIN_ZOOM, ringAreaHa, tracedGeojson, tracedRing, type Corner } from '../../lib/farmmap/trace.ts';
+import { SMALL_MEDIUM_MAX_HA, farmSizeBand } from '../../lib/farmmap/farmSize.ts';
 import { farmProblems, onboardBody, onboardErrorText, type OnboardDraft } from '../../lib/onboardFiles.ts';
 import { PROVENANCE_CLASS, PROVENANCE_LABEL } from '../../lib/provenance.ts';
 import { activeSession } from '../../lib/session.ts';
@@ -85,7 +86,8 @@ export const TraceDetail: React.FC<TraceDetailProps> = ({ corners, zoom, onZoomI
     assets: [],
   };
   const adding = existing.includes(draft.farmId);
-  const problems = geojson ? farmProblems(adding ? { ...draft, name: draft.farmId, country: 'MM' } : draft) : [];
+  const sizeProblem = farmSizeBand(area) === 'too-large' ? [t('farmMap.trace.tooLarge', { max: SMALL_MEDIUM_MAX_HA, area: area.toFixed(1) })] : [];
+  const problems = geojson ? [...sizeProblem, ...farmProblems(adding ? { ...draft, name: draft.farmId, country: 'MM' } : draft)] : [];
 
   const suggest = async () => {
     const point = crosshair();

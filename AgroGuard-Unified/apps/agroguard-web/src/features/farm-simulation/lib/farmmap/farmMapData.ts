@@ -4,6 +4,9 @@ import { COUNTRY_CODE, LIVESTOCK, MACHINES, MILL_NAME, NAME_SUFFIX, TZ } from '.
 import { CROPS, RICE_STAGES } from './farmMapTheme.ts';
 import type { Anchor, ChunkBucket, Farm, FarmStatus, GlyphName, MachineState, Poi, PoiType } from './farmMapTypes.ts';
 import type { CountrySummary } from './farmMapViewTypes.ts';
+import { SMALL_MEDIUM_MAX_HA } from './farmSize.ts';
+
+const DEMO_MIN_HA = 0.3;
 
 export interface FarmMap {
   farms: Farm[];
@@ -34,8 +37,7 @@ function buildFarm(an: Anchor, index: number, anchorIndex: number, row: (typeof 
   const angle = sector[0] + random() * span;
   const dist = radius[0] + Math.sqrt(random()) * (radius[1] - radius[0]);
   const [la, lo] = offset(lat, lon, angle, dist);
-  const big = crop === 'palm' || crop === 'sugarcane' ? 6 : crop === 'veg' || crop === 'tea' ? 0.4 : 1;
-  const area = +((crop === 'rice' ? 3 + random() * 30 : 2 + random() * 18) * big).toFixed(1);
+  const area = +(DEMO_MIN_HA + random() ** 2 * (SMALL_MEDIUM_MAX_HA - DEMO_MIN_HA)).toFixed(1);
   const meta = CROPS[crop];
   const ndvi = +(0.42 + random() * 0.4).toFixed(2);
   const risk = random();
@@ -56,7 +58,7 @@ function buildFarm(an: Anchor, index: number, anchorIndex: number, row: (typeof 
   const updMin = Math.round(3 + random() * 55);
   const members = crop === 'palm' ? 0 : Math.round(8 + random() * 120);
   const fieldsCap = crop === 'rice' ? 12 : 8;
-  const fieldsN = Math.max(2, Math.min(fieldsCap, Math.round(Math.sqrt(area / big) * (crop === 'rice' ? 2.2 : 1.4))));
+  const fieldsN = Math.max(2, Math.min(fieldsCap, Math.round(Math.sqrt(area) * (crop === 'rice' ? 2.2 : 1.4))));
   return {
     id: `AQ-${COUNTRY_CODE[an.country]}-${String(anchorIndex * 20 + index + 1).padStart(4, '0')}`,
     name, anchor: an.id, town, country: an.country, lat: +la.toFixed(5), lon: +lo.toFixed(5), crop, area, status, ndvi, organic,

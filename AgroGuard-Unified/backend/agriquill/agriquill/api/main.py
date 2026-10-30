@@ -1297,6 +1297,7 @@ def _onboard_farm(farm_id: str, req: OnboardReq, files: dict[str, bytes]) -> dic
             paths[name].write_bytes(raw)
         boundary = next((p for n, p in paths.items() if n.startswith("boundaries")), None)
         rings = onboard.read_boundaries(boundary) if boundary else {}
+        onboard.check_farm_size(rings)
         fields = onboard.read_fields(paths["fields.csv"]) if "fields.csv" in paths else []
         sources = ", ".join(n for n in files if n.startswith(("boundaries", "fields")))
         assets = [a.model_dump() for a in req.assets]
