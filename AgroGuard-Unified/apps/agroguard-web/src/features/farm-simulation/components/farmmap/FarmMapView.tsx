@@ -22,6 +22,9 @@ import { FarmDetail } from './FarmDetail.tsx';
 import { FarmMapLayerPanel } from './FarmMapLayerPanel.tsx';
 import { FarmMapToasts } from './FarmMapToasts.tsx';
 import { FarmMapTopBar } from './FarmMapTopBar.tsx';
+import { FarmerTopBar } from './FarmerTopBar.tsx';
+import { TodayCard } from './TodayCard.tsx';
+import { motionAllowed } from '../../lib/farmmap/today.ts';
 import { FarmSelectionBar } from './FarmSelectionBar.tsx';
 import { GuideHud } from './GuideHud.tsx';
 import { HoverTip } from './HoverTip.tsx';
@@ -318,6 +321,8 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const setLayer = (key: LayerKey, on: boolean) => setLayers((current) => ({ ...current, [key]: on }));
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
   const buyerView = ui.shown === 'buyer' && marketOn;
+  const farmerView = ui.shown === 'farmer';
+  const lowMotion = useMemo(() => !motionAllowed(), []);
   const rightWidth = buyerView ? Math.max(RIGHT_WIDTH, Math.min(BUYER_WIDTH, mapWidth - 420)) : RIGHT_WIDTH;
 
   const buyerPlace = (): BuyerPlace => {
@@ -326,6 +331,16 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
     const lon = centre?.lng ?? data.anchors[0].lon;
     const near = data.anchors.reduce((best, a) => ((a.lat - lat) ** 2 + (a.lon - lon) ** 2 < (best.lat - lat) ** 2 + (best.lon - lon) ** 2 ? a : best), data.anchors[0]);
     return { town: near.town, lat: near.lat, lon: near.lon };
+  };
+
+  const centreFarm = (): Farm | null => {
+    const centre = engine?.map().getCenter();
+    if (!centre) return data.farms[0] ?? null;
+    return data.farms.reduce<Farm | null>((best, f) => (!best || (f.lat - centre.lat) ** 2 + (f.lon - centre.lng) ** 2 < (best.lat - centre.lat) ** 2 + (best.lon - centre.lng) ** 2 ? f : best), null);
+  };
+  const sellFromTop = () => {
+    const target = farm ?? centreFarm();
+    if (target) setMarketFarm(target);
   };
 
   const rightBody = () => {
@@ -407,6 +422,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       </>
     );
     if (buyerView) return <BuyerBoard place={buyerPlace()} onDirections={(from, to) => planner.openTo(from, to)} />;
+    if (farmerView && !selection) return <TodayCard farm={centreFarm()} onSell={sellFromTop} />;
     return (
       <>
         <DetailSection>
@@ -442,14 +458,15 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   };
 
   return (
-    <div ref={rootRef} className={`aq-root aq-farmmap${tracing ? ' is-tracing' : ''}${buyerView ? ' is-buyer' : ''}${panels.right ? ' has-details' : ''}`} style={buyerView ? ({ '--aq-fm-right-w': `${rightWidth}px` } as React.CSSProperties) : undefined}>
+    <div ref={rootRef} className={`aq-root aq-farmmap${tracing ? ' is-tracing' : ''}${buyerView ? ' is-buyer' : ''}${farmerView ? ' is-farmer' : ''}${farmerView && lowMotion ? ' is-low-motion' : ''}${panels.right ? ' has-details' : ''}`} style={buyerView ? ({ '--aq-fm-right-w': `${rightWidth}px` } as React.CSSProperties) : undefined}>
       <div className="aq-fm-stage">
         <div ref={mapRef} className="aq-fm-map" />
         <canvas ref={fogRef} className="aq-fm-fog" aria-hidden="true" />
         <div className="aq-fm-tipbox"><HoverTip info={farmView ? null : hover} width={mapWidth} /></div>
         {tracing ? <div ref={trace.crosshairRef} className="aq-fm-crosshair" aria-hidden="true" /> : null}
       </div>
-      <FarmMapTopBar
+      {farmerView ? <FarmerTopBar farmName={farm?.name ?? null} onSell={sellFromTop} /> : null}
+      {farmerView ? null : <FarmMapTopBar
         view={view}
         farms={data.farms.length}
         canRoute={!!selection && selection.kind !== 'own' && selection.kind !== 'mill' && !route}
@@ -461,7 +478,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         onOpenFleet={onOpenFleet}
         viewAs={ui.viewAs}
         onViewAs={ui.mode === 'dev' ? ui.setViewAs : undefined}
-      />
+      />}
       {ui.mode === 'dev' && ui.viewAs ? (
         <p className="aq-fm-viewas-banner" role="status">{t('farmMap.mode.banner', { mode: t(ui.viewAs === 'farmer' ? 'farmMap.mode.farmer' : 'farmMap.mode.buyer') })}</p>
       ) : null}

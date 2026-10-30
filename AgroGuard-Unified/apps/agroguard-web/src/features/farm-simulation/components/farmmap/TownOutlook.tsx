@@ -18,7 +18,7 @@ export const VERDICT_KEY: Record<OutlookLevel, Key> = {
   'no-buyers': 'farmMap.market.verdict.noBuyers',
   'no-data': 'farmMap.market.verdict.noData',
 };
-const ADVICE_KEY: Record<Advice['id'], Key> = {
+export const ADVICE_KEY: Record<Advice['id'], Key> = {
   'presell-bulk': 'farmMap.market.advice.presellBulk',
   'try-nearby': 'farmMap.market.advice.tryNearby',
   'stagger-harvest': 'farmMap.market.advice.staggerHarvest',

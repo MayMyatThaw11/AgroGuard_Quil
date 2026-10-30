@@ -1,0 +1,114 @@
+.aq-farmmap.is-farmer .aq-fm-left,
+.aq-farmmap.is-farmer .aq-fm-status,
+.aq-farmmap.is-farmer .aq-fm-viewas-banner {
+  display: none;
+}
+
+.aq-fm-farmer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aq-space-4);
+}
+
+.aq-fm-farmer-top .aq-fm-top-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--aq-space-3);
+}
+
+.aq-fm-farmer-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: var(--aq-space-2);
+  padding: 0 6px;
+  border-radius: 999px;
+  font: 700 12px/1 var(--aq-font-sans);
+  color: var(--aq-leaf-700, #14532d);
+  background: var(--aq-surface-card);
+}
+
+.aq-fm-today {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--aq-leaf-400) 14%, transparent), transparent 55%);
+}
+
+.aq-fm-today-text {
+  margin: var(--aq-space-3) 0;
+  font: 600 18px/1.45 var(--aq-font-sans);
+  color: var(--aq-text-strong);
+}
+
+.aq-fm-today-item.is-act { border-left: 4px solid var(--aq-alert-500, #dc2626); padding-left: var(--aq-space-3); }
+.aq-fm-today-item.is-watch { border-left: 4px solid var(--aq-amber-500, #d97706); padding-left: var(--aq-space-3); }
+.aq-fm-today-item.is-info { border-left: 4px solid var(--aq-leaf-600); padding-left: var(--aq-space-3); }
+
+:lang(my) .aq-fm-today-text,
+:lang(km) .aq-fm-today-text { line-height: 1.6; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .aq-farmmap.is-farmer:not(.is-low-motion) .aq-fm-mk-bar-fill {
+    transition: width 600ms ease-out;
+  }
+
+  .aq-farmmap.is-farmer:not(.is-low-motion) .aq-fm-farmer-badge.is-ripple {
+    animation: aq-fm-ripple 900ms ease-out 1;
+  }
+
+  .aq-farmmap.is-farmer:not(.is-low-motion) .aq-fm-mk-steps li {
+    animation: aq-fm-step 300ms ease-out both;
+  }
+
+  .aq-farmmap.is-farmer:not(.is-low-motion) .aq-fm-mk-steps li:nth-child(2) { animation-delay: 300ms; }
+  .aq-farmmap.is-farmer:not(.is-low-motion) .aq-fm-mk-steps li:nth-child(3) { animation-delay: 600ms; }
+  .aq-farmmap.is-farmer:not(.is-low-motion) .aq-fm-mk-steps li:nth-child(4) { animation-delay: 900ms; }
+  .aq-farmmap.is-farmer:not(.is-low-motion) .aq-fm-mk-steps li:nth-child(5) { animation-delay: 1200ms; }
+
+  .aq-farmmap.is-farmer:not(.is-low-motion) .aq-fm-today-item {
+    animation: aq-fm-fade 300ms ease-out both;
+  }
+}
+
+@keyframes aq-fm-ripple {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--aq-leaf-400) 70%, transparent); }
+  to { box-shadow: 0 0 0 14px transparent; }
+}
+
+@keyframes aq-fm-step {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes aq-fm-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.aq-fm-farmer-top .aq-fm-title-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aq-fm-farmer-top .aq-fm-top-actions { flex: 0 0 auto; }
+
+@media (max-width: 639px) {
+  .aq-fm-farmer-top .aq-fm-select { max-width: 92px; }
+  .aq-fm-farmer-top .aq-fm-title-text { display: none; }
+}
+
+@media (max-width: 639px) {
+  .aq-fm-farmer-top .aq-fm-top-actions { flex: 1 1 auto; min-width: 0; }
+  .aq-fm-farmer-top .aq-fm-top-actions > button {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: auto;
+    min-height: 44px;
+    padding: 6px 10px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+}
