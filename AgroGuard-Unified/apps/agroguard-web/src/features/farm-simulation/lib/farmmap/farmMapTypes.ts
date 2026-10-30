@@ -61,6 +61,14 @@ export interface Farm {
   stageI: number;
   updMin: number;
   members: number;
+  osm?: FarmOutline;
+}
+
+export interface FarmOutline {
+  id: string;
+  landuse: string;
+  ring: Position[];
+  areaHa: number;
 }
 
 interface PoiBase {

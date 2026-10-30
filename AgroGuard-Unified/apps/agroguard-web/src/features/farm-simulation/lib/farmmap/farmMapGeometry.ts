@@ -5,11 +5,38 @@ import { weatherOf } from './farmMapWeather.ts';
 import type { Anchor, ChunkData, Farm, FarmGeometry, FieldGeometry, Position } from './farmMapTypes.ts';
 
 const geometryCache = new Map<string, FarmGeometry>();
+const PAD_M = 12;
+
+function look(farm: Farm, random: () => number): { stage: string | null; color: string } {
+  if (farm.crop === 'rice') {
+    const si = Math.max(0, Math.min(RICE_STAGES.length - 1, farm.stageI + Math.round((random() - 0.5) * 2)));
+    return { stage: RICE_STAGES[si][0], color: RICE_STAGES[si][1] };
+  }
+  return { stage: null, color: shade(CROPS[farm.crop].color, (random() - 0.5) * 0.18) };
+}
+
+function outlineGeometry(farm: Farm, ring: Position[], random: () => number): FarmGeometry {
+  const lons = ring.map((p) => p[0]);
+  const lats = ring.map((p) => p[1]);
+  const padLon = PAD_M / (111320 * Math.cos((farm.lat * Math.PI) / 180));
+  const padLat = PAD_M / 111320;
+  const [w, e, s, n] = [Math.min(...lons) - padLon, Math.max(...lons) + padLon, Math.min(...lats) - padLat, Math.max(...lats) + padLat];
+  const { stage, color } = look(farm, random);
+  return {
+    fields: [{ id: `${farm.id}-F01`, ring, stage, color, area: farm.area, crop: farm.crop }],
+    bound: [[w, s], [e, s], [e, n], [w, n], [w, s]],
+  };
+}
 
 export function fieldsOf(farm: Farm): FarmGeometry {
   const cached = geometryCache.get(farm.id);
   if (cached) return cached;
   const random = rng(777 + parseInt(farm.id.slice(-4), 10) * 13);
+  if (farm.osm) {
+    const traced = outlineGeometry(farm, farm.osm.ring, random);
+    geometryCache.set(farm.id, traced);
+    return traced;
+  }
   const n = farm.fieldsN;
   const cols = Math.ceil(Math.sqrt(n * 1.4));
   const rows = Math.ceil(n / cols);
@@ -36,15 +63,7 @@ export function fieldsOf(farm: Farm): FarmGeometry {
       const h = ch - gap;
       const jx = (random() - 0.5) * cw * 0.12;
       const ring = [project(x0, y0), project(x0 + w + jx, y0), project(x0 + w + jx * 0.4, y0 + h), project(x0, y0 + h), project(x0, y0)];
-      let stage: string | null = null;
-      let color = CROPS[farm.crop].color;
-      if (farm.crop === 'rice') {
-        const si = Math.max(0, Math.min(RICE_STAGES.length - 1, farm.stageI + Math.round((random() - 0.5) * 2)));
-        stage = RICE_STAGES[si][0];
-        color = RICE_STAGES[si][1];
-      } else {
-        color = shade(color, (random() - 0.5) * 0.18);
-      }
+      const { stage, color } = look(farm, random);
       fields.push({ id: `${farm.id}-F${String(k + 1).padStart(2, '0')}`, ring, stage, color, area: +((w * h) / 10000).toFixed(2), crop: farm.crop });
     }
   }

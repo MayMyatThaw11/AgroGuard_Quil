@@ -25,6 +25,20 @@ export function ringAreaHa(ring: Corner[]): number {
   return Math.round((Math.abs(twice) / 2 / 10000) * 1000) / 1000;
 }
 
+const turn = (o: Corner, a: Corner, b: Corner) => (a[1] - o[1]) * (b[0] - o[0]) - (a[0] - o[0]) * (b[1] - o[1]);
+const crossing = (a: Corner, b: Corner, c: Corner, d: Corner) => turn(a, b, c) * turn(a, b, d) < 0 && turn(c, d, a) * turn(c, d, b) < 0;
+
+export function isSimpleRing(ring: Corner[]): boolean {
+  const edges = ring.length - 1;
+  for (let i = 0; i < edges; i += 1) {
+    for (let j = i + 2; j < edges; j += 1) {
+      if (i === 0 && j === edges - 1) continue;
+      if (crossing(ring[i], ring[i + 1], ring[j], ring[j + 1])) return false;
+    }
+  }
+  return true;
+}
+
 const lonLat = (ring: Corner[]) => ring.map(([lat, lon]) => [lon, lat]);
 
 export function tracedGeojson(corners: Corner[], field: string, source = 'traced on the farm map'): string | null {

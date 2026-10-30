@@ -416,7 +416,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
       <div className="aq-fm-replica-hud" role="status">
         <b><Box size={13} aria-hidden="true" /> {target.label}{row ? ` · ${row.date}` : ''}</b>
         {!ready ? <span className="aq-fm-replica-load"><Loader size={12} aria-hidden="true" /> {t('farmMap.farmView.loading')}</span> : null}
-        {target.kind === 'example' ? <span>{t('farmMap.farmView.example')}</span> : null}
+        {target.kind === 'example' ? <span>{t(target.outline ? 'farmMap.farmView.exampleReal' : 'farmMap.farmView.example')}</span> : null}
         {!season && target.kind === 'own' ? <span>{t('farmMap.farmView.noSeason')}</span> : null}
         {dryRun ? <span>{t('farmMap.replica.noBoundary')}</span> : null}
         {placed.length ? <span>{t('farmMap.farmView.sizeLine', { ha: totalHa.toFixed(totalHa >= 10 ? 1 : 2), n: placed.length })}</span> : null}
@@ -451,6 +451,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
         {hood.data ? <span>{OMT_ATTRIBUTION}</span> : null}
         {ground.status !== 'flat' ? <span>{RELIEF_ATTRIBUTION}</span> : null}
         {!ground.imageryFailed || !ready ? <span>{SAT_ATTRIBUTION}</span> : null}
+        {target.kind === 'example' ? <span>{target.outline ? t('farmMap.replica.osmOutline', { id: target.outline }) : t('farmMap.replica.illustrative')}</span> : null}
       </div>
       {guideOpen ? <FarmViewGuide onClose={closeGuide} /> : null}
     </div>

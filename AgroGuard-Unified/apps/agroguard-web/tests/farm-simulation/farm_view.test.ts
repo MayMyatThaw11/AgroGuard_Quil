@@ -320,7 +320,7 @@ test('the ground under a field is flattened to the field and eases back to the t
 test('the main field is the selected one, else the largest', () => {
   const small: TargetField = { id: 'a', ring: [[17, 95], [17, 95.0005], [17.0005, 95.0005], [17.0005, 95], [17, 95]], crop: null, stage: null };
   const large: TargetField = { id: 'b', ring: SQUARE, crop: null, stage: null };
-  const target: FarmTarget = { kind: 'own', id: 'f', label: 'f', fields: [small, large], centre: { lat: 17, lon: 95 }, bbox: { minLat: 17, maxLat: 17.01, minLon: 95, maxLon: 95.01 }, selectedId: null };
+  const target: FarmTarget = { kind: 'own', id: 'f', label: 'f', fields: [small, large], centre: { lat: 17, lon: 95 }, bbox: { minLat: 17, maxLat: 17.01, minLon: 95, maxLon: 95.01 }, selectedId: null, outline: null };
   assert.equal(mainField({ ...target, selectedId: null })?.id, 'b');
   assert.equal(mainField({ ...target, selectedId: 'a' })?.id, 'a');
   assert.equal(mainField({ ...target, fields: [], selectedId: null }), null);

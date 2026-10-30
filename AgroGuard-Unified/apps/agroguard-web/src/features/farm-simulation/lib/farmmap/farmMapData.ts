@@ -1,3 +1,4 @@
+import { demoOutline, outlineCentre } from './demoFields.ts';
 import { ANCHOR_ROWS } from './farmMapAnchors.ts';
 import { chunkKey, offset, pick, rng } from './farmMapRandom.ts';
 import { COUNTRY_CODE, LIVESTOCK, MACHINES, MILL_NAME, NAME_SUFFIX, TZ } from './farmMapRegions.ts';
@@ -59,10 +60,13 @@ function buildFarm(an: Anchor, index: number, anchorIndex: number, row: (typeof 
   const members = crop === 'palm' ? 0 : Math.round(8 + random() * 120);
   const fieldsCap = crop === 'rice' ? 12 : 8;
   const fieldsN = Math.max(2, Math.min(fieldsCap, Math.round(Math.sqrt(area) * (crop === 'rice' ? 2.2 : 1.4))));
+  const real = demoOutline(an.id, index);
+  const spot = real ? outlineCentre(real.ring) : { lat: +la.toFixed(5), lon: +lo.toFixed(5) };
   return {
     id: `AQ-${COUNTRY_CODE[an.country]}-${String(anchorIndex * 20 + index + 1).padStart(4, '0')}`,
-    name, anchor: an.id, town, country: an.country, lat: +la.toFixed(5), lon: +lo.toFixed(5), crop, area, status, ndvi, organic,
-    bearing, fieldsN, soil, irrigation, ph, om, moisture, water, yieldF, flood, drought, elev, stageI, updMin, members,
+    name, anchor: an.id, town, country: an.country, lat: spot.lat, lon: spot.lon, crop, area: real ? +real.areaHa.toFixed(1) : area, status, ndvi, organic,
+    bearing, fieldsN: real ? 1 : fieldsN, soil, irrigation, ph, om, moisture, water, yieldF, flood, drought, elev, stageI, updMin, members,
+    ...(real ? { osm: real } : {}),
   };
 }
 

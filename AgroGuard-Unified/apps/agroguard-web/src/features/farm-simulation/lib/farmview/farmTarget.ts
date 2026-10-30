@@ -22,6 +22,7 @@ export interface FarmTarget {
   centre: { lat: number; lon: number };
   bbox: BBox;
   selectedId: string | null;
+  outline: string | null;
 }
 
 const MIN_HALF_DEG = 0.0005;
@@ -43,7 +44,7 @@ export function fromExample(farm: Farm, fieldId: string | null = null): FarmTarg
     stage: f.stage,
   }));
   const centre = { lat: farm.lat, lon: farm.lon };
-  return { kind: 'example', id: farm.id, label: farm.name, fields, centre, bbox: bboxOf(fields.flatMap((f) => f.ring), centre), selectedId: fieldId };
+  return { kind: 'example', id: farm.id, label: farm.name, fields, centre, bbox: bboxOf(fields.flatMap((f) => f.ring), centre), selectedId: fieldId, outline: farm.osm?.id ?? null };
 }
 
 export function fromOwn(farmId: string, spec: ContractSpec, parcelId: string | null = null): FarmTarget | null {
@@ -60,7 +61,7 @@ export function fromOwn(farmId: string, spec: ContractSpec, parcelId: string | n
   } else {
     return null;
   }
-  return { kind: 'own', id: farmId, label: spec.farm.name ?? farmId, fields, centre, bbox: bboxOf(points, centre), selectedId: parcelId };
+  return { kind: 'own', id: farmId, label: spec.farm.name ?? farmId, fields, centre, bbox: bboxOf(points, centre), selectedId: parcelId, outline: null };
 }
 
 export function mainField(target: FarmTarget): TargetField | null {
