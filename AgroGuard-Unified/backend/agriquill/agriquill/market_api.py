@@ -182,7 +182,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
     async def create_producer(
         body: dict[str, Any] = _BODY, caller: Any = caller_dep
     ) -> dict[str, Any]:
-        if "buyer" in caller.roles:
+        if body.get("on_behalf") is True:
             return _run(producers.create, account_of(caller), caller.buyer_kind or "", body)
         return _run(producers.create, _farmer(caller), None, body)
 
@@ -209,6 +209,14 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         account = account_of(caller) if caller is not None and caller.account else None
         code, pin = str(body.get("code") or ""), str(body.get("pin") or "")
         return _run(producers.claim, account, producer_id, code, pin)
+
+    @r.post("/producers/{producer_id}/pin")
+    async def check_pin(
+        producer_id: str, body: dict[str, Any] = _BODY, caller: Any = caller_dep
+    ) -> dict[str, Any]:
+        return _run(
+            producers.verify_pin, account_of(caller), producer_id, str(body.get("pin") or "")
+        )
 
     @r.post("/producers/{producer_id}/revoke-manager")
     async def revoke(producer_id: str, caller: Any = caller_dep) -> dict[str, Any]:

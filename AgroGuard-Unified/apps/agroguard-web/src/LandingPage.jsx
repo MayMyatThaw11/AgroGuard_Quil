@@ -25,6 +25,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from './lib/session.js'
 import { BUYER_KINDS } from './lib/account.js'
+import { claimProducer } from './features/farm-simulation/lib/farmmap/producers.ts'
 import Logo from './components/Logo.jsx'
 
 const capabilities = [
@@ -97,7 +98,7 @@ const impactHighlights = [
   },
 ]
 
-function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
+function AuthModal({ mode, onModeChange, onClose, onSuccess, onClaimed }) {
   const [message, setMessage] = useState('')
   const [emailInput, setEmailInput] = useState('')
   const [accountType, setAccountType] = useState('farmer')
@@ -125,6 +126,18 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
     event.preventDefault()
     if (mode === 'forgot') {
       setMessage('Password reset instructions have been sent to your email.')
+      return
+    }
+    if (mode === 'claim') {
+      const form = new FormData(event.currentTarget)
+      setBusy(true)
+      setFailed(false)
+      claimProducer(String(form.get('profile')).trim(), String(form.get('code')).trim().toUpperCase(), String(form.get('pin')))
+        .then(onClaimed, (error) => {
+          setFailed(true)
+          setMessage(error.message)
+        })
+        .finally(() => setBusy(false))
       return
     }
     const targetEmail = emailInput || new FormData(event.currentTarget).get('email')
@@ -155,13 +168,13 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
           <Logo className="h-14 w-14" />
           <p className="mt-5 text-xs font-semibold uppercase tracking-[0.35em] text-myanglow-medium">AgroGuard account</p>
           <h2 className="mt-2 text-3xl font-semibold text-myanglow-navy">
-            {mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset your password'}
+            {mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : mode === 'claim' ? 'Take control of your profile' : 'Reset your password'}
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            {mode === 'signin' ? 'Sign in to continue to your farm dashboard.' : mode === 'signup' ? 'Start monitoring your fields with AgroGuard.' : 'Enter your email and we will send recovery instructions.'}
+            {mode === 'signin' ? 'Sign in to continue to your farm dashboard.' : mode === 'signup' ? 'Start monitoring your fields with AgroGuard.' : mode === 'claim' ? 'Enter the profile number and code from the card your cooperative gave you. No email needed.' : 'Enter your email and we will send recovery instructions.'}
           </p>
 
-          {mode !== 'forgot' ? (
+          {mode !== 'forgot' && mode !== 'claim' ? (
             <div className="mt-6 grid grid-cols-2 rounded-2xl bg-myanglow-sage/35 p-1">
               <button type="button" onClick={() => changeMode('signin')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${mode === 'signin' ? 'bg-white text-myanglow-forest shadow-sm' : 'text-slate-500'}`}>Sign in</button>
               <button type="button" onClick={() => changeMode('signup')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${mode === 'signup' ? 'bg-white text-myanglow-forest shadow-sm' : 'text-slate-500'}`}>Sign up</button>
@@ -199,14 +212,26 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
                 </span>
               </label>
             ) : null}
-            <label className="block text-sm font-semibold text-myanglow-navy">
-              Email address
-              <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
-                <Mail size={17} className="text-myanglow-medium" />
-                <input required name="email" type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} autoComplete="email" placeholder="farmer@example.com" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
-              </span>
-            </label>
-            {mode !== 'forgot' ? (
+            {mode === 'claim' ? (
+              <>
+                {[['profile', 'Profile number', 'text', 'pro-'], ['code', 'Code', 'text', '6 characters'], ['pin', 'Choose a 4-digit PIN', 'password', '4 digits']].map(([name, label, type, hint]) => (
+                  <label key={name} className="block text-sm font-semibold text-myanglow-navy">
+                    {label}
+                    <input required name={name} type={type} inputMode={name === 'pin' ? 'numeric' : undefined} maxLength={name === 'pin' ? 4 : name === 'code' ? 6 : undefined} autoComplete="off" placeholder={hint} className="mt-2 w-full rounded-2xl border border-myanglow-sage bg-white px-4 py-3.5 text-sm font-normal outline-none focus:border-myanglow-medium focus:ring-4 focus:ring-myanglow-sage/30" />
+                  </label>
+                ))}
+              </>
+            ) : null}
+            {mode !== 'claim' ? (
+              <label className="block text-sm font-semibold text-myanglow-navy">
+                Email address
+                <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
+                  <Mail size={17} className="text-myanglow-medium" />
+                  <input required name="email" type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} autoComplete="email" placeholder="farmer@example.com" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
+                </span>
+              </label>
+            ) : null}
+            {mode !== 'forgot' && mode !== 'claim' ? (
               <label className="block text-sm font-semibold text-myanglow-navy">
                 Password
                 <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
@@ -217,7 +242,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
             ) : null}
 
             {message ? <p role={failed ? 'alert' : undefined} className={`rounded-xl px-4 py-3 text-sm ${failed ? 'border border-red-200 bg-red-50 font-semibold text-red-700' : 'bg-myanglow-sage/40 text-myanglow-forest'}`}>{message}</p> : null}
-            {mode !== 'forgot' ? (
+            {mode !== 'forgot' && mode !== 'claim' ? (
               <div className="rounded-xl border border-myanglow-sage px-4 py-3 text-xs text-slate-500">
                 <p className="font-semibold text-myanglow-navy">Demo accounts (any password)</p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -230,13 +255,14 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
               </div>
             ) : null}
             <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500">
-              {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'} 
+              {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : mode === 'claim' ? 'Take control' : 'Send reset link'} 
             </button>
           </form>
 
           <div className="mt-5 text-center text-sm text-slate-500">
             {mode === 'signin' ? <button type="button" onClick={() => changeMode('forgot')} className="font-semibold text-myanglow-forest hover:text-myanglow-medium">Forgot password?</button> : null}
-            {mode === 'forgot' ? <button type="button" onClick={() => changeMode('signin')} className="font-semibold text-myanglow-forest hover:text-myanglow-medium">Back to sign in</button> : null}
+            {mode === 'signin' || mode === 'signup' ? <button type="button" onClick={() => changeMode('claim')} className="mt-3 block w-full font-semibold text-myanglow-forest hover:text-myanglow-medium">I have a code from my cooperative</button> : null}
+            {mode === 'forgot' || mode === 'claim' ? <button type="button" onClick={() => changeMode('signin')} className="font-semibold text-myanglow-forest hover:text-myanglow-medium">Back to sign in</button> : null}
           </div>
         </div>
       </section>
@@ -543,6 +569,7 @@ function LandingPage() {
           onModeChange={setAuthMode}
           onClose={() => setAuthMode(null)}
           onSuccess={() => navigate('/dashboard')}
+          onClaimed={() => navigate('/farm-simulation')}
         />
       ) : null}
     </main>

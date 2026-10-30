@@ -179,7 +179,7 @@ def create(actor: str, actor_buyer_kind: str | None, body: dict[str, Any]) -> di
 
 def private_view(record: dict[str, Any]) -> dict[str, Any]:
     hidden = {"claim_hash", "claim_salt", "pin_hash", "device_tokens", "claim_failures"}
-    return {k: v for k, v in record.items() if k not in hidden}
+    return {**{k: v for k, v in record.items() if k not in hidden}, "has_pin": "pin_hash" in record}
 
 
 def can_act(account: str, record: dict[str, Any]) -> bool:
@@ -268,6 +268,19 @@ def claim(account: str | None, producer_id: str, code: str, pin: str) -> dict[st
     if token:
         out["device_token"] = token
     return out
+
+
+def verify_pin(account: str, producer_id: str, pin: str) -> dict[str, Any]:
+    record = require_act(account, producer_id)
+    now = time.time()
+    recent = [t for t in record["claim_failures"] if now - t < 3600]
+    if len(recent) >= CLAIM_TRIES_PER_HOUR:
+        raise PermissionError("too many wrong PINs: locked for an hour")
+    stored = record.get("pin_hash")
+    if stored and not hmac.compare_digest(_hash(pin, record["claim_salt"]), stored):
+        _change(producer_id, lambda old: {**old, "claim_failures": recent + [now]})
+        raise PermissionError("that PIN is not right")
+    return private_view(record)
 
 
 def account_for_token(token: str) -> str | None:

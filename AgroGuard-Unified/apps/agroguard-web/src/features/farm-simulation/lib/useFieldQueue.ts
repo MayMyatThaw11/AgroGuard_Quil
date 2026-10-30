@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { decideProposal, postReading } from './api.ts';
+import { createProducer } from './farmmap/producers.ts';
 import { ApiError } from './apiError.ts';
 import {
   enqueue,
@@ -19,6 +20,8 @@ export async function sendItem(item: QueuedItem): Promise<SendOutcome> {
       if (out.rejected.length > 0 && out.stored.length === 0) {
         return { result: 'conflict', message: out.rejected.map((r) => `${r.field}: ${r.reason}`).join('; ') };
       }
+    } else if (item.kind === 'producer') {
+      await createProducer(item.body);
     } else {
       await decideProposal(item.body.proposal_id, item.body.decision, item.body.decided_by);
     }

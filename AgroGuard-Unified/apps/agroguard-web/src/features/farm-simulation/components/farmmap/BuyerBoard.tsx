@@ -18,6 +18,7 @@ import {
 } from '../../lib/farmmap/market.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { AqButton } from '../aq/aqPrimitives.tsx';
+import { CoopFarmers } from './CoopFarmers.tsx';
 import { DetailSection } from './detailParts.tsx';
 import { LEVEL_KEY, SupplyBars, TownOutlook, useWeight } from './TownOutlook.tsx';
 
@@ -126,6 +127,7 @@ export const BuyerBoard: React.FC<{ place: BuyerPlace; onDirections: (from: Rout
   const [expanded, setExpanded] = useState<string | null>(null);
   const [flash, setFlash] = useState('');
   const [error, setError] = useState('');
+  const [registering, setRegistering] = useState(false);
 
   const loadOrders = useCallback(() => {
     myPreorders().then(setOrders, (e) => setError(message(e)));
@@ -152,66 +154,73 @@ export const BuyerBoard: React.FC<{ place: BuyerPlace; onDirections: (from: Rout
     }
   };
 
+  const farmers = kind === 'cooperative' ? <CoopFarmers by={kind} point={{ lat: place.lat, lon: place.lon }} onRegistering={setRegistering} /> : null;
+
   return (
     <div className="aq-fm-mk" data-ui-panel="buyer">
-      <DetailSection className="is-head">
-        <h2 className="aq-title">{t('farmMap.buyer.title')}</h2>
-        <p className="aq-meta">{t(kindKey(kind))}, {place.town}</p>
-        <AqButton variant="primary" large onClick={() => setOpen((v) => !v)}><Plus size={15} aria-hidden="true" />{t('farmMap.buyer.post')}</AqButton>
-        {flash ? <p className="aq-fm-mk-flash" role="status">{flash}</p> : null}
-      </DetailSection>
+      {registering ? null : (
+        <>
+          <DetailSection className="is-head">
+            <h2 className="aq-title">{t('farmMap.buyer.title')}</h2>
+            <p className="aq-meta">{t(kindKey(kind))}, {place.town}</p>
+            <AqButton variant="primary" large onClick={() => setOpen((v) => !v)}><Plus size={15} aria-hidden="true" />{t('farmMap.buyer.post')}</AqButton>
+            {flash ? <p className="aq-fm-mk-flash" role="status">{flash}</p> : null}
+          </DetailSection>
 
-      {open ? (
-        <DetailSection className="aq-fm-mk-form">
-          <div className="aq-fm-mk-fields">
-            <label>
-              <span>{t('farmMap.market.produce')}</span>
-              <select className="aq-fm-select" value={produce} onChange={(e) => setProduce(e.target.value as Produce)}>
-                {PRODUCE.map((p) => <option key={p} value={p}>{t(produceKey(p))}</option>)}
-              </select>
-            </label>
-            <label>
-              <span>{t('farmMap.market.kg')}</span>
-              <input className="aq-fm-input" type="number" min={1} step={kgStep(kind)} inputMode="numeric" value={kg} onChange={(e) => setKg(Math.max(1, Number(e.target.value) || 1))} />
-            </label>
-            <label>
-              <span>{t('farmMap.buyer.neededBy')}</span>
-              <input className="aq-fm-input" type="date" value={needed} onChange={(e) => setNeeded(e.target.value)} />
-            </label>
-            <label>
-              <span>{t('farmMap.buyer.town')}</span>
-              <input className="aq-fm-input" value={town} maxLength={80} onChange={(e) => setTown(e.target.value)} />
-            </label>
-            <label>
-              <span>{t('farmMap.buyer.price')}</span>
-              <input className="aq-fm-input" type="number" min={1} inputMode="numeric" value={price} placeholder={t('farmMap.market.noOfferPrice')} onChange={(e) => setPrice(e.target.value)} />
-            </label>
-          </div>
-          <AqButton variant="primary" large onClick={() => void post()}>{t('farmMap.buyer.postNow')}</AqButton>
-        </DetailSection>
-      ) : null}
+          {open ? (
+            <DetailSection className="aq-fm-mk-form">
+              <div className="aq-fm-mk-fields">
+                <label>
+                  <span>{t('farmMap.market.produce')}</span>
+                  <select className="aq-fm-select" value={produce} onChange={(e) => setProduce(e.target.value as Produce)}>
+                    {PRODUCE.map((p) => <option key={p} value={p}>{t(produceKey(p))}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>{t('farmMap.market.kg')}</span>
+                  <input className="aq-fm-input" type="number" min={1} step={kgStep(kind)} inputMode="numeric" value={kg} onChange={(e) => setKg(Math.max(1, Number(e.target.value) || 1))} />
+                </label>
+                <label>
+                  <span>{t('farmMap.buyer.neededBy')}</span>
+                  <input className="aq-fm-input" type="date" value={needed} onChange={(e) => setNeeded(e.target.value)} />
+                </label>
+                <label>
+                  <span>{t('farmMap.buyer.town')}</span>
+                  <input className="aq-fm-input" value={town} maxLength={80} onChange={(e) => setTown(e.target.value)} />
+                </label>
+                <label>
+                  <span>{t('farmMap.buyer.price')}</span>
+                  <input className="aq-fm-input" type="number" min={1} inputMode="numeric" value={price} placeholder={t('farmMap.market.noOfferPrice')} onChange={(e) => setPrice(e.target.value)} />
+                </label>
+              </div>
+              <AqButton variant="primary" large onClick={() => void post()}>{t('farmMap.buyer.postNow')}</AqButton>
+            </DetailSection>
+          ) : null}
 
-      {open && outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} /> : null}
+          {open && outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} /> : null}
 
-      {!open ? <SupplyChart town={place.town} on={needed} onPick={(p) => { setProduce(p); setOpen(true); }} /> : null}
+          {!open ? <SupplyChart town={place.town} on={needed} onPick={(p) => { setProduce(p); setOpen(true); }} /> : null}
 
-      <DetailSection>
-        <p className="aq-fm-mk-subhead">{t('farmMap.buyer.mine')}</p>
-        {error ? <p className="aq-fm-mk-error" role="alert">{t('farmMap.market.error', { error })}</p> : null}
-        {!orders.length ? <p className="aq-fm-mk-quiet">{t('farmMap.buyer.none')}</p> : null}
-        {orders.map((order) => (
-          <div key={order.id} className="aq-fm-mk-offer">
-            <button type="button" className="aq-fm-mk-order-head" aria-expanded={expanded === order.id} onClick={() => setExpanded(expanded === order.id ? null : order.id)}>
-              <span>
-                <strong>{t(produceKey(order.produce))}</strong>, {t('farmMap.market.needs', { w: weight(order.qty_kg), date: day(order.needed_by) })}
-                <span className="aq-fm-mk-quiet"> {t('farmMap.buyer.offers', { n: order.offers })}</span>
-              </span>
-              {expanded === order.id ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
-            </button>
-            {expanded === order.id ? <Candidates order={order} place={place} onDirections={onDirections} /> : null}
-          </div>
-        ))}
-      </DetailSection>
+          <DetailSection>
+            <p className="aq-fm-mk-subhead">{t('farmMap.buyer.mine')}</p>
+            {error ? <p className="aq-fm-mk-error" role="alert">{t('farmMap.market.error', { error })}</p> : null}
+            {!orders.length ? <p className="aq-fm-mk-quiet">{t('farmMap.buyer.none')}</p> : null}
+            {orders.map((order) => (
+              <div key={order.id} className="aq-fm-mk-offer">
+                <button type="button" className="aq-fm-mk-order-head" aria-expanded={expanded === order.id} onClick={() => setExpanded(expanded === order.id ? null : order.id)}>
+                  <span>
+                    <strong>{t(produceKey(order.produce))}</strong>, {t('farmMap.market.needs', { w: weight(order.qty_kg), date: day(order.needed_by) })}
+                    <span className="aq-fm-mk-quiet"> {t('farmMap.buyer.offers', { n: order.offers })}</span>
+                  </span>
+                  {expanded === order.id ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
+                </button>
+                {expanded === order.id ? <Candidates order={order} place={place} onDirections={onDirections} /> : null}
+              </div>
+            ))}
+          </DetailSection>
+        </>
+      )}
+      {farmers}
     </div>
   );
 };

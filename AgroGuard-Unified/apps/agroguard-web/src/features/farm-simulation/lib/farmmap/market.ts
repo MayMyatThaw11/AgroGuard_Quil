@@ -142,7 +142,7 @@ export const getOutlook = (town: string, produce: Produce, on: string) =>
   request<Outlook>(`${BASE}/outlook?${new URLSearchParams({ town, produce, on })}`);
 export const getPreorders = (produce: Produce, channel: Channel, lat: number, lon: number) =>
   request<Preorder[]>(`${BASE}/preorders?${new URLSearchParams({ produce, channel, lat: String(lat), lon: String(lon) })}`);
-export const postListing = (body: { produce: Produce; qty_kg: number; ready_on: string; town: string; lat: number; lon: number; area_ha?: number }) =>
+export const postListing = (body: { produce: Produce; qty_kg: number; ready_on: string; town: string; lat: number; lon: number; area_ha?: number; producer_id?: string }) =>
   request<Listing>(`${BASE}/listings`, json(body));
 export const applyToPreorder = (preorderId: string, listingId: string, qtyKg: number) =>
   request<Offer>(`${BASE}/preorders/${encodeURIComponent(preorderId)}/offers`, json({ listing_id: listingId, qty_kg: qtyKg }));

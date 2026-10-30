@@ -188,6 +188,7 @@ def test_coop_registers_farmer_who_claims_from_a_phone_without_account() -> None
         "township": "Hmawbi",
         "crops": [{"produce": "tomato", "area_ha": 1.0, "harvest_month": 3}],
         "consent": {"by": "Co-op", "read_aloud": True, "text_version": "v1"},
+        "on_behalf": True,
     }
     made = client.post(f"{BASE}/producers", json=body, headers=BUYER)
     assert made.status_code == 201
@@ -252,3 +253,50 @@ def test_buyer_sees_farm_location_only_after_selecting() -> None:
     client.post(f"{BASE}/preorders/{order['id']}/offers/{offer['id']}/select", headers=BUYER)
     [chosen] = client.get(f"{BASE}/preorders/{order['id']}/offers", headers=BUYER).json()
     assert chosen["farm_lat"] == 17.1 and chosen["farm_lon"] == 96.05
+
+
+def test_dev_without_buyer_kind_registers_a_self_owned_profile_and_pin_gate_works() -> None:
+    dev = token(9, "Lead", role="dev")
+    body = {
+        "kind": "individual",
+        "name": "Ko Aung",
+        "lat": 17.4,
+        "lon": 96.3,
+        "pin": "4321",
+        "crops": [{"produce": "onion", "harvest_month": 4}],
+    }
+    made = client.post(f"{BASE}/producers", json=body, headers=dev)
+    assert made.status_code == 201, made.text
+    created = made.json()
+    assert created["owner"] is not None and created["manager"] is None and created["has_pin"]
+    assert (
+        client.post(
+            f"{BASE}/producers/{created['id']}/pin", json={"pin": "4321"}, headers=dev
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"{BASE}/producers/{created['id']}/pin", json={"pin": "0000"}, headers=dev
+        ).status_code
+        == 403
+    )
+
+
+def test_registering_for_someone_else_needs_the_explicit_flag_and_consent() -> None:
+    dev = token(9, "Lead", role="dev")
+    body = {
+        "kind": "individual",
+        "name": "Ko Aung",
+        "lat": 17.5,
+        "lon": 96.4,
+        "crops": [{"produce": "onion", "harvest_month": 4}],
+        "on_behalf": True,
+    }
+    assert client.post(f"{BASE}/producers", json=body, headers=dev).status_code == 422
+    assert (
+        client.post(
+            f"{BASE}/producers", json={**body, "on_behalf": False}, headers=BUYER
+        ).status_code
+        == 403
+    )

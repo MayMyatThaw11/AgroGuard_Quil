@@ -21,11 +21,16 @@ import {
   type Preorder,
   type Produce,
 } from '../../lib/farmmap/market.ts';
+import { createProducer, loadActiveProducer, myProducers, saveActiveProducer, type Producer } from '../../lib/farmmap/producers.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
+import { newId, useFieldQueue } from '../../lib/useFieldQueue.ts';
+import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 import { AqTabs } from '../aq/aqLayout.tsx';
 import { AqButton } from '../aq/aqPrimitives.tsx';
 import { DetailSection } from './detailParts.tsx';
 import { HaulShare } from './HaulShare.tsx';
+import { ProducerSetup } from './ProducerSetup.tsx';
+import { ProducerSwitch } from './ProducerSwitch.tsx';
 import { TownOutlook, useWeight } from './TownOutlook.tsx';
 
 const READY_IN_DAYS = 21;
@@ -56,6 +61,10 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   const [busy, setBusy] = useState('');
   const [pickup, setPickup] = useState<Pickup | null>(null);
   const [flash, setFlash] = useState('');
+  const [producers, setProducers] = useState<Producer[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(() => loadActiveProducer(browserStorage()));
+  const [setup, setSetup] = useState(false);
+  const queue = useFieldQueue();
 
   const loadOutlook = useCallback(() => {
     getOutlook(farm.town, produce, ready).then(setOutlook, (e) => setError(message(e)));
@@ -67,16 +76,25 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   const loadOffers = useCallback(() => {
     getMyOffers().then(setOffers, (e) => setError(message(e)));
   }, []);
+  const loadProducers = useCallback(() => {
+    myProducers().then(setProducers, () => setProducers([]));
+  }, []);
 
   useEffect(loadOutlook, [loadOutlook]);
   useEffect(loadBuyers, [loadBuyers]);
   useEffect(loadOffers, [loadOffers]);
+  useEffect(loadProducers, [loadProducers]);
+
+  const pickProducer = (id: string) => {
+    setActiveId(id);
+    saveActiveProducer(browserStorage(), id);
+  };
 
   const save = async () => {
     setBusy('save');
     setError('');
     try {
-      setListing(await postListing({ produce, qty_kg: kg, ready_on: ready, town: farm.town, lat: farm.lat, lon: farm.lon, area_ha: farm.area }));
+      setListing(await postListing({ produce, qty_kg: kg, ready_on: ready, town: farm.town, lat: farm.lat, lon: farm.lon, area_ha: farm.area, ...(activeId ? { producer_id: activeId } : {}) }));
       setFlash(t('farmMap.market.saved'));
       loadOutlook();
     } catch (e) {
@@ -116,6 +134,25 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   };
 
   if (pickup) return <HaulShare pickup={pickup} onBack={() => setPickup(null)} />;
+  if (setup) {
+    return (
+      <ProducerSetup
+        assisted={false}
+        point={{ lat: farm.lat, lon: farm.lon }}
+        by=""
+        onCancel={() => setSetup(false)}
+        onJoined={(profile) => { pickProducer(profile.id); loadProducers(); setSetup(false); }}
+        onQueue={(draft) => queue.add({ id: newId(), kind: 'producer', queuedAt: new Date().toISOString(), body: draft })}
+        onFinish={async (draft, pin) => {
+          const created = await createProducer(draft, pin ? { pin } : {});
+          pickProducer(created.id);
+          loadProducers();
+          setSetup(false);
+          setFlash(t('farmMap.producer.saved'));
+        }}
+      />
+    );
+  }
 
   const offered = new Set(offers.map((o) => o.preorder_id));
   return (
@@ -129,6 +166,8 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
           </div>
         </div>
       </DetailSection>
+
+      <ProducerSwitch producers={producers} activeId={activeId} onPick={pickProducer} onSetup={() => setSetup(true)} onChanged={loadProducers} />
 
       {outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} onAdvice={(a) => a.id === 'presell-bulk' && setChannel('bulk')} /> : <DetailSection className="is-loading"><span className="aq-fm-spin" aria-hidden="true" /></DetailSection>}
 

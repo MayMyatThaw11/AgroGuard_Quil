@@ -33,6 +33,24 @@ export function setAccessCode(code: string): void {
   }
 }
 
+const PRODUCER_TOKEN_KEY = 'agriquill.producerToken';
+
+export function producerToken(): string {
+  try {
+    return localStorage.getItem(PRODUCER_TOKEN_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function setProducerToken(token: string): void {
+  try {
+    localStorage.setItem(PRODUCER_TOKEN_KEY, token);
+  } catch {
+    return;
+  }
+}
+
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await send(path, init)).json() as Promise<T>;
 }
@@ -45,6 +63,7 @@ async function send(path: string, init?: RequestInit): Promise<Response> {
       'content-type': 'application/json',
       ...(code ? { 'x-agriquill-write-token': code } : {}),
       ...(planToken() ? { authorization: `Bearer ${planToken()}` } : {}),
+      ...(producerToken() ? { 'x-agriquill-producer-token': producerToken() } : {}),
       ...(init?.headers ?? {}),
     },
   });

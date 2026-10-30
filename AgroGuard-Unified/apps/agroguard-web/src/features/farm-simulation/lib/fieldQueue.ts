@@ -1,3 +1,5 @@
+import type { ProducerDraft } from './farmmap/producers.ts';
+
 export type QueuedItem =
   | {
       id: string;
@@ -16,7 +18,8 @@ export type QueuedItem =
       kind: 'decision';
       queuedAt: string;
       body: { proposal_id: string; decision: 'approved' | 'rejected'; decided_by: string };
-    };
+    }
+  | { id: string; kind: 'producer'; queuedAt: string; body: ProducerDraft };
 
 export type SendOutcome = { result: 'done' } | { result: 'conflict'; message: string } | { result: 'retry'; message: string };
 
@@ -60,9 +63,9 @@ export function saveQueue(items: QueuedItem[], store: KeyValueStore | null = sto
 }
 
 export function itemKey(item: QueuedItem): string {
-  return item.kind === 'reading'
-    ? `reading:${item.body.device_id}:${item.body.observed_at}`
-    : `decision:${item.body.proposal_id}`;
+  if (item.kind === 'reading') return `reading:${item.body.device_id}:${item.body.observed_at}`;
+  if (item.kind === 'producer') return `producer:${item.body.name}:${item.body.lat}:${item.body.lon}`;
+  return `decision:${item.body.proposal_id}`;
 }
 
 export function enqueue(items: QueuedItem[], item: QueuedItem): QueuedItem[] {

@@ -224,3 +224,22 @@ def test_join_group_adds_member() -> None:
     group = producers.create(FARMER, None, body(kind="group", members=[{"name": "U Ba"}]))
     updated = producers.add_member(FARMER, group["id"], {"name": "Daw Mya", "area_ha": 0.8})
     assert [m["name"] for m in updated["members"]] == ["U Ba", "Daw Mya"]
+
+
+def test_private_view_says_whether_a_pin_guards_the_profile() -> None:
+    plain = producers.create(FARMER, None, body())
+    guarded = producers.create(FARMER, None, body(lat=17.3, lon=96.2, pin="4321"))
+    assert plain["has_pin"] is False and guarded["has_pin"] is True
+    assert "pin_hash" not in guarded
+
+
+def test_verify_pin_checks_the_pin_and_locks_after_five_wrong() -> None:
+    record = producers.create(FARMER, None, body(pin="4321"))
+    assert producers.verify_pin(FARMER, record["id"], "4321")["id"] == record["id"]
+    with pytest.raises(PermissionError):
+        producers.verify_pin(STRANGER, record["id"], "4321")
+    for _ in range(5):
+        with pytest.raises(PermissionError):
+            producers.verify_pin(FARMER, record["id"], "0000")
+    with pytest.raises(PermissionError):
+        producers.verify_pin(FARMER, record["id"], "4321")
