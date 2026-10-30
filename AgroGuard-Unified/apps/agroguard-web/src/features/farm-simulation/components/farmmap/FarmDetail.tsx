@@ -30,6 +30,7 @@ interface FarmDetailProps {
   field: string | null;
   onRoute: () => void;
   onFocus: () => void;
+  onMarket?: () => void;
   onPick: (target: PickTarget) => void;
   onOpenOps: (farmId: string) => void;
   onOpen3d: () => void;
@@ -107,7 +108,7 @@ const TONE: Record<FarmStatus, 'accent' | 'warning' | 'alert'> = { ok: 'accent',
 
 const NEARBY: PoiType[] = ['market', 'storage', 'mill', 'water'];
 
-export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, onFocus, onPick, onOpenOps, onOpen3d, surroundings }) => {
+export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, onMarket, onFocus, onPick, onOpenOps, onOpen3d, surroundings }) => {
   const t = useT();
   const data = getFarmMap();
   const safeDepthCm = usePaddySettingsStore((s) => s.applied.awd_safe_depth_cm);
@@ -149,9 +150,9 @@ export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, on
         </div>
         <div className="aq-fm-badges">
           <AqBadge>{t('farmMap.farm.illustrative')}</AqBadge>
-          <AqBadge tone={tone}>{statusLabel(farm.status)}</AqBadge>
           <AqBadge>{t(farmSizeBand(farm.area) === 'small' ? 'farmMap.size.small' : 'farmMap.size.smallMedium', { ha: farm.area })}</AqBadge>
           <AqBadge>{cropName}{stage ? ` · ${stage}` : ''}</AqBadge>
+          <AqBadge tone={tone}>{statusLabel(farm.status)}</AqBadge>
           {farm.organic ? <AqBadge tone="accent"><ShieldCheck size={12} aria-hidden="true" />{t('farmMap.farm.organic')}</AqBadge> : null}
         </div>
         <UpdatedLine>{t('farmMap.farm.valuesNote')}</UpdatedLine>
@@ -237,7 +238,11 @@ export const FarmDetail: React.FC<FarmDetailProps> = ({ farm, field, onRoute, on
         ))}
       </DetailSection>
       <DetailSection className="is-actions">
-        <AqButton variant="primary" onClick={onRoute}><Route size={14} aria-hidden="true" />{t('farmMap.farm.routeMarket')}</AqButton>
+        {onMarket ? (
+          <AqButton variant="primary" onClick={onMarket}><Route size={14} aria-hidden="true" />{t('farmMap.market.sell')}</AqButton>
+        ) : (
+          <AqButton variant="primary" onClick={onRoute}><Route size={14} aria-hidden="true" />{t('farmMap.farm.routeMarket')}</AqButton>
+        )}
         <AqButton variant="secondary" onClick={onFocus}><ScanLine size={14} aria-hidden="true" />{t('farmMap.farm.flyTo')}</AqButton>
       </DetailSection>
     </>

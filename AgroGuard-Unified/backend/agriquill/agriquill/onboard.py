@@ -258,7 +258,8 @@ def check_farm_size(rings: dict[str, list[list[float]]], existing_ha: float = 0.
     total = existing_ha + sum(ring_area_ha(r) for r in rings.values())
     if total > SMALL_MEDIUM_MAX_HA:
         raise ValueError(
-            f"Farm Map is for farms up to {SMALL_MEDIUM_MAX_HA:.0f} ha for now; these fields add up to {total:.1f} ha"
+            f"Farm Map is for farms up to {SMALL_MEDIUM_MAX_HA:.0f} ha for now; "
+            f"these fields add up to {total:.1f} ha"
         )
 
 

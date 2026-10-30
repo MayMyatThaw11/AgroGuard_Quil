@@ -33,7 +33,7 @@ export function setAccessCode(code: string): void {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await send(path, init)).json() as Promise<T>;
 }
 

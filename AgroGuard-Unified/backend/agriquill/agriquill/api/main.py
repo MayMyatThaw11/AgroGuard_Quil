@@ -45,6 +45,7 @@ from .. import (
     knowledge,
     live,
     lots,
+    market,
     market_api,
     ml,
     modelcard,
@@ -180,7 +181,9 @@ def _reader(
         ) from exc
     for name, code, roles, farms in users:
         if _same(token, code):
-            return Caller(name, roles, farms, f"code:{name}")
+            dev_roles = roles | {"buyer"} if "manager" in roles else roles
+            kind = "cooperative" if "manager" in roles else None
+            return Caller(name, dev_roles, farms, f"code:{name}", kind)
     shared = settings.write_token
     if shared is not None and _same(token, shared.get_secret_value()):
         return Caller(None, ROLES)
@@ -2172,7 +2175,10 @@ async def knowledge_search(
 
 @asynccontextmanager
 async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
-    require_sign_in_configured(get_settings())
+    settings = get_settings()
+    require_sign_in_configured(settings)
+    if settings.is_development and settings.farm_market_enabled:
+        await asyncio.to_thread(market.seed_demo)
     async with jobs.background():
         yield
 

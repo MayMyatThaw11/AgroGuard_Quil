@@ -212,3 +212,36 @@ def test_outlook_cache_is_per_day_not_per_week() -> None:
 @pytest.mark.parametrize("kind", ["factory", "msme"])
 def test_factories_and_msmes_buy_in_bulk(kind: str) -> None:
     assert market.channel_for(kind) == "bulk"
+
+
+def test_demo_seed_runs_once_and_shows_a_glut_and_a_short_town() -> None:
+    assert market.seed_demo() > 0
+    assert market.seed_demo() == 0
+    ready = (date.today() + timedelta(days=21)).isoformat()
+    glut = market.outlook("Nyaungshwe", "tomato", ready)
+    assert glut["level"] == "glut"
+    near = next(a for a in glut["advice"] if a["id"] == "try-nearby")
+    assert near["params"]["town"] == "Taunggyi"
+    assert market.outlook("Aungban", "potato", ready)["level"] == "short"
+    kinds = {p["buyer_kind"] for p in market.preorders() if p["town"] == "Aungban"}
+    assert {"factory", "processor"} <= kinds
+
+
+def test_demo_reseed_replaces_old_demo_rows_and_keeps_real_ones() -> None:
+    real = listing(123, town="Nyaungshwe", at=(20.66, 96.935))
+    market.post_listing(
+        "old-demo",
+        {
+            "produce": "tomato",
+            "qty_kg": 99999,
+            "ready_on": ON.isoformat(),
+            "town": "Nyaungshwe",
+            "lat": 20.66,
+            "lon": 96.935,
+            "demo": True,
+        },
+    )
+    market.seed_demo()
+    ids = {x["id"] for x in market.listings()}
+    assert real["id"] in ids
+    assert not any(x["qty_kg"] == 99999 for x in market.listings())

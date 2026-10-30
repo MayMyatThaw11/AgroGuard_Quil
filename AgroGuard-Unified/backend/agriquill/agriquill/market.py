@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from .data import prices
-from .store import RecordCache, now_iso
+from .store import RecordCache, connect, now_iso
 
 _STORE = RecordCache("contracts.sqlite")
 URL = "agriquill://market"
@@ -441,39 +441,81 @@ def outlook(town: str, produce: str, on: str, today: date | None = None) -> dict
     return result
 
 
-def seed_demo(anchor_towns: list[tuple[str, float, float]]) -> int:
-    if any(x.get("demo") for x in listings()):
+DEMO_TOWNS: tuple[
+    tuple[str, float, float, str, tuple[int, ...], tuple[tuple[str, int], ...]], ...
+] = (
+    ("Nyaungshwe", 20.66, 96.935, "tomato", (1500, 2000, 2500, 3000), (("processor", 2000),)),
+    ("Taunggyi", 20.78, 97.03, "tomato", (300,), (("factory", 3000), ("restaurant", 200))),
+    (
+        "Aungban",
+        20.66,
+        96.63,
+        "potato",
+        (800, 800),
+        (("factory", 5000), ("processor", 2000), ("household", 20)),
+    ),
+    (
+        "Maubin",
+        16.73,
+        95.65,
+        "rice",
+        (2000, 2000, 2000, 2000),
+        (("cooperative", 6000), ("retail", 500)),
+    ),
+    ("Hmawbi", 17.10, 96.05, "tomato", (900, 900), (("restaurant", 400), ("household", 30))),
+    ("Taikkyi", 17.32, 95.97, "tomato", (100,), (("processor", 1500),)),
+)
+
+
+DEMO_SEED_VERSION = "2"
+
+
+def _clear_demo() -> None:
+    conn, lock = connect("contracts.sqlite")
+    with lock:
+        conn.execute(
+            "DELETE FROM records WHERE source IN (?, ?) AND json_extract(payload, '$.demo') = 1",
+            (LISTING, PREORDER),
+        )
+        conn.commit()
+    clear_cache()
+
+
+def seed_demo() -> int:
+    marker = _STORE.get("demo_seed", "version")
+    if marker and marker["payload"].get("version") == DEMO_SEED_VERSION:
         return 0
+    _clear_demo()
+    _STORE.update("demo_seed", "version", lambda _old: {"version": DEMO_SEED_VERSION}, URL)
     added = 0
     ready = (date.today() + timedelta(days=21)).isoformat()
-    for i, (town, lat, lon) in enumerate(anchor_towns):
-        produce = ("tomato", "onion", "rice", "chili")[i % 4]
-        for j in range(4):
-            post_listing(
-                f"demo-farmer-{i}-{j}",
-                {
-                    "produce": produce,
-                    "qty_kg": 800 + 400 * j,
-                    "ready_on": ready,
-                    "town": town,
-                    "lat": lat + 0.01 * j,
-                    "lon": lon,
-                    "demo": True,
-                },
-            )
-            added += 1
-        post_preorder(
-            f"demo-buyer-{i}",
-            "processor",
-            {
+    for t, (town, lat, lon, produce, supply, demand) in enumerate(DEMO_TOWNS):
+        for j, kg in enumerate(supply):
+            body = {
                 "produce": produce,
-                "qty_kg": 1500 + 500 * (i % 3),
+                "qty_kg": kg,
+                "ready_on": ready,
+                "town": town,
+                "lat": lat + 0.008 * j,
+                "lon": lon - 0.006 * j,
+                "demo": True,
+                "farmer_name": f"Demo farm {t + 1}.{j + 1}",
+            }
+            post_listing(f"demo-farmer-{t}-{j}", body)
+            added += 1
+        for k, (kind, kg) in enumerate(demand):
+            buyer = f"demo-buyer-{t}-{k}"
+            body = {
+                "produce": produce,
+                "qty_kg": kg,
                 "needed_by": ready,
                 "town": town,
-                "lat": lat,
-                "lon": lon,
+                "lat": lat + 0.01,
+                "lon": lon + 0.01,
                 "demo": True,
-            },
-        )
-        added += 1
+                "buyer_name": f"Demo {kind} {t + 1}.{k + 1}",
+            }
+            post_preorder(buyer, kind, body)
+            mark_buyer_verified(buyer)
+            added += 1
     return added

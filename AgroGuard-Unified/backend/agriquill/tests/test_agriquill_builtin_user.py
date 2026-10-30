@@ -28,7 +28,7 @@ def test_builtin_code_signs_in_as_farm_manager_with_both_roles() -> None:
     assert res.status_code == 200
     body = res.json()
     assert body["name"] == "Farm Manager"
-    assert body["roles"] == ["crew", "manager"]
+    assert body["roles"] == ["buyer", "crew", "manager"]
     assert body["farms"] is None
     assert body["sign_in_required"] is True
 

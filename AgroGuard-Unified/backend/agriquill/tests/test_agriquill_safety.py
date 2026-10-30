@@ -100,7 +100,7 @@ def test_auth_me_reports_who_the_code_belongs_to():
         assert right.status_code == 200
         assert right.json() == {
             "name": "TestUser",
-            "roles": ["crew", "manager"],
+            "roles": ["buyer", "crew", "manager"],
             "farms": None,
             "sign_in_required": True,
         }

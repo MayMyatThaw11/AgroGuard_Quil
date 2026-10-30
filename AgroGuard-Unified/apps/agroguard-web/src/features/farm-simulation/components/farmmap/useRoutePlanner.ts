@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FarmMapEngine, GuideProgress } from '../../lib/farmmap/engine/engineTypes.ts';
+import type { FarmMapEngine, GuideProgress, RouteStop } from '../../lib/farmmap/engine/engineTypes.ts';
 import { getFarmMap } from '../../lib/farmmap/farmMapData.ts';
 import { draftForFarm, draftForPoi } from '../../lib/farmmap/farmMapRoutes.ts';
 import { TRAVEL_MODES, type RouteState } from './RoutePanel.tsx';
@@ -48,6 +48,11 @@ export function useRoutePlanner({ engine, selection, onRestore, onFocusRight, to
     });
   }, [engine, route, patch, toast]);
 
+  const openTo = useCallback((from: RouteStop, to: RouteStop) => {
+    back.current = selection;
+    setRoute({ options: [from, to], from: from.id, to: to.id, mode: 'truck', result: null, loading: false, go: Date.now() });
+  }, [selection]);
+
   const stopGuide = useCallback(() => {
     engine?.stopGuide();
     setGuide(null);
@@ -86,5 +91,5 @@ export function useRoutePlanner({ engine, selection, onRestore, onFocusRight, to
     });
   }, [engine, route, onFocusRight, toast]);
 
-  return { route, guide, patch, open, close, dismiss, start, stopGuide };
+  return { route, guide, patch, open, openTo, close, dismiss, start, stopGuide };
 }

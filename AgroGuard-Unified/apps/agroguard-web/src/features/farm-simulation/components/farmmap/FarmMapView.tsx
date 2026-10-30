@@ -57,6 +57,9 @@ import { useFarmMapPick } from './useFarmMapPick.ts';
 import { useFarmMapSync } from './useFarmMapSync.ts';
 import { useRoutePlanner, type Selection } from './useRoutePlanner.ts';
 import { useUiMode } from './useUiMode.ts';
+import { MarketPanel } from './MarketPanel.tsx';
+import type { Farm } from '../../lib/farmmap/farmMapTypes.ts';
+import { marketEnabled } from '../../lib/farmmap/market.ts';
 import { useToasts } from './useToasts.ts';
 import { useViewCounts } from './useViewCounts.ts';
 
@@ -138,6 +141,15 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
 
   const guideLayout = useCallback((active: boolean) => setPanels({ left: !active, right: true }), []);
   const ui = useUiMode();
+  const [marketOn, setMarketOn] = useState(false);
+  const [marketFarm, setMarketFarm] = useState<Farm | null>(null);
+  useEffect(() => {
+    let alive = true;
+    marketEnabled().then((r) => alive && setMarketOn(r.enabled), () => alive && setMarketOn(false));
+    return () => {
+      alive = false;
+    };
+  }, []);
   const planner = useRoutePlanner({ engine, selection, onRestore: setSelection, onFocusRight: guideLayout, toast: push });
   const { route, guide } = planner;
 
@@ -331,11 +343,14 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         }}
       />
     );
+    if (marketFarm && !route) return (
+      <MarketPanel farm={marketFarm} onClose={() => setMarketFarm(null)} onDirections={(from, to) => planner.openTo(from, to)} />
+    );
     if (route) return (
       <RoutePanel route={route} onChange={planner.patch} onClose={planner.close} onStart={planner.start} />
     );
     if (farm && selection?.kind === 'farm') return (
-      <FarmDetail farm={farm} field={selection.field} onRoute={planner.open} onFocus={() => engine?.focusFarm(farm)} onPick={pick} onOpenOps={onOpenOps} onOpen3d={() => openView(fromExample(farm, selection.field))} surroundings={surroundings} />
+      <FarmDetail farm={farm} field={selection.field} onRoute={planner.open} onMarket={marketOn ? () => setMarketFarm(farm) : undefined} onFocus={() => engine?.focusFarm(farm)} onPick={pick} onOpenOps={onOpenOps} onOpen3d={() => openView(fromExample(farm, selection.field))} surroundings={surroundings} />
     );
     if (ownFarm) return (
       <OwnFarmDetail
