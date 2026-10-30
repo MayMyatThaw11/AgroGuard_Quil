@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_URL } from '../api.js'
+import { clearAccount, saveAccount } from './account.js'
 
 export const TOKEN_KEY = 'agroguard_token'
 const CHANGED = 'agroguard:session'
@@ -29,6 +30,7 @@ export function logout() {
   } catch {
     /* nothing saved to clear */
   }
+  clearAccount()
   setToken('')
 }
 
@@ -44,13 +46,13 @@ export async function authFetch(path, init = {}) {
   })
 }
 
-export async function login(email) {
+export async function login(email, account = null) {
   let response
   try {
     response = await fetch(`${API_BASE_URL}/auth/demo-login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(account ? { email, ...account } : { email }),
     })
   } catch {
     throw new Error('Cannot reach the AgroGuard API. Check that it is running.')
@@ -63,6 +65,7 @@ export async function login(email) {
     }
     throw new Error(`Sign-in failed (HTTP ${response.status}).`)
   }
+  saveAccount(body)
   setToken(body.access_token)
   return body
 }

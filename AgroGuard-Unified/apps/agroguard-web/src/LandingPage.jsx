@@ -24,6 +24,7 @@ import {
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from './lib/session.js'
+import { BUYER_KINDS } from './lib/account.js'
 import Logo from './components/Logo.jsx'
 
 const capabilities = [
@@ -99,16 +100,18 @@ const impactHighlights = [
 function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
   const [message, setMessage] = useState('')
   const [emailInput, setEmailInput] = useState('')
+  const [accountType, setAccountType] = useState('farmer')
+  const [buyerKind, setBuyerKind] = useState('household')
 
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const signIn = async (email) => {
+  const signIn = async (email, account = null) => {
     setBusy(true)
     setFailed(false)
     setMessage('')
     try {
-      await login(email)
+      await login(email, account)
       onSuccess()
     } catch (error) {
       setFailed(true)
@@ -125,7 +128,8 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
       return
     }
     const targetEmail = emailInput || new FormData(event.currentTarget).get('email')
-    signIn(targetEmail)
+    const account = mode === 'signup' ? { account_type: accountType, buyer_kind: accountType === 'buyer' ? buyerKind : null } : null
+    signIn(targetEmail, account)
   }
 
   const changeMode = (nextMode) => {
@@ -166,6 +170,27 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
 
           <form onSubmit={submit} className="mt-4 space-y-3">
             {mode === 'signup' ? (
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-semibold text-myanglow-navy">I am here to</legend>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                  {[['farmer', 'Sell my harvest', 'Farmers and farmer groups'], ['buyer', 'Buy from farms', 'Homes, shops, factories, co-ops']].map(([value, title, note]) => (
+                    <button key={value} type="button" role="radio" aria-checked={accountType === value} onClick={() => setAccountType(value)} className={`rounded-2xl border px-4 py-3 text-left transition ${accountType === value ? 'border-myanglow-forest bg-myanglow-sage/35 ring-2 ring-myanglow-forest/20' : 'border-myanglow-sage bg-white hover:bg-myanglow-sage/20'}`}>
+                      <span className="block text-sm font-semibold text-myanglow-navy">{title}</span>
+                      <span className="mt-0.5 block text-xs text-slate-500">{note}</span>
+                    </button>
+                  ))}
+                </div>
+                {accountType === 'buyer' ? (
+                  <label className="block text-sm font-semibold text-myanglow-navy">
+                    What kind of buyer are you?
+                    <select value={buyerKind} onChange={(e) => setBuyerKind(e.target.value)} className="mt-2 w-full rounded-2xl border border-myanglow-sage bg-white px-4 py-3.5 text-sm font-normal outline-none focus:border-myanglow-medium focus:ring-4 focus:ring-myanglow-sage/30">
+                      {BUYER_KINDS.map((kind) => <option key={kind.value} value={kind.value}>{kind.label}</option>)}
+                    </select>
+                  </label>
+                ) : null}
+              </fieldset>
+            ) : null}
+            {mode === 'signup' ? (
               <label className="block text-sm font-semibold text-myanglow-navy">
                 Full name
                 <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
@@ -196,7 +221,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
               <div className="rounded-xl border border-myanglow-sage px-4 py-3 text-xs text-slate-500">
                 <p className="font-semibold text-myanglow-navy">Demo accounts (any password)</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {['free@demo.com', 'pro@demo.com'].map((email) => (
+                  {['free@demo.com', 'pro@demo.com', 'buyer@demo.com'].map((email) => (
                     <button key={email} type="button" disabled={busy} onClick={() => { setEmailInput(email); signIn(email); }} className="rounded-lg border border-myanglow-sage px-3 py-1.5 font-semibold text-myanglow-forest transition hover:bg-myanglow-sage/40 disabled:opacity-50">
                       {email}
                     </button>
