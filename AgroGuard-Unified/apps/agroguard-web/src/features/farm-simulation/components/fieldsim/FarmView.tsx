@@ -13,7 +13,7 @@ import { sunPosition, weedDensity } from '../../lib/farmview/seasonField.ts';
 import { OMT_ATTRIBUTION } from '../../lib/farmview/captureOmt.ts';
 import { buildProfile, type Chip } from '../../lib/farmview/profile.ts';
 import { HEIGHT_KEY, distanceWord, heightLine, terrainKey } from '../../lib/farmview/plainHud.ts';
-import { lowLyingNotes, waterLevelY } from '../../lib/farmview/flood.ts';
+import { DEM_ERROR_M, fieldHeights, floodBasis, floodClass, lowLyingNotes, waterLevelM, waterSceneY, type FloodBasis } from '../../lib/farmview/flood.ts';
 import { browserStorage, guideSeen, markGuideSeen } from '../../lib/farmview/guideSeen.ts';
 import { FAR_HALF_KM, NEIGHBOURHOOD_HALF_KM, RELIEF_ATTRIBUTION, clampCamera, clearView, fogDensity, heightAt, ringPlan, slopeStats } from '../../lib/farmview/terrain.ts';
 import { nearest, type NearFeature } from '../../lib/farmmap/surroundings.ts';
@@ -232,6 +232,24 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
     return nearest(origin.lat, origin.lon, features, NEIGHBOURHOOD_HALF_KM);
   }, [origin.lat, origin.lon, hood.features]);
   const risk = useRisk(target.id, target.kind === 'own');
+  const originHeight = demField ? heightAt(demField, origin.lat, origin.lon) : null;
+  const heights = useMemo(() => {
+    if (!demField || !main) return null;
+    const lat = main.ring.reduce((s, p) => s + p[0], 0) / main.ring.length;
+    const lon = main.ring.reduce((s, p) => s + p[1], 0) / main.ring.length;
+    return fieldHeights([...main.ring.map(([la, lo]) => heightAt(demField, la, lo)), heightAt(demField, lat, lon)]);
+  }, [demField, main]);
+  const lowestGround = useMemo(() => {
+    if (!demField) return null;
+    const span = NEIGHBOURHOOD_HALF_KM / 111;
+    const samples: (number | null)[] = [];
+    for (let i = -7; i <= 7; i += 1) for (let j = -7; j <= 7; j += 1) samples.push(heightAt(demField, origin.lat + (span * i) / 7, origin.lon + (span * j) / 7));
+    return fieldHeights(samples)?.min ?? null;
+  }, [demField, origin.lat, origin.lon]);
+  const [basisChoice, setBasis] = useState<FloodBasis | null>(null);
+  const basis = basisChoice ?? floodBasis(heights?.median ?? null);
+  const levelM = lowestGround === null ? null : waterLevelM(basis, depth, lowestGround);
+  const floodResult = heights && levelM !== null && depth > 0 ? floodClass(heights, levelM, DEM_ERROR_M) : null;
   const floodNotes = useMemo(() => lowLyingNotes(nearHits, elevationM), [nearHits, elevationM]);
   const profile = useMemo(() => {
     return buildProfile({
@@ -337,7 +355,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           <GroundPatches patches={ground.patches} />
           {hood.data && ground.status !== 'loading' ? <Neighbourhood data={hood.data} groundAt={ground.groundAt} profile={profile} seed={target.id} /> : null}
           <Weather seed={target.id} fx={fx} lowPower={budget.weak} centre={framing.centre} baseY={mainBase} />
-          {depth > 0 ? <WaterPlane y={waterLevelY(mainBase, depth)} /> : null}
+          {depth > 0 && levelM !== null && originHeight !== null ? <WaterPlane y={waterSceneY(levelM, originHeight)} /> : null}
           {outlined ? <OutlineFields rings={placed.map((p) => p.ring)} groundAt={ground.groundAt} /> : null}
           {(outlined ? [] : layouts).map(({ placed: p, layout, seasonal }) => {
             const stage: RiceStage | null = seasonal ? stageForDvs(dvs) : riceStageFromName(p.field.stage);
@@ -409,7 +427,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           </div>
         </details>
         <WeatherPanel fx={fx} live={liveWeather} condition={weatherKey(fx)} temperatureC={wxChoice === 'now' && !season ? wxNow?.temperature_2m ?? null : null} choice={wxChoice} onChoice={setWxChoice} />
-        <FloodPanel own={target.kind === 'own'} risk={risk} notes={floodNotes} depth={depth} onDepth={setDepth} />
+        <FloodPanel own={target.kind === 'own'} risk={risk} notes={floodNotes} depth={depth} onDepth={setDepth} heights={heights} basis={basis} onBasis={setBasis} result={floodResult} errorM={DEM_ERROR_M} />
       </div>
       <div className="aq-fm-replica-credits">
         {hood.data ? <span>{OMT_ATTRIBUTION}</span> : null}
