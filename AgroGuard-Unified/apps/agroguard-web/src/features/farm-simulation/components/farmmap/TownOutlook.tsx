@@ -116,6 +116,12 @@ export const TownOutlook: React.FC<{ outlook: Outlook; produceWord: string; onAd
           })}
         </div>
       ) : null}
+      {outlook.no_reach ? (
+        <div className="aq-fm-mk-advice">
+          <p className="aq-fm-mk-subhead">{t('farmMap.market.noReach.title')}</p>
+          {outlook.no_reach.options.map((o) => <p key={o} className="aq-fm-mk-quiet">{t(`farmMap.market.noReach.${o}` as Key)}</p>)}
+        </div>
+      ) : null}
       {outlook.nearby.length ? (
         <div className="aq-fm-mk-nearby">
           <p className="aq-fm-mk-subhead">{t('farmMap.market.nearby')}</p>

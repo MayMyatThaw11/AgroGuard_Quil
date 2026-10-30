@@ -42,6 +42,7 @@ export interface Outlook {
   advice: Advice[];
   nearby: { town: string; km: number; level: OutlookLevel; unmet_kg: number }[];
   market_open?: boolean;
+  no_reach?: { options: ('storage' | 'list-anyway' | 'alert')[] };
 }
 
 export interface Preorder {

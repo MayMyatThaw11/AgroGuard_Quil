@@ -203,7 +203,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
 
       <ProducerSwitch producers={producers} activeId={activeId} onPick={pickProducer} onSetup={() => setSetup(true)} onChanged={loadProducers} />
 
-      {outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} onAdvice={(a) => a.id === 'presell-bulk' && setChannel('bulk')} /> : <DetailSection className="is-loading"><span className="aq-fm-spin" aria-hidden="true" /></DetailSection>}
+      {outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} onAdvice={(a) => (a.id === 'presell-bulk' || a.id === 'reach-processors') && setChannel('bulk')} /> : <DetailSection className="is-loading"><span className="aq-fm-spin" aria-hidden="true" /></DetailSection>}
 
       {outlook?.market_open === false ? <DetailSection><p className="aq-fm-mk-quiet">{t('farmMap.signals.comingSoon')}</p></DetailSection> : null}
 
