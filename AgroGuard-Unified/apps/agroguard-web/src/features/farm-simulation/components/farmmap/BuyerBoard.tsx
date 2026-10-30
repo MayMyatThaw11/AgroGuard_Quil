@@ -24,6 +24,7 @@ import { CandidateTransport } from './CandidateTransport.tsx';
 import { CoopFarmers } from './CoopFarmers.tsx';
 import { DetailSection } from './detailParts.tsx';
 import { SeasonOrdersBuyer } from './SeasonMatch.tsx';
+import { MoreRows } from './uxParts.tsx';
 import { LEVEL_KEY, SupplyBars, TownOutlook, useWeight } from './TownOutlook.tsx';
 
 export interface BuyerPlace {
@@ -213,7 +214,7 @@ export const BuyerBoard: React.FC<{ place: BuyerPlace; onDirections: (from: Rout
             <p className="aq-fm-mk-subhead">{t('farmMap.buyer.mine')}</p>
             {error ? <p className="aq-fm-mk-error" role="alert">{t('farmMap.market.error', { error })}</p> : null}
             {!orders.length ? <p className="aq-fm-mk-quiet">{t('farmMap.buyer.none')}</p> : null}
-            {orders.map((order) => (
+            <MoreRows rows={orders}>{(shown) => shown.map((order) => (
               <div key={order.id} className="aq-fm-mk-offer">
                 <button type="button" className="aq-fm-mk-order-head" aria-expanded={expanded === order.id} onClick={() => setExpanded(expanded === order.id ? null : order.id)}>
                   <span>
@@ -224,7 +225,7 @@ export const BuyerBoard: React.FC<{ place: BuyerPlace; onDirections: (from: Rout
                 </button>
                 {expanded === order.id ? <Candidates order={order} place={place} onDirections={onDirections} /> : null}
               </div>
-            ))}
+            ))}</MoreRows>
           </DetailSection>
           <SeasonOrdersBuyer place={place} />
         </>

@@ -181,6 +181,9 @@ def species_for(
     return out
 
 
+ROI_MIN = 3.0
+
+
 def margin(
     species_id: str, units: float, prices: dict[str, float] | None, fed: bool = True
 ) -> dict[str, Any]:
@@ -200,6 +203,8 @@ def margin(
         "revenue_mmk": revenue,
         "cost_mmk": cost,
         "margin_mmk": revenue - cost,
+        "roi_x": round(revenue / cost, 2) if cost else None,
+        "roi_ok": revenue >= ROI_MIN * cost,
         "missing": [],
     }
 

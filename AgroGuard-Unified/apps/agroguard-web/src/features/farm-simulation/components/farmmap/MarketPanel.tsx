@@ -27,8 +27,10 @@ import { checkText, getSignals, hasKg, hasReady, kgText, readyText, type Signals
 import { prefillOffer } from '../../lib/farmmap/marketCues.ts';
 import { markPaid } from '../../lib/farmmap/seasonMatch.ts';
 import { latestHealthUpdate } from '../../lib/agroguard.ts';
-import { createProducer, loadActiveProducer, myProducers, saveActiveProducer, type Producer } from '../../lib/farmmap/producers.ts';
-import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
+import { haToAcres, createProducer, loadActiveProducer, myProducers, saveActiveProducer, type Producer } from '../../lib/farmmap/producers.ts';
+import { loadOutlook as loadKept, saveOutlook, savedAgo } from '../../lib/farmmap/outlookCache.ts';
+import { sellSteps } from '../../lib/farmmap/steps.ts';
+import { activeLocale, useLang, useT, type Key } from '../../lib/i18n.ts';
 import { newId, useFieldQueue } from '../../lib/useFieldQueue.ts';
 import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 import { AqTabs } from '../aq/aqLayout.tsx';
@@ -40,6 +42,7 @@ import { MarketCue, SeasonLine } from './MarketCue.tsx';
 import { ProducerSwitch } from './ProducerSwitch.tsx';
 import { SeasonMatchFarmer } from './SeasonMatch.tsx';
 import { TownOutlook, useWeight } from './TownOutlook.tsx';
+import { MoreRows, StepsStrip } from './uxParts.tsx';
 
 const READY_IN_DAYS = 21;
 const kindKey = (kind: string) => `farmMap.market.kind.${kind}` as Key;
@@ -55,7 +58,11 @@ function expectedKg(farm: Farm): number {
 
 export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirections: (from: RouteStop, to: RouteStop) => void }> = ({ farm, onClose, onDirections }) => {
   const t = useT();
+  const lang = useLang();
   const weight = useWeight();
+  const [ask, setAsk] = useState('');
+  const [visible, setVisible] = useState(true);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const choices = produceForCrop(farm.crop);
   const [produce, setProduce] = useState<Produce>(choices[0]);
   const [kg, setKg] = useState(() => expectedKg(farm));
@@ -76,7 +83,20 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   const queue = useFieldQueue();
 
   const loadOutlook = useCallback(() => {
-    getOutlook(farm.town, produce, ready).then(setOutlook, (e) => setError(message(e)));
+    getOutlook(farm.town, produce, ready).then(
+      (o) => {
+        setOutlook(o);
+        setSavedAt(null);
+        saveOutlook(browserStorage(), farm.town, produce, o);
+      },
+      (e) => {
+        const kept = loadKept(browserStorage(), farm.town, produce);
+        if (kept) {
+          setOutlook(kept.outlook);
+          setSavedAt(kept.savedAt);
+        } else setError(message(e));
+      },
+    );
   }, [farm.town, produce, ready]);
   const loadBuyers = useCallback(() => {
     setBuyers(null);
@@ -136,7 +156,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
     setBusy('save');
     setError('');
     try {
-      const made = await postListing({ produce, qty_kg: kg, ready_on: ready, town: farm.town, lat: farm.lat, lon: farm.lon, area_ha: farm.area, ...(activeId ? { producer_id: activeId } : {}) });
+      const made = await postListing({ produce, qty_kg: kg, ready_on: ready, town: farm.town, lat: farm.lat, lon: farm.lon, area_ha: farm.area, ...(activeId ? { producer_id: activeId } : {}), ...(ask ? { ask_mmk_kg: Number(ask) } : {}), visible_to_buyers: visible });
       setListing(made);
       setFlash(checkText(made.check, kg, t, weight) ?? t('farmMap.market.saved'));
       loadOutlook();
@@ -206,21 +226,29 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
           <button type="button" className="aq-icon-btn" aria-label={t('farmMap.market.back')} onClick={onClose}><ArrowLeft size={16} aria-hidden="true" /></button>
           <div>
             <h2 className="aq-title">{t('farmMap.market.title')}</h2>
-            <p className="aq-meta">{farm.name}, {farm.town}</p>
+            <p className="aq-meta">{farm.name}, {farm.town}, {t('farmMap.acres', { n: haToAcres(farm.area).toFixed(1) })}</p>
           </div>
         </div>
       </DetailSection>
 
       <ProducerSwitch producers={producers} activeId={activeId} onPick={pickProducer} onSetup={() => setSetup(true)} onChanged={loadProducers} />
 
+      <StepsStrip
+        title={t('farmMap.steps.sellTitle')}
+        steps={sellSteps({ profile: activeId !== null, listed: listing !== null, offered: offers.length > 0, delivered: offers.some((o) => o.status === 'delivered'), paid: offers.some((o) => Boolean(o.paid_on)) })}
+      />
+
       {activeId ? <MarketCue producerId={activeId} /> : null}
 
       {outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} onAdvice={(a) => (a.id === 'presell-bulk' || a.id === 'reach-processors') && setChannel('bulk')} /> : <DetailSection className="is-loading"><span className="aq-fm-spin" aria-hidden="true" /></DetailSection>}
+
+      {savedAt ? <DetailSection><p className="aq-fm-mk-quiet" role="status">{t('farmMap.offline.saved', { time: savedAgo(savedAt, Date.now(), lang) })}</p></DetailSection> : null}
 
       {outlook?.market_open === false ? <DetailSection><p className="aq-fm-mk-quiet">{t('farmMap.signals.comingSoon')}</p></DetailSection> : null}
 
       <DetailSection className="aq-fm-mk-form">
         <p className="aq-fm-mk-subhead">{t('farmMap.market.harvestTitle')}</p>
+        <div className="aq-fm-group">
         <div className="aq-fm-mk-fields">
           <label>
             <span>{t('farmMap.market.produce')}</span>
@@ -237,6 +265,15 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
             <input className="aq-fm-input" type="date" value={ready} onChange={(e) => setReady(e.target.value)} />
           </label>
         </div>
+        </div>
+        <details className="aq-fm-group">
+          <summary>{t('farmMap.supply.more')}</summary>
+          <label className="aq-fm-pr-field">
+            <span>{t('farmMap.market.ask')}</span>
+            <input className="aq-fm-input" type="number" min={1} inputMode="numeric" value={ask} onChange={(e) => setAsk(e.target.value)} />
+          </label>
+          <label className="aq-fm-ss-check"><input type="checkbox" checked={visible} onChange={(e) => setVisible(e.target.checked)} /> {t('farmMap.market.visible')}</label>
+        </details>
         {signals && readyText(signals.ready_on, t, activeLocale()) ? <p className="aq-fm-mk-quiet">{readyText(signals.ready_on, t, activeLocale())}</p> : null}
         {signals && kgText(signals.expected_kg, t, weight) ? <p className="aq-fm-mk-quiet">{kgText(signals.expected_kg, t, weight)}</p> : null}
         {signals?.grade.advice ? <p className="aq-fm-mk-hint">{t('farmMap.signals.processor')}</p> : null}
@@ -255,7 +292,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
         <AqTabs<Channel> value={channel} label={t('farmMap.market.buyersTitle', { produce: t(produceKey(produce)) })} onChange={setChannel} items={[{ value: 'direct', label: t('farmMap.market.direct') }, { value: 'bulk', label: t('farmMap.market.bulk') }]} />
         {buyers === null ? <p className="aq-fm-mk-quiet">…</p> : null}
         {buyers && buyers.length === 0 ? <p className="aq-fm-mk-quiet">{t(channel === 'bulk' ? 'farmMap.market.emptyBulk' : 'farmMap.market.emptyDirect')}</p> : null}
-        {buyers?.map((order) => (
+        {buyers ? <MoreRows rows={buyers}>{(shown) => shown.map((order) => (
           <div key={order.id} className="aq-fm-mk-buyer">
             <div className="aq-fm-mk-buyer-main">
               <span className="aq-fm-mk-buyer-kind">{t(kindKey(order.buyer_kind))}</span>
@@ -272,7 +309,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
               {offered.has(order.id) ? t('farmMap.market.offered') : t('farmMap.market.offer')}
             </AqButton>
           </div>
-        ))}
+        ))}</MoreRows> : null}
       </DetailSection>
 
       {activeId ? <SeasonLine producerId={activeId} /> : null}
@@ -282,7 +319,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
       {offers.length ? (
         <DetailSection>
           <p className="aq-fm-mk-subhead">{t('farmMap.market.offersTitle')}</p>
-          {offers.map((row) => {
+          <MoreRows rows={offers}>{(shown) => shown.map((row) => {
             const buyer = row.buyer_name ?? t(kindKey(row.buyer_kind));
             const chosen = row.status !== 'candidate';
             return (
@@ -302,7 +339,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
                 ) : null}
               </div>
             );
-          })}
+          })}</MoreRows>
         </DetailSection>
       ) : null}
     </div>

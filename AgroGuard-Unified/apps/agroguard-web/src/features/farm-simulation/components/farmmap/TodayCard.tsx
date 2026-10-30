@@ -11,7 +11,9 @@ import { browserStorage } from '../../lib/paddySettingsBoot.ts';
 import { loadActiveProducer, myProducers } from '../../lib/farmmap/producers.ts';
 import { usePaddySettingsStore } from '../../store/paddySettingsStore.ts';
 import { AqButton } from '../aq/aqPrimitives.tsx';
+import { epistemicOf } from '../../lib/farmmap/epistemic.ts';
 import { DetailSection } from './detailParts.tsx';
+import { EpiTag } from './uxParts.tsx';
 import { ADVICE_KEY, useWeight } from './TownOutlook.tsx';
 
 const AHEAD_DAYS = 21;
@@ -86,6 +88,7 @@ export const TodayCard: React.FC<{ farm: Farm | null; onSell: () => void }> = ({
       {current ? (
         <div key={current.key} className={`aq-fm-today-item is-${current.level}`}>
           <p className="aq-fm-today-text" role="status">{sentence(current)}</p>
+          <EpiTag kind={epistemicOf(current)} />
           <div className="aq-fm-mk-offer-actions">
             {current.source !== 'decision' ? <AqButton variant="primary" large onClick={onSell}>{t('farmMap.today.openMarket')}</AqButton> : null}
             <AqButton variant={current.source === 'decision' ? 'primary' : 'ghost'} large onClick={() => setDone(new Set([...done, current.key]))}>{t('farmMap.today.done')}</AqButton>

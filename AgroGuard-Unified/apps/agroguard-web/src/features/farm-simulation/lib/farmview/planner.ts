@@ -45,7 +45,7 @@ export interface Suggestion {
   cautions: Reason[];
   trench?: Trench;
   stocking?: { per_ha: number; units: number };
-  margin?: { missing: string[]; units: number; harvest_kg: number; cycle_days: number; revenue_mmk?: number; cost_mmk?: number; margin_mmk?: number };
+  margin?: { missing: string[]; units: number; harvest_kg: number; cycle_days: number; revenue_mmk?: number; cost_mmk?: number; margin_mmk?: number; roi_x?: number | null; roi_ok?: boolean };
   ranking?: { id: string; name: string; margin: { missing: string[]; margin_mmk?: number } }[];
   status: string;
 }

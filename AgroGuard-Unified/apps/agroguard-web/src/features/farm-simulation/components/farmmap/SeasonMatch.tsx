@@ -34,6 +34,7 @@ import {
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { AqButton, AqBadge } from '../aq/aqPrimitives.tsx';
 import { DetailSection } from './detailParts.tsx';
+import { MoreRows } from './uxParts.tsx';
 import { useWeight } from './TownOutlook.tsx';
 
 const FIT_TONE: Record<Fit, 'accent' | 'neutral' | 'warning'> = { strong: 'accent', good: 'neutral', weak: 'warning' };
@@ -127,10 +128,14 @@ export const SeasonMatchFarmer: React.FC<{ producer: Producer | null }> = ({ pro
         <>
           <p className="aq-fm-mk-quiet">{t('farmMap.season.intro')}</p>
           <p className="aq-fm-mk-quiet">{t('farmMap.season.beta')}</p>
+          <div className="aq-fm-group">
           <p className="aq-fm-mk-subhead">{t('farmMap.season.wants')}</p>
           <Chips items={WANTS} on={wants} label={(w) => t(`farmMap.season.want.${w}` as Key)} onToggle={(w) => { const next = toggle(wants, w); setWants(next); save({ wants: next }); }} />
+          </div>
+          <div className="aq-fm-group">
           <p className="aq-fm-mk-subhead">{t('farmMap.season.canOffer')}</p>
           <Chips items={CAN_OFFER} on={can} label={(c) => t(`farmMap.season.can.${c}` as Key)} onToggle={(c) => { const next = toggle(can, c); setCan(next); save({ can_offer: next }); }} />
+          </div>
           {ideas ? (
             <>
               <p className="aq-fm-mk-subhead">{t('farmMap.signals.plantTitle')}</p>
@@ -138,7 +143,7 @@ export const SeasonMatchFarmer: React.FC<{ producer: Producer | null }> = ({ pro
             </>
           ) : null}
           {rows && !rows.length ? <p className="aq-fm-mk-quiet">{t('farmMap.season.empty')}</p> : null}
-          {rows?.map((m) => <MatchCard key={`${m.order_id}-${m.remaining_kg}`} match={m} producerId={id} onReserved={() => { setFlash(t('farmMap.season.reservedFlash')); load(); }} />)}
+          {rows ? <MoreRows rows={rows}>{(shown) => shown.map((m) => <MatchCard key={`${m.order_id}-${m.remaining_kg}`} match={m} producerId={id} onReserved={() => { setFlash(t('farmMap.season.reservedFlash')); load(); }} />)}</MoreRows> : null}
           {flash ? <p className="aq-fm-mk-flash" role="status">{flash}</p> : null}
           {error ? <p className="aq-fm-mk-error" role="alert">{t('farmMap.market.error', { error })}</p> : null}
         </>

@@ -107,3 +107,20 @@ def test_unknown_salinity_is_reported_not_assumed() -> None:
 def test_birds_near_water_carry_the_biosecurity_caution() -> None:
     row = next(r for r in mixfarm.suggest(farm()) if r["id"] == "dike_poultry")
     assert "avian-influenza" in [c["id"] for c in row["cautions"]]
+
+
+def test_margin_flags_a_return_under_three_times_the_cost() -> None:
+    fed = mixfarm.margin(
+        "nile_tilapia",
+        units=1000,
+        prices={"sell_mmk_kg": 4000, "seed_mmk_each": 50, "feed_mmk_kg": 1500},
+    )
+    assert fed["roi_x"] == pytest.approx(fed["revenue_mmk"] / fed["cost_mmk"], abs=0.01)
+    assert fed["roi_ok"] is False
+    cheap = mixfarm.margin(
+        "nile_tilapia",
+        units=1000,
+        prices={"sell_mmk_kg": 4000, "seed_mmk_each": 50, "feed_mmk_kg": 100},
+    )
+    assert cheap["roi_ok"] is True and cheap["roi_x"] > 3
+    assert "roi_ok" not in mixfarm.margin("nile_tilapia", units=1000, prices={})

@@ -93,6 +93,9 @@ const Row: React.FC<{ s: Suggestion; prices: Prices; onPrice: (species: string, 
       ) : m ? (
         <p className="aq-fm-mk-quiet">{t('farmMap.planner.marginMissing')}</p>
       ) : null}
+      {m && !m.missing.length && m.roi_ok !== undefined ? (
+        <p className={m.roi_ok ? 'aq-fm-mk-quiet' : 'aq-fm-pl-caution'}>{m.roi_ok ? t('farmMap.roi.ok', { x: m.roi_x ?? '' }) : t('farmMap.roi.low')}</p>
+      ) : null}
       {m && lead ? (
         <details className="aq-fm-pl-prices">
           <summary>{t('farmMap.planner.prices', { species: t(`farmMap.planner.species.${lead.id}` as Key) })}</summary>

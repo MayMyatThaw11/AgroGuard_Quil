@@ -32,8 +32,8 @@ await run(async (browser) => {
   await search.fill(FARM);
   await p.waitForTimeout(500);
   await p.keyboard.press('Enter');
-  await ready(p, 'farm detail', 'button:has-text("Sell this harvest")');
-  await p.locator('button:has-text("Sell this harvest")').click();
+  await ready(p, 'farm detail', '.aq-fm-selbar button:has-text("Sell this harvest")');
+  await p.locator('.aq-fm-selbar button:has-text("Sell this harvest")').click();
   await ready(p, 'season section', '.aq-fm-ss-card');
   await p.locator('.aq-fm-mk-form').scrollIntoViewIfNeeded();
   await shot(p, join(GATE, `signals-${W}`));
@@ -59,6 +59,7 @@ await run(async (browser) => {
   await buyer.page.keyboard.press('Enter');
   await buyer.page.waitForTimeout(3000);
   await buyer.page.keyboard.press('Escape');
+  await buyer.page.locator('.aq-tabs button:has-text("My orders")').click();
   await ready(buyer.page, 'buyer season orders', '.aq-fm-ss-progress');
   await buyer.page.locator('.aq-fm-ss-progress').first().scrollIntoViewIfNeeded();
   await shot(buyer.page, join(GATE, `buyer-${W}`));

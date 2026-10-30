@@ -146,7 +146,7 @@ export const getOutlook = (town: string, produce: Produce, on: string) =>
   request<Outlook>(`${BASE}/outlook?${new URLSearchParams({ town, produce, on })}`);
 export const getPreorders = (produce: Produce, channel: Channel, lat: number, lon: number) =>
   request<Preorder[]>(`${BASE}/preorders?${new URLSearchParams({ produce, channel, lat: String(lat), lon: String(lon) })}`);
-export const postListing = (body: { produce: Produce; qty_kg: number; ready_on: string; town: string; lat: number; lon: number; area_ha?: number; producer_id?: string }) =>
+export const postListing = (body: { produce: Produce; qty_kg: number; ready_on: string; town: string; lat: number; lon: number; area_ha?: number; producer_id?: string; ask_mmk_kg?: number; visible_to_buyers?: boolean }) =>
   request<Listing>(`${BASE}/listings`, json(body));
 export const applyToPreorder = (preorderId: string, listingId: string, qtyKg: number) =>
   request<Offer>(`${BASE}/preorders/${encodeURIComponent(preorderId)}/offers`, json({ listing_id: listingId, qty_kg: qtyKg }));
@@ -217,7 +217,7 @@ export const confirmDelivery = (offerId: string, body: { received_kg: number; re
 
 export const kgStep = (buyerKind: string | null): number => (buyerKind && SMALL_BUYERS.includes(buyerKind) ? 1 : 100);
 
-export const postPreorder = (body: { produce: Produce; qty_kg: number; needed_by: string; town: string; lat: number; lon: number; price_offer_mmk_kg?: number }) =>
+export const postPreorder = (body: { produce: Produce; qty_kg: number; needed_by: string; town: string; lat: number; lon: number; price_offer_mmk_kg?: number; target_listing_ids?: string[] }) =>
   request<Preorder>(`${BASE}/preorders`, json(body));
 export const myPreorders = () => request<MyPreorder[]>(`${BASE}/preorders/mine`);
 export const preorderOffers = (preorderId: string) => request<Candidate[]>(`${BASE}/preorders/${encodeURIComponent(preorderId)}/offers`);

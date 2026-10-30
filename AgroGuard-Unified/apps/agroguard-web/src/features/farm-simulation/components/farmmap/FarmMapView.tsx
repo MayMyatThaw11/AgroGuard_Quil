@@ -61,7 +61,8 @@ import { useFarmMapSync } from './useFarmMapSync.ts';
 import { useRoutePlanner, type Selection } from './useRoutePlanner.ts';
 import { useUiMode } from './useUiMode.ts';
 import { MarketPanel } from './MarketPanel.tsx';
-import { BuyerBoard, type BuyerPlace } from './BuyerBoard.tsx';
+import { type BuyerPlace } from './BuyerBoard.tsx';
+import { BuyerMapShell } from './BuyerMapShell.tsx';
 import type { Farm } from '../../lib/farmmap/farmMapTypes.ts';
 import { marketEnabled } from '../../lib/farmmap/market.ts';
 import { useToasts } from './useToasts.ts';
@@ -421,7 +422,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         </DetailSection>
       </>
     );
-    if (buyerView) return <BuyerBoard place={buyerPlace()} onDirections={(from, to) => planner.openTo(from, to)} />;
+    if (buyerView) return <BuyerMapShell place={buyerPlace()} onDirections={(from, to) => planner.openTo(from, to)} />;
     if (farmerView && !selection) return <TodayCard farm={centreFarm()} onSell={sellFromTop} />;
     return (
       <>
