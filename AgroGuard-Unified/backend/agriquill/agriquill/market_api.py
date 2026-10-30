@@ -5,8 +5,9 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
-from . import haul, market, producers, season_match
+from . import cropvalue, haul, market, market_signals, producers, season_match
 from .config import get_settings
+from .data import regions
 
 
 def require_market() -> None:
@@ -178,7 +179,40 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
     async def post_listing(
         body: dict[str, Any] = _BODY, caller: Any = caller_dep
     ) -> dict[str, Any]:
-        return _run(market.post_listing, _farmer(caller), {**body, "farmer_name": caller.name})
+        farmer = _farmer(caller)
+        listing = _run(market.post_listing, farmer, {**body, "farmer_name": caller.name})
+        check = None
+        if listing.get("producer_id"):
+            record = producers.get(listing["producer_id"])
+            expected = market_signals.expected_kg(record, listing["produce"])
+            check = market_signals.gap(listing["qty_kg"], expected.get("kg"))
+        return {**listing, "check": check}
+
+    @r.get("/signals")
+    async def signals(
+        producer_id: str = Query(..., max_length=40),
+        produce: str = Query(..., max_length=40),
+        severity: str | None = Query(None, max_length=20),
+        caller: Any = caller_dep,
+    ) -> dict[str, Any]:
+        record = _run(producers.require_act, _farmer(caller), producer_id)
+        return {
+            "ready_on": market_signals.ready_on(record, produce),
+            "expected_kg": market_signals.expected_kg(record, produce),
+            "grade": market_signals.grade_route(severity),
+            "market_open": market.market_open(record.get("township") or ""),
+        }
+
+    @r.get("/plant-ideas")
+    async def plant_ideas(
+        producer_id: str = Query(..., max_length=40),
+        month: int = Query(..., ge=1, le=12),
+        caller: Any = caller_dep,
+    ) -> list[dict[str, Any]]:
+        record = _run(producers.require_act, _farmer(caller), producer_id)
+        town = record.get("township") or record.get("village") or ""
+        site = cropvalue.site_from_region(regions.get(town)) if town else {}
+        return market_signals.what_to_plant(site, month, town)
 
     @r.post("/preorders/{preorder_id}/offers", status_code=201)
     async def apply(

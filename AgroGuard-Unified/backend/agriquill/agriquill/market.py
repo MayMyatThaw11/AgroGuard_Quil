@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from . import baseline
+from .config import get_settings
 from .data import prices
 from .store import RecordCache, connect, now_iso
 
@@ -52,6 +53,11 @@ PRICE_FELL_PCT = -10.0
 CACHE_TTL_S = 60.0
 MAX_KG = 1_000_000
 _OUTLOOKS: dict[str, tuple[float, dict[str, Any]]] = {}
+
+
+def market_open(town: str) -> bool:
+    towns = {t.strip().lower() for t in get_settings().farm_market_towns.split(",") if t.strip()}
+    return not towns or town.strip().lower() in towns
 
 
 def clear_cache() -> None:
@@ -442,6 +448,7 @@ def outlook(town: str, produce: str, on: str, today: date | None = None) -> dict
         "advice": advice,
         "nearby": nearby,
         "baseline": baseline.summary(baseline.DEFAULT_COUNTRY, produce, today),
+        "market_open": market_open(town),
         "yield_status": YIELD_STATUS,
     }
     _OUTLOOKS[key] = (time.time() + CACHE_TTL_S, result)

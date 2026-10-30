@@ -183,6 +183,7 @@ def create(actor: str, actor_buyer_kind: str | None, body: dict[str, Any]) -> di
         "name": name,
         "members": _members(body.get("members")),
         "crops": _crops(body.get("crops")),
+        "contract_id": str(body.get("contract_id") or "").strip()[:80] or None,
         "wants": _flags(body.get("wants"), WANTS, "wants"),
         "can_offer": _flags(body.get("can_offer"), CAN_OFFER, "can_offer"),
         "lat": lat,
@@ -259,6 +260,8 @@ def update(account: str, producer_id: str, body: dict[str, Any]) -> dict[str, An
             new["name"] = str(body["name"]).strip()[:80] or old["name"]
         if "crops" in body:
             new["crops"] = _crops(body["crops"])
+        if "contract_id" in body:
+            new["contract_id"] = str(body["contract_id"] or "").strip()[:80] or None
         if "wants" in body:
             new["wants"] = _flags(body["wants"], WANTS, "wants")
         if "can_offer" in body:

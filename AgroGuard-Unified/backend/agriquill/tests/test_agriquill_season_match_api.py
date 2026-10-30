@@ -86,3 +86,43 @@ def test_reserve_then_buyer_sees_progress_and_over_reserve_is_422() -> None:
 def test_new_buyer_reliability_says_new() -> None:
     body = client.get(f"{BASE}/buyers/ag:3/reliability", headers=FARMER).json()
     assert body["new"] is True and body["median_days_to_pay"] is None
+
+
+def test_signals_ready_date_expected_kg_grade_and_listing_check() -> None:
+    _, pid = setup()
+    sig = client.get(
+        f"{BASE}/signals",
+        params={"producer_id": pid, "produce": "tomato", "severity": "high"},
+        headers=FARMER,
+    ).json()
+    assert sig["ready_on"]["source"] == "profile-month"
+    assert sig["expected_kg"]["kg"] > 0
+    assert sig["grade"]["advice"] == "processor-for-grade" and sig["market_open"] is True
+    stranger = client.get(
+        f"{BASE}/signals", params={"producer_id": pid, "produce": "tomato"}, headers=FARMER_B
+    )
+    assert stranger.status_code == 403
+    expected = sig["expected_kg"]["kg"]
+    body = {
+        "produce": "tomato",
+        "qty_kg": expected * 4,
+        "ready_on": "2027-03-15",
+        "town": "Hmawbi",
+        "lat": 17.1,
+        "lon": 96.05,
+        "producer_id": pid,
+    }
+    made = client.post(f"{BASE}/listings", json=body, headers=FARMER)
+    assert made.status_code == 201 and made.json()["check"] == {"expected_kg": expected}
+    fine = client.post(f"{BASE}/listings", json={**body, "qty_kg": expected}, headers=FARMER)
+    assert fine.json()["check"] is None
+
+
+def test_plant_ideas_endpoint_is_guarded_and_returns_a_list() -> None:
+    _, pid = setup()
+    ok = client.get(f"{BASE}/plant-ideas", params={"producer_id": pid, "month": 3}, headers=FARMER)
+    assert ok.status_code == 200 and isinstance(ok.json(), list)
+    no = client.get(
+        f"{BASE}/plant-ideas", params={"producer_id": pid, "month": 3}, headers=FARMER_B
+    )
+    assert no.status_code == 403

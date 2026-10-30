@@ -28,6 +28,7 @@ BLANK_MEANS_UNSET = (
 
 SMALL_MEDIUM_MAX_HA = 10.0
 
+
 class Settings(BaseSettings):
     # Fails closed: a forgotten variable means "production", where sign-in is
     # mandatory and the built-in demo sign-in is off. Local runs set
@@ -77,6 +78,8 @@ class Settings(BaseSettings):
     builtin_user: SecretStr | None = SecretStr("Farm Manager:FARMSIM-2026:manager,crew:*")
     public_farms: str = "farm_ayeyarwady_demo"
     farm_market_enabled: bool = False
+    # Comma-separated pilot townships where matching runs; empty means every town.
+    farm_market_towns: str = ""
     # The AgroGuard API that counts each signed-in user's simulated farms. Unset means no quota
     # (development only: production refuses to run simulations without it).
     agroguard_url: str | None = None
