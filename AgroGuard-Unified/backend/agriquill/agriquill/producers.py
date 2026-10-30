@@ -66,17 +66,21 @@ def _crops(raw: Any) -> list[dict[str, Any]]:
         month = int(crop.get("harvest_month") or 0)
         if not 1 <= month <= 12:
             raise ValueError("harvest_month must be 1 to 12")
-        area = crop.get("area_ha")
         crops.append(
-            {
-                "produce": produce,
-                "harvest_month": month,
-                "area_ha": float(area) if area not in (None, "") else None,
-            }
+            {"produce": produce, "harvest_month": month, "area_ha": _area(crop.get("area_ha"))}
         )
     if not crops:
         raise ValueError("add at least one crop with its harvest month")
     return crops
+
+
+def _area(raw: Any) -> float | None:
+    if raw in (None, ""):
+        return None
+    area = float(raw)
+    if not 0 < area <= MAX_FARM_HA:
+        raise ValueError(f"area_ha must be above 0 and up to {MAX_FARM_HA:.0f} ha")
+    return area
 
 
 def _flags(raw: Any, allowed: tuple[str, ...], field: str) -> list[str]:
@@ -92,8 +96,7 @@ def _members(raw: Any) -> list[dict[str, Any]]:
         name = str(member.get("name") or "").strip()
         if not name or len(name) > 80:
             raise ValueError("each member needs a name (up to 80 characters)")
-        area = member.get("area_ha")
-        members.append({"name": name, "area_ha": float(area) if area not in (None, "") else None})
+        members.append({"name": name, "area_ha": _area(member.get("area_ha"))})
     return members
 
 
@@ -302,6 +305,8 @@ def claim(account: str | None, producer_id: str, code: str, pin: str) -> dict[st
     ):
         _change(producer_id, lambda old: {**old, "claim_failures": recent + [now]})
         raise PermissionError("that code is not right")
+    if record["owner"] is not None:
+        raise PermissionError("this profile is already claimed")
     if not (pin.isdigit() and len(pin) == 4):
         raise ValueError("the PIN must be 4 digits")
     token = None if account else secrets.token_urlsafe(32)

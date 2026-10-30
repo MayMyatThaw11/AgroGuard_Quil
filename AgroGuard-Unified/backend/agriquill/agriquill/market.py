@@ -170,8 +170,19 @@ def post_listing(farmer: str, body: dict[str, Any]) -> dict[str, Any]:
     area = body.get("area_ha")
     area_ha = float(area) if area not in (None, "") else None
     ask = body.get("ask_mmk_kg")
+    ready = _day(body.get("ready_on"), "ready_on").isoformat()
+    again = next(
+        (
+            x
+            for x in listings()
+            if not x["demo"]
+            and (x["farmer"], x["producer_id"], x["produce"], x["ready_on"], x["town"])
+            == (farmer, producer_id, produce, ready, town)
+        ),
+        None,
+    )
     record = {
-        "id": f"lst-{uuid.uuid4().hex[:12]}",
+        "id": again["id"] if again else f"lst-{uuid.uuid4().hex[:12]}",
         "farmer": farmer,
         "farmer_name": body.get("farmer_name"),
         "producer_id": producer_id,
@@ -180,7 +191,7 @@ def post_listing(farmer: str, body: dict[str, Any]) -> dict[str, Any]:
         "qty_kg": kg,
         "counted_kg": counted_kg(produce, kg, area_ha),
         "area_ha": area_ha,
-        "ready_on": _day(body.get("ready_on"), "ready_on").isoformat(),
+        "ready_on": ready,
         "town": town,
         "lat": lat,
         "lon": lon,
@@ -284,7 +295,7 @@ def list_preorders(
     for p in rows[:50]:
         item = {k: v for k, v in p.items() if k not in ("lat", "lon")}
         if lat is not None and lon is not None:
-            item["km"] = round(km_between(lat, lon, p["lat"], p["lon"]), 1)
+            item["km"] = round(km_between(lat, lon, p["lat"], p["lon"]))
         out.append(item)
     return out
 
@@ -320,6 +331,8 @@ def select(buyer: str, preorder_id: str, offer_id: str) -> dict[str, Any]:
     def choose(old: dict[str, Any] | None) -> dict[str, Any]:
         if old is None or old["preorder_id"] != preorder_id:
             raise KeyError(f"no offer {offer_id} on this pre-order")
+        if old["status"] != "candidate":
+            raise ValueError("only a waiting offer can be selected")
         return {**old, "status": "selected", "selected_at": now_iso()}
 
     record, _ = _STORE.update(OFFER, offer_id, choose, URL)
@@ -397,8 +410,8 @@ def towns_balance(produce: str, on: str, today: date | None = None) -> list[dict
                 "demand_kg": here["demand_kg"],
                 "listings": here["listings"],
                 "buyers": here["buyers"],
-                "lat": round(here["centre"][0], 4),
-                "lon": round(here["centre"][1], 4),
+                "lat": round(here["centre"][0], 2),
+                "lon": round(here["centre"][1], 2),
             }
         )
     return rows

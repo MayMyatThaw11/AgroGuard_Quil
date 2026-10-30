@@ -169,11 +169,6 @@ def _reader(
     producer_token: str | None = Header(None, alias="X-AgriQuill-Producer-Token"),
 ) -> Caller | None:
     settings = get_settings()
-    if producer_token:
-        device = producers.account_for_token(producer_token)
-        if device is None:
-            raise HTTPException(status_code=401, detail="this phone's farm key is not valid")
-        return Caller(None, frozenset({"crew"}), frozenset(), device)
     try:
         users = parse_users(_user_entries(settings))
     except ValueError as exc:
@@ -191,6 +186,11 @@ def _reader(
     signed_in = _agroguard_caller(authorization)
     if signed_in is not None:
         return signed_in
+    if producer_token:
+        device = producers.account_for_token(producer_token)
+        if device is None:
+            raise HTTPException(status_code=401, detail="this phone's farm key is not valid")
+        return Caller(None, frozenset({"crew"}), frozenset(), device)
     if shared is None and not users:
         if not settings.is_development:
             # Startup refuses this state; guard anyway so a runtime change can't open the API.

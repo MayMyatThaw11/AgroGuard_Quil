@@ -22,6 +22,7 @@ def processors(
     for p in market.preorders():
         if (
             p["status"] != "open"
+            or p.get("target_listing_ids")
             or p["channel"] != "bulk"
             or p["buyer_kind"] not in KINDS
             or p["produce"] != produce

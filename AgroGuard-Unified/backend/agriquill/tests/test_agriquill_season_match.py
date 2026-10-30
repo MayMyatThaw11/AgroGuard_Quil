@@ -214,9 +214,11 @@ def delivered(
     market.select(buyer, po["id"], offer["id"])
     haul.confirm_delivery(buyer, offer["id"], 400, 0)
     if paid_in_days is not None:
-        season_match.mark_paid(
-            farmer, offer["id"], (utc_today() + timedelta(days=paid_in_days)).isoformat()
+        back = (utc_today() - timedelta(days=paid_in_days)).isoformat()
+        market._STORE.update(
+            market.OFFER, offer["id"], lambda o: {**o, "delivered_at": back}, market.URL
         )
+        season_match.mark_paid(farmer, offer["id"], utc_today().isoformat())
     return offer
 
 

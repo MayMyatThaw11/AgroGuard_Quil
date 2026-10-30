@@ -37,7 +37,11 @@ def _recent(
     since = (today - timedelta(days=1)).isoformat()
     rows = []
     for p in orders:
-        if p["status"] != "open" or p["produce"] not in _grown(record):
+        if (
+            p["status"] != "open"
+            or p["produce"] not in _grown(record)
+            or p.get("target_listing_ids")
+        ):
             continue
         if p["created_at"][:10] < since:
             continue

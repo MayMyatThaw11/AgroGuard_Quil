@@ -291,7 +291,10 @@ def activate(today: date | None = None) -> int:
     for row in _reserves():
         order = _order(row["order_id"])
         if row["status"] == "intent" and today.month in order["delivery_months"]:
-            _activate_one(row, order, today)
+            try:
+                _activate_one(row, order, today)
+            except PermissionError:
+                continue
             done += 1
     return done
 
@@ -307,9 +310,13 @@ def mark_paid(actor: str, offer_id: str, paid_on: Any = None) -> dict[str, Any]:
         raise PermissionError("only the farmer on this offer can mark it paid")
     if offer["status"] != "delivered":
         raise ValueError("an offer can be marked paid only after delivery")
+    if offer.get("paid_on"):
+        raise ValueError("this offer is already marked paid")
     day = _day(paid_on or now_iso())
     if day < _delivered_on(offer):
         raise ValueError("paid_on cannot be before the delivery")
+    if day > _day(now_iso()):
+        raise ValueError("paid_on cannot be in the future")
     record, _ = _STORE.update(
         market.OFFER, offer_id, lambda old: {**old, "paid_on": day.isoformat()}, market.URL
     )

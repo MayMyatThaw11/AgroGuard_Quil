@@ -61,7 +61,7 @@ def _row(
         "town": listing["town"],
         "qty_kg": qty,
         "ready_on": listing["ready_on"],
-        "km": round(km, 1),
+        "km": round(km),
         "ask_mmk_kg": listing.get("ask_mmk_kg"),
         "price_basis": basis,
         "landed_low": low,

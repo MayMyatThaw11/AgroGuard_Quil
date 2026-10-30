@@ -93,17 +93,17 @@ def _candidates(buyer: str, preorder_id: str) -> list[dict[str, Any]]:
             continue
         listing = next((x for x in market.listings() if x["id"] == offer["listing_id"]), None)
         row = {
-            **offer,
+            **{k: v for k, v in offer.items() if k != "farmer"},
             "farmer_name": listing.get("farmer_name") if listing else None,
             "ready_on": listing["ready_on"] if listing else None,
             "farm_town": listing["town"] if listing else None,
-            "km": round(haul.route_km(offer), 1),
             "pickup": haul.pickup_for(offer["id"]),
         }
         if listing:
             pid = listing.get("producer_id")
             row["reliability"] = season_match.farmer_reliability(pid) if pid else None
             exact = offer["status"] in ("selected", "delivered")
+            row["km"] = round(haul.route_km(offer), 1 if exact else 0)
             row.update(_transport(listing, order, offer, 0.0 if exact else 1.0))
             if exact:
                 row["farm_lat"], row["farm_lon"] = listing["lat"], listing["lon"]
@@ -137,11 +137,11 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
     r = APIRouter(prefix="/market", dependencies=[Depends(require_market)])
 
     @r.get("/status")
-    async def status() -> dict[str, bool]:
+    def status() -> dict[str, bool]:
         return {"enabled": True}
 
     @r.get("/outlook")
-    async def outlook(
+    def outlook(
         town: str = Query(..., max_length=80),
         produce: str = Query(..., max_length=40),
         on: str = Query(..., max_length=10),
@@ -150,7 +150,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(market.outlook, town, produce, on)
 
     @r.get("/outlook/towns")
-    async def outlook_towns(
+    def outlook_towns(
         produce: str = Query(..., max_length=40),
         on: str = Query(..., max_length=10),
         caller: Any = caller_dep,
@@ -158,7 +158,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(market.towns_balance, produce, on)
 
     @r.get("/preorders")
-    async def preorders(
+    def preorders(
         town: str | None = Query(None, max_length=80),
         produce: str | None = Query(None, max_length=40),
         channel: str | None = Query(None, pattern="^(direct|bulk)$"),
@@ -170,7 +170,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return market.list_preorders(town, produce, channel, lat, lon, farmer)
 
     @r.get("/preorders/mine")
-    async def my_preorders(caller: Any = caller_dep) -> list[dict[str, Any]]:
+    def my_preorders(caller: Any = caller_dep) -> list[dict[str, Any]]:
         buyer, _ = _buyer(caller)
         counts: dict[str, int] = {}
         for offer in market.offers():
@@ -200,7 +200,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return {**listing, "check": check}
 
     @r.get("/cues")
-    async def producer_cues(
+    def producer_cues(
         producer_id: str = Query(..., max_length=40),
         since: str | None = Query(None, max_length=10),
         caller: Any = caller_dep,
@@ -208,11 +208,11 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(cues.cues, _farmer(caller), producer_id, since)
 
     @r.get("/producers/{producer_id}/season")
-    async def season(producer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
+    def season(producer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
         return _run(season_match.season_record, _farmer(caller), producer_id)
 
     @r.get("/supply")
-    async def supply_search(
+    def supply_search(
         produce: str = Query(..., max_length=40),
         lat: float = Query(..., ge=-90, le=90),
         lon: float = Query(..., ge=-180, le=180),
@@ -232,14 +232,14 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(supply.save_search, buyer, body)
 
     @r.get("/cues/buyer")
-    async def buyer_cues(
+    def buyer_cues(
         since: str | None = Query(None, max_length=10), caller: Any = caller_dep
     ) -> list[dict[str, Any]]:
         buyer, _ = _buyer(caller)
         return cues.buyer_cues(buyer, since)
 
     @r.get("/surplus")
-    async def surplus(
+    def surplus(
         produce: str = Query(..., max_length=40),
         lat: float = Query(..., ge=-90, le=90),
         lon: float = Query(..., ge=-180, le=180),
@@ -252,7 +252,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(lambda: reach.surplus(produce, lat, lon, market._day(on, "on")))
 
     @r.get("/signals")
-    async def signals(
+    def signals(
         producer_id: str = Query(..., max_length=40),
         produce: str = Query(..., max_length=40),
         severity: str | None = Query(None, max_length=20),
@@ -267,7 +267,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         }
 
     @r.get("/plant-ideas")
-    async def plant_ideas(
+    def plant_ideas(
         producer_id: str = Query(..., max_length=40),
         month: int = Query(..., ge=1, le=12),
         caller: Any = caller_dep,
@@ -284,7 +284,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(market.apply, _farmer(caller), preorder_id, body)
 
     @r.get("/preorders/{preorder_id}/offers")
-    async def candidates(preorder_id: str, caller: Any = caller_dep) -> list[dict[str, Any]]:
+    def candidates(preorder_id: str, caller: Any = caller_dep) -> list[dict[str, Any]]:
         buyer, _ = _buyer(caller)
         return _run(_candidates, buyer, preorder_id)
 
@@ -294,7 +294,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(market.select, buyer, preorder_id, offer_id)
 
     @r.get("/offers/mine")
-    async def mine(caller: Any = caller_dep) -> list[dict[str, Any]]:
+    def mine(caller: Any = caller_dep) -> list[dict[str, Any]]:
         farmer = _farmer(caller)
         season_match.activate()
         return _mine(farmer)
@@ -307,12 +307,12 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(season_match.post_order, buyer, kind, {**body, "buyer_name": caller.name})
 
     @r.get("/season-orders/mine")
-    async def my_season_orders(caller: Any = caller_dep) -> list[dict[str, Any]]:
+    def my_season_orders(caller: Any = caller_dep) -> list[dict[str, Any]]:
         buyer, _ = _buyer(caller)
         return season_match.mine(buyer)
 
     @r.get("/season-orders/matches")
-    async def season_matches(
+    def season_matches(
         producer_id: str = Query(..., max_length=40), caller: Any = caller_dep
     ) -> list[dict[str, Any]]:
         farmer = _farmer(caller)
@@ -338,11 +338,11 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(season_match.mark_paid, _farmer(caller), offer_id, body.get("paid_on"))
 
     @r.get("/buyers/{account}/reliability")
-    async def buyer_record(account: str, caller: Any = caller_dep) -> dict[str, Any]:
+    def buyer_record(account: str, caller: Any = caller_dep) -> dict[str, Any]:
         return season_match.buyer_reliability(account)
 
     @r.get("/offers/{offer_id}/trip")
-    async def trip(offer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
+    def trip(offer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
         return _run(haul.trip, _farmer(caller), offer_id)
 
     @r.post("/offers/{offer_id}/delivery")
@@ -372,11 +372,11 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(producers.create, _farmer(caller), None, body)
 
     @r.get("/producers/plan")
-    async def plan(caller: Any = caller_dep) -> dict[str, Any]:
+    def plan(caller: Any = caller_dep) -> dict[str, Any]:
         return producers.plan_usage(account_of(caller))
 
     @r.get("/producers/mine")
-    async def my_producers(caller: Any = caller_dep) -> list[dict[str, Any]]:
+    def my_producers(caller: Any = caller_dep) -> list[dict[str, Any]]:
         return producers.mine(account_of(caller))
 
     @r.patch("/producers/{producer_id}")
@@ -412,7 +412,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         return _run(producers.revoke_manager, account_of(caller), producer_id)
 
     @r.get("/producers/{producer_id}/activity")
-    async def activity(producer_id: str, caller: Any = caller_dep) -> list[dict[str, Any]]:
+    def activity(producer_id: str, caller: Any = caller_dep) -> list[dict[str, Any]]:
         return _run(producers.activity, account_of(caller), producer_id)
 
     return r

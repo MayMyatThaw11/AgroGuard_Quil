@@ -35,10 +35,11 @@ def listing(
     at: tuple[float, float] = HMAWBI,
     ready: date = ON,
     produce: str = "tomato",
+    farmer: str = "farmer-a",
     **extra,
 ):
     return market.post_listing(
-        "farmer-a",
+        farmer,
         {
             "produce": produce,
             "qty_kg": kg,
@@ -114,8 +115,8 @@ def test_select_by_other_buyer_raises() -> None:
 
 
 def test_advice_presell_and_nearby() -> None:
-    for _ in range(12):
-        listing(300)
+    for i in range(12):
+        listing(300, farmer=f"f{i}")
     for i in range(3):
         preorder(200, buyer=f"b{i}")
     preorder(5000, town="Taikkyi", at=TAIKKYI, buyer="far")
@@ -141,8 +142,8 @@ def test_tomato_outlook_without_price() -> None:
     [(9, 3, "early"), (10, 3, "some"), (31, 3, "good"), (12, 2, "early")],
 )
 def test_coverage_labels(listings: int, buyers: int, label: str) -> None:
-    for _ in range(listings):
-        listing(10)
+    for i in range(listings):
+        listing(10, farmer=f"f{i}")
     for i in range(buyers):
         preorder(10, buyer=f"b{i}")
     assert outlook()["coverage"]["label"] == label
@@ -190,7 +191,7 @@ def test_plant_other_is_partial() -> None:
 def test_listing_write_purges_outlook() -> None:
     listing(100)
     assert outlook()["supply_kg"] == 100
-    listing(50)
+    listing(50, farmer="farmer-b")
     assert outlook()["supply_kg"] == 150
 
 
