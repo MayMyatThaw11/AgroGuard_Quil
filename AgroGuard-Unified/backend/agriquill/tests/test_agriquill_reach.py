@@ -81,7 +81,7 @@ def test_reach_processors_when_no_local_buyers() -> None:
     out = advice()
     assert out["level"] == "no-buyers"
     found = next(a for a in out["advice"] if a["id"] == "reach-processors")
-    assert found["params"]["n"] == 2 and found["params"]["km"] < 60
+    assert found["params"]["n"] == 2 and found["params"]["km"] > 60
     assert "no_reach" not in out
 
 

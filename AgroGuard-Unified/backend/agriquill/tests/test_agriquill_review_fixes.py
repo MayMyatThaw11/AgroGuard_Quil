@@ -207,3 +207,14 @@ def test_saving_the_same_harvest_twice_replaces_it_instead_of_doubling_supply() 
     assert post_listing(FARMER, kg=700).status_code == 201
     mine = [x for x in market.listings() if x["farmer"] == "ag:1"]
     assert [x["qty_kg"] for x in mine] == [700]
+
+
+def test_town_balance_is_cached_until_a_write_for_that_produce(monkeypatch) -> None:
+    post_listing(FARMER, kg=500)
+    first = market.towns_balance("tomato", READY)
+    calls = []
+    real = market.listings
+    monkeypatch.setattr(market, "listings", lambda: calls.append(1) or real())
+    assert market.towns_balance("tomato", READY) == first and not calls
+    post_listing(FARMER_B, kg=700)
+    assert market.towns_balance("tomato", READY)[0]["supply_kg"] > first[0]["supply_kg"]

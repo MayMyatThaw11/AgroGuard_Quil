@@ -53,7 +53,7 @@ PRICE_FELL_PCT = -10.0
 CACHE_TTL_S = 60.0
 CACHE_MAX = 1000
 MAX_KG = 1_000_000
-_OUTLOOKS: dict[str, tuple[float, dict[str, Any]]] = {}
+_OUTLOOKS: dict[str, tuple[float, Any]] = {}
 
 
 def market_open(town: str) -> bool:
@@ -61,7 +61,7 @@ def market_open(town: str) -> bool:
     return not towns or town.strip().lower() in towns
 
 
-def _remember(key: str, result: dict[str, Any]) -> None:
+def _remember(key: str, result: Any) -> None:
     now = time.time()
     if len(_OUTLOOKS) >= CACHE_MAX:
         for stale in [k for k, (until, _) in _OUTLOOKS.items() if until <= now]:
@@ -76,7 +76,8 @@ def clear_cache() -> None:
 
 
 def _purge(town: str, produce: str) -> None:
-    for key in [k for k in _OUTLOOKS if k.startswith(f"{town.lower()}|{produce}|")]:
+    stale = (f"{town.lower()}|{produce}|", f"towns|{produce}|")
+    for key in [k for k in _OUTLOOKS if k.startswith(stale)]:
         _OUTLOOKS.pop(key, None)
 
 
@@ -395,6 +396,10 @@ def towns_balance(produce: str, on: str, today: date | None = None) -> list[dict
     if produce not in PRODUCE:
         raise ValueError(f"produce must be one of {', '.join(sorted(PRODUCE))}")
     on_day = _day(on, "on")
+    key = f"towns|{produce}|{on_day.isoformat()}"
+    hit = _OUTLOOKS.get(key)
+    if hit and hit[0] > time.time():
+        return hit[1]
     names = {x["town"] for x in listings() if x["produce"] == produce}
     names |= {p["town"] for p in preorders() if p["produce"] == produce and p["status"] == "open"}
     rows = []
@@ -414,6 +419,7 @@ def towns_balance(produce: str, on: str, today: date | None = None) -> list[dict
                 "lon": round(here["centre"][1], 2),
             }
         )
+    _remember(key, rows)
     return rows
 
 
@@ -490,7 +496,10 @@ def outlook(town: str, produce: str, on: str, today: date | None = None) -> dict
         found = reach.processors(produce, *here["centre"], on_day, today)
         if found:
             advice.append(
-                {"id": "reach-processors", "params": {"n": len(found), "km": found[0]["road_km"]}}
+                {
+                    "id": "reach-processors",
+                    "params": {"n": len(found), "km": max(r["road_km"] for r in found)},
+                }
             )
         else:
             no_reach = {"options": reach.no_reach_options(produce)}
