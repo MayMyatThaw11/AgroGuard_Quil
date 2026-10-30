@@ -427,6 +427,17 @@ def outlook(town: str, produce: str, on: str, today: date | None = None) -> dict
         advice.append({"id": "price-fell", "params": {"pct": change, "months": 3}})
     if level == "glut" and (on_day - today).days > PLANTING_AHEAD_DAYS:
         advice.append({"id": "plant-other", "params": {"share": "part"}})
+    no_reach = None
+    if level in ("no-buyers", "glut") and here["centre"]:
+        from . import reach
+
+        found = reach.processors(produce, *here["centre"], on_day, today)
+        if found:
+            advice.append(
+                {"id": "reach-processors", "params": {"n": len(found), "km": found[0]["road_km"]}}
+            )
+        else:
+            no_reach = {"options": reach.no_reach_options(produce)}
 
     result = {
         "town": town,
@@ -449,6 +460,7 @@ def outlook(town: str, produce: str, on: str, today: date | None = None) -> dict
         "nearby": nearby,
         "baseline": baseline.summary(baseline.DEFAULT_COUNTRY, produce, today),
         "market_open": market_open(town),
+        **({"no_reach": no_reach} if no_reach else {}),
         "yield_status": YIELD_STATUS,
     }
     _OUTLOOKS[key] = (time.time() + CACHE_TTL_S, result)

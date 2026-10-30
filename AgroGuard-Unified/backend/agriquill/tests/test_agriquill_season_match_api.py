@@ -126,3 +126,10 @@ def test_plant_ideas_endpoint_is_guarded_and_returns_a_list() -> None:
         f"{BASE}/plant-ideas", params={"producer_id": pid, "month": 3}, headers=FARMER_B
     )
     assert no.status_code == 403
+
+
+def test_surplus_route_is_for_food_businesses_only() -> None:
+    params = {"produce": "potato", "lat": 17.3, "lon": 95.97, "on": "2027-03-15"}
+    ok = client.get(f"{BASE}/surplus", params=params, headers=BUYER)
+    assert ok.status_code == 200 and isinstance(ok.json(), list)
+    assert client.get(f"{BASE}/surplus", params=params, headers=FARMER).status_code == 403

@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
-from . import cropvalue, haul, market, market_signals, producers, season_match
+from . import cropvalue, haul, market, market_signals, producers, reach, season_match
 from .config import get_settings
 from .data import regions
 
@@ -187,6 +187,19 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
             expected = market_signals.expected_kg(record, listing["produce"])
             check = market_signals.gap(listing["qty_kg"], expected.get("kg"))
         return {**listing, "check": check}
+
+    @r.get("/surplus")
+    async def surplus(
+        produce: str = Query(..., max_length=40),
+        lat: float = Query(..., ge=-90, le=90),
+        lon: float = Query(..., ge=-180, le=180),
+        on: str = Query(..., max_length=10),
+        caller: Any = caller_dep,
+    ) -> list[dict[str, Any]]:
+        _, kind = _buyer(caller)
+        if kind not in reach.KINDS:
+            raise HTTPException(status_code=403, detail="only food businesses see surplus towns")
+        return _run(lambda: reach.surplus(produce, lat, lon, market._day(on, "on")))
 
     @r.get("/signals")
     async def signals(

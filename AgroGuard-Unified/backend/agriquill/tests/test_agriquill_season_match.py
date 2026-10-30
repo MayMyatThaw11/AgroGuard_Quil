@@ -30,6 +30,10 @@ def isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     settings.data_dir, settings.ledger_path = saved
 
 
+def utc_today() -> date:
+    return date.fromisoformat(store.now_iso()[:10])
+
+
 def profile(owner: str = FARMER, **extra: Any) -> dict[str, Any]:
     body = {
         "kind": "household",
@@ -211,13 +215,13 @@ def delivered(
     haul.confirm_delivery(buyer, offer["id"], 400, 0)
     if paid_in_days is not None:
         season_match.mark_paid(
-            farmer, offer["id"], (date.today() + timedelta(days=paid_in_days)).isoformat()
+            farmer, offer["id"], (utc_today() + timedelta(days=paid_in_days)).isoformat()
         )
     return offer
 
 
 def test_buyer_reliability_days_to_pay_median() -> None:
-    far = date.today() + timedelta(days=30)
+    far = utc_today() + timedelta(days=30)
     for days in (1, 3, 7):
         delivered(FARMER, BUYER, days, far)
     pending = market.post_preorder(
@@ -265,7 +269,7 @@ def test_new_buyer_has_no_record_not_zero() -> None:
 
 
 def test_mark_paid_needs_delivery_and_the_farmer() -> None:
-    far = date.today() + timedelta(days=30)
+    far = utc_today() + timedelta(days=30)
     offer = delivered(FARMER, BUYER, None, far)
     with pytest.raises(PermissionError):
         season_match.mark_paid(STRANGER, offer["id"], far.isoformat())
@@ -299,8 +303,8 @@ def test_mark_paid_needs_delivery_and_the_farmer() -> None:
 
 def test_farmer_reliability_counts_on_time_only() -> None:
     pid = profile()["id"]
-    delivered(FARMER, BUYER, None, date.today() + timedelta(days=5), pid)
-    delivered(FARMER, BUYER, None, date.today() - timedelta(days=5), pid)
+    delivered(FARMER, BUYER, None, utc_today() + timedelta(days=5), pid)
+    delivered(FARMER, BUYER, None, utc_today() - timedelta(days=5), pid)
     assert season_match.farmer_reliability(pid) == {"delivered": 2, "on_time": 1}
     assert season_match.farmer_reliability(profile("ag:7", lat=18.0, lon=97.0)["id"]) == {
         "delivered": 0,

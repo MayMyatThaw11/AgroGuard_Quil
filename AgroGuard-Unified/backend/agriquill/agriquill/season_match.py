@@ -86,6 +86,7 @@ def post_order(buyer: str, buyer_kind: str, body: dict[str, Any]) -> dict[str, A
         "status": "open",
         "created_at": now_iso(),
     }
+    market.clear_cache()
     return market._save(ORDER, record)
 
 
@@ -306,7 +307,7 @@ def mark_paid(actor: str, offer_id: str, paid_on: Any = None) -> dict[str, Any]:
         raise PermissionError("only the farmer on this offer can mark it paid")
     if offer["status"] != "delivered":
         raise ValueError("an offer can be marked paid only after delivery")
-    day = _day(paid_on) if paid_on else date.today()
+    day = _day(paid_on or now_iso())
     if day < _delivered_on(offer):
         raise ValueError("paid_on cannot be before the delivery")
     record, _ = _STORE.update(
