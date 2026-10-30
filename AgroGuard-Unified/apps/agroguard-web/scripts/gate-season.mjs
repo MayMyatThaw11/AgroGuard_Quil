@@ -35,6 +35,8 @@ await run(async (browser) => {
   await ready(p, 'farm detail', 'button:has-text("Sell this harvest")');
   await p.locator('button:has-text("Sell this harvest")').click();
   await ready(p, 'season section', '.aq-fm-ss-card');
+  await p.locator('.aq-fm-mk-form').scrollIntoViewIfNeeded();
+  await shot(p, join(GATE, `signals-${W}`));
   await p.locator('.aq-fm-ss-card').first().scrollIntoViewIfNeeded();
   await shot(p, join(GATE, `farmer-${W}`));
   await p.locator('.aq-fm-ss-reserve button').first().click();

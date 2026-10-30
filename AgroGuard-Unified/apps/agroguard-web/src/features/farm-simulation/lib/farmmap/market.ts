@@ -41,6 +41,7 @@ export interface Outlook {
   price: PriceTrend | MissingValue;
   advice: Advice[];
   nearby: { town: string; km: number; level: OutlookLevel; unmet_kg: number }[];
+  market_open?: boolean;
 }
 
 export interface Preorder {
@@ -94,6 +95,7 @@ export interface Listing {
   counted_kg: number;
   ready_on: string;
   town: string;
+  check?: { expected_kg: number } | null;
 }
 
 const CROP_PRODUCE: Record<CropId, Produce[]> = {

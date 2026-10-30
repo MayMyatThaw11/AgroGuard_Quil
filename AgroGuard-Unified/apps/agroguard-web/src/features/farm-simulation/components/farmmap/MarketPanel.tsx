@@ -23,7 +23,9 @@ import {
   type Produce,
   type Trip,
 } from '../../lib/farmmap/market.ts';
+import { checkText, getSignals, hasKg, hasReady, kgText, readyText, type Signals } from '../../lib/farmmap/marketSignals.ts';
 import { markPaid } from '../../lib/farmmap/seasonMatch.ts';
+import { latestHealthUpdate } from '../../lib/agroguard.ts';
 import { createProducer, loadActiveProducer, myProducers, saveActiveProducer, type Producer } from '../../lib/farmmap/producers.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { newId, useFieldQueue } from '../../lib/useFieldQueue.ts';
@@ -65,6 +67,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   const [busy, setBusy] = useState('');
   const [pickup, setPickup] = useState<{ pickup: Pickup; trip: Trip | null; row: Offer } | null>(null);
   const [flash, setFlash] = useState('');
+  const [signals, setSignals] = useState<Signals | null>(null);
   const [producers, setProducers] = useState<Producer[]>([]);
   const [activeId, setActiveId] = useState<string | null>(() => loadActiveProducer(browserStorage()));
   const [setup, setSetup] = useState(false);
@@ -94,6 +97,25 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   useEffect(loadBuyers, [loadBuyers]);
   useEffect(loadOffers, [loadOffers]);
   useEffect(loadProducers, [loadProducers]);
+  useEffect(() => {
+    if (!activeId) {
+      setSignals(null);
+      return undefined;
+    }
+    let live = true;
+    latestHealthUpdate()
+      .catch(() => null)
+      .then((h) => getSignals(activeId, produce, h?.detection?.severity))
+      .then((s) => {
+        if (!live) return;
+        setSignals(s);
+        if (hasReady(s.ready_on)) setReady(s.ready_on.date);
+        if (hasKg(s.expected_kg)) setKg(s.expected_kg.kg);
+      }, () => live && setSignals(null));
+    return () => {
+      live = false;
+    };
+  }, [activeId, produce]);
 
   const pickProducer = (id: string) => {
     setActiveId(id);
@@ -104,8 +126,9 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
     setBusy('save');
     setError('');
     try {
-      setListing(await postListing({ produce, qty_kg: kg, ready_on: ready, town: farm.town, lat: farm.lat, lon: farm.lon, area_ha: farm.area, ...(activeId ? { producer_id: activeId } : {}) }));
-      setFlash(t('farmMap.market.saved'));
+      const made = await postListing({ produce, qty_kg: kg, ready_on: ready, town: farm.town, lat: farm.lat, lon: farm.lon, area_ha: farm.area, ...(activeId ? { producer_id: activeId } : {}) });
+      setListing(made);
+      setFlash(checkText(made.check, kg, t, weight) ?? t('farmMap.market.saved'));
       loadOutlook();
     } catch (e) {
       setError(message(e));
@@ -182,6 +205,8 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
 
       {outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} onAdvice={(a) => a.id === 'presell-bulk' && setChannel('bulk')} /> : <DetailSection className="is-loading"><span className="aq-fm-spin" aria-hidden="true" /></DetailSection>}
 
+      {outlook?.market_open === false ? <DetailSection><p className="aq-fm-mk-quiet">{t('farmMap.signals.comingSoon')}</p></DetailSection> : null}
+
       <DetailSection className="aq-fm-mk-form">
         <p className="aq-fm-mk-subhead">{t('farmMap.market.harvestTitle')}</p>
         <div className="aq-fm-mk-fields">
@@ -200,6 +225,9 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
             <input className="aq-fm-input" type="date" value={ready} onChange={(e) => setReady(e.target.value)} />
           </label>
         </div>
+        {signals && readyText(signals.ready_on, t, activeLocale()) ? <p className="aq-fm-mk-quiet">{readyText(signals.ready_on, t, activeLocale())}</p> : null}
+        {signals && kgText(signals.expected_kg, t, weight) ? <p className="aq-fm-mk-quiet">{kgText(signals.expected_kg, t, weight)}</p> : null}
+        {signals?.grade.advice ? <p className="aq-fm-mk-hint">{t('farmMap.signals.processor')}</p> : null}
         {!listing ? <p className="aq-fm-mk-quiet">{t('farmMap.market.harvestHint')}</p> : null}
         <AqButton variant={listing ? 'secondary' : 'primary'} large disabled={busy === 'save'} onClick={() => void save()}>{t('farmMap.market.save')}</AqButton>
         {flash ? <p className="aq-fm-mk-flash" role="status">{flash}</p> : null}

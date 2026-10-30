@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { PRODUCE, type Produce } from '../../lib/farmmap/market.ts';
+import { getPlantIdeas, plantText, type PlantIdea } from '../../lib/farmmap/marketSignals.ts';
 import type { Producer } from '../../lib/farmmap/producers.ts';
 import {
   BUYER_NEEDS,
@@ -90,7 +91,9 @@ const MatchCard: React.FC<{ match: Match; producerId: string; onReserved: () => 
 
 export const SeasonMatchFarmer: React.FC<{ producer: Producer | null }> = ({ producer }) => {
   const t = useT();
+  const weight = useWeight();
   const [rows, setRows] = useState<Match[] | null>(null);
+  const [ideas, setIdeas] = useState<PlantIdea[] | null>(null);
   const [wants, setWants] = useState<Want[]>([]);
   const [can, setCan] = useState<CanOffer[]>([]);
   const [flash, setFlash] = useState('');
@@ -103,6 +106,10 @@ export const SeasonMatchFarmer: React.FC<{ producer: Producer | null }> = ({ pro
     seasonMatches(id).then(setRows, (e) => setError(message(e)));
   }, [id]);
   useEffect(load, [load]);
+  useEffect(() => {
+    if (!id) return;
+    getPlantIdeas(id, ((new Date().getMonth() + 3) % 12) + 1).then(setIdeas, () => setIdeas(null));
+  }, [id]);
   useEffect(() => {
     setWants(producer?.wants ?? []);
     setCan(producer?.can_offer ?? []);
@@ -124,6 +131,12 @@ export const SeasonMatchFarmer: React.FC<{ producer: Producer | null }> = ({ pro
           <Chips items={WANTS} on={wants} label={(w) => t(`farmMap.season.want.${w}` as Key)} onToggle={(w) => { const next = toggle(wants, w); setWants(next); save({ wants: next }); }} />
           <p className="aq-fm-mk-subhead">{t('farmMap.season.canOffer')}</p>
           <Chips items={CAN_OFFER} on={can} label={(c) => t(`farmMap.season.can.${c}` as Key)} onToggle={(c) => { const next = toggle(can, c); setCan(next); save({ can_offer: next }); }} />
+          {ideas ? (
+            <>
+              <p className="aq-fm-mk-subhead">{t('farmMap.signals.plantTitle')}</p>
+              {ideas.length ? ideas.map((i) => <p key={i.produce}>{plantText(i, t, weight, t(produceKey(i.produce)))}</p>) : <p className="aq-fm-mk-quiet">{t('farmMap.signals.plantNone')}</p>}
+            </>
+          ) : null}
           {rows && !rows.length ? <p className="aq-fm-mk-quiet">{t('farmMap.season.empty')}</p> : null}
           {rows?.map((m) => <MatchCard key={`${m.order_id}-${m.remaining_kg}`} match={m} producerId={id} onReserved={() => { setFlash(t('farmMap.season.reservedFlash')); load(); }} />)}
           {flash ? <p className="aq-fm-mk-flash" role="status">{flash}</p> : null}

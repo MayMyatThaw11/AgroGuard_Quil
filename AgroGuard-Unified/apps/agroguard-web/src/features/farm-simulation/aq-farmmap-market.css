@@ -725,3 +725,11 @@
 }
 
 .aq-fm-ss-farmer { padding-left: var(--aq-space-3); border-left: 2px solid var(--aq-leaf-400); }
+
+.aq-fm-mk-hint {
+  margin: 0;
+  padding: var(--aq-space-2) var(--aq-space-3);
+  border-left: 3px solid var(--aq-amber-500, var(--aq-leaf-600));
+  font: 500 13px/1.5 var(--aq-font-sans);
+  background: var(--aq-surface-tile);
+}
