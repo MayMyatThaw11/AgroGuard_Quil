@@ -302,6 +302,115 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const setLayer = (key: LayerKey, on: boolean) => setLayers((current) => ({ ...current, [key]: on }));
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
 
+  const rightBody = () => {
+    if (tracing) return (
+      <TraceDetail
+        corners={trace.corners}
+        zoom={stats.zoom}
+        onZoomIn={() => {
+          const centre = engine?.map().getCenter();
+          if (centre) engine?.fly({ center: [centre.lng, centre.lat], zoom: TRACE_MIN_ZOOM + 2, duration: 1800 });
+        }}
+        onAddCentre={trace.addCentre}
+        crosshair={trace.crosshair}
+        onReplace={trace.replace}
+        onUndo={trace.undo}
+        onClear={trace.clear}
+        onCancel={stopTrace}
+        existing={yours.map((f) => f.id)}
+        onSaved={(farmId) => {
+          const corners = trace.corners;
+          const lat = corners.reduce((s, c) => s + c[0], 0) / corners.length;
+          const lon = corners.reduce((s, c) => s + c[1], 0) / corners.length;
+          stopTrace();
+          own.reload();
+          pick({ kind: 'own', farm: farmId }, true);
+          engine?.fly({ center: [lon, lat], zoom: 16, duration: 1800 });
+        }}
+      />
+    );
+    if (route) return (
+      <RoutePanel route={route} onChange={planner.patch} onClose={planner.close} onStart={planner.start} />
+    );
+    if (farm && selection?.kind === 'farm') return (
+      <FarmDetail farm={farm} field={selection.field} onRoute={planner.open} onFocus={() => engine?.focusFarm(farm)} onPick={pick} onOpenOps={onOpenOps} onOpen3d={() => openView(fromExample(farm, selection.field))} surroundings={surroundings} />
+    );
+    if (ownFarm) return (
+      <OwnFarmDetail
+        farm={ownFarm}
+        onLink={(fieldId) => own.link(ownFarm.id, fieldId)}
+        onOpen3d={() => openOwn(ownFarm.id, season?.farmId === ownFarm.id ? season.parcelId : null)}
+        onFocus={() => {
+          const centre = farmCentroid(ownFarm.spec);
+          if (centre) engine?.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2200 });
+        }}
+        onPlaySeason={(run, parcelId, replica) => {
+          setSeason({ farmId: ownFarm.id, parcelId, run, year: 0, engine: 'own', tint: 'ponded_mm' });
+          if (isPhone()) setPanels((p) => ({ ...p, right: false }));
+          const ring = ownFarm.spec.parcels.find((p) => p.id === parcelId)?.boundary;
+          if (ring?.length) engine?.fly({ center: [ring.reduce((s, c) => s + c[1], 0) / ring.length, ring.reduce((s, c) => s + c[0], 0) / ring.length], zoom: 17, duration: 2000 });
+          setPlayback({ day: 0, playing: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches, speed: 4, carry: 0 });
+          if (replica) openOwn(ownFarm.id, parcelId);
+        }}
+        extra={<DeliversTo farmId={ownFarm.id} parcels={ownFarm.spec.parcels.map((p) => p.id)} sites={millSites.sites} onChanged={millSites.reload} />}
+      />
+    );
+    if (selection?.kind === 'own') return (
+      <DetailSection>
+        <p className="aq-fm-note">{t('farmMap.view.loadingFarm')}</p>
+      </DetailSection>
+    );
+    if (site) return (
+      <SiteDetail site={site} onFocus={() => engine?.fly({ center: [site.centroid[1], site.centroid[0]], zoom: 16.5, duration: 2200 })} />
+    );
+    if (poi) return (
+      <PoiDetail poi={poi} onRoute={planner.open} onPick={pick} />
+    );
+    if (spot) return (
+      <>
+        <DetailSection className="is-head">
+          <h2 className="aq-title">{t('farmMap.view.landCheck')}</h2>
+          <p className="aq-meta">{spot.lat.toFixed(SPOT_DECIMALS)}, {spot.lon.toFixed(SPOT_DECIMALS)} · {t('farmMap.view.spotNote')}</p>
+        </DetailSection>
+        <DetailSection>
+          <TechniqueFit lat={spot.lat} lon={spot.lon} />
+        </DetailSection>
+      </>
+    );
+    return (
+      <>
+        <DetailSection>
+          <AqSectionLabel aside={own.error ? t('farmMap.common.unavailableLower') : undefined}>{t('farmMap.view.yourFarms')}</AqSectionLabel>
+          {own.error ? <p className="aq-fm-note">{t('farmMap.view.ownFailed', { error: own.error })}</p> : null}
+          {!own.error && yours.length === 0 ? <p className="aq-fm-note">{t('farmMap.view.noOwn')}</p> : null}
+          {own.error ? null : <FarmsRollup farms={ownFarms} />}
+          <AqButton onClick={startTrace}><PenLine size={14} aria-hidden="true" />{t('farmMap.trace.title')}</AqButton>
+          <PhotoLocate onFound={(lat, lon) => (inAsean({ lat, lon }) ? pick({ kind: 'coord', lat, lon }) : push({ tone: 'info', title: t('farmMap.search.label'), message: t('farmMap.search.outsideAsean') }))} />
+          <SitesUpload onDone={millSites.reload} />
+          {millSites.sites.map((s) => (
+            <button key={s.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'mill', id: s.id })}>
+              <i className="aq-fm-flag is-unknown" aria-hidden="true" />
+              <span className="aq-fm-near-copy">
+                <span className="aq-fm-near-name">{s.name}</span>
+                <span className="aq-fm-near-sub">{t('farmMap.site.kind')} · {t('farmMap.site.suppliersN', { n: s.suppliers.length })}</span>
+              </span>
+            </button>
+          ))}
+          {[...yours, ...demos].map((f) => (
+            <button key={f.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'own', farm: f.id })}>
+              <i className={`aq-fm-flag is-${f.status}`} aria-hidden="true" />
+              <span className="aq-fm-near-copy">
+                <span className="aq-fm-near-name">{f.spec.farm.name ?? f.id}</span>
+                <span className="aq-fm-near-sub">{statusLabel(f.status)} · {t('farmMap.common.parcels', { n: f.spec.parcels.length })} · {f.seed ? t('farmMap.view.demoContract') : t('farmMap.view.fromFile')}</span>
+              </span>
+            </button>
+          ))}
+        </DetailSection>
+        <OverviewPanel farms={inView} stats={stats} onPick={pick} />
+      </>
+    );
+  };
+
   return (
     <div ref={rootRef} className={`aq-root aq-farmmap${tracing ? ' is-tracing' : ''}${panels.right ? ' has-details' : ''}`}>
       <div className="aq-fm-stage">
@@ -346,104 +455,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
               </button>
             ) : null}
             <div key={rightKey} className="aq-panel-scroll aq-fm-right-body aq-fm-slide">
-              {tracing ? (
-                <TraceDetail
-                  corners={trace.corners}
-                  zoom={stats.zoom}
-                  onZoomIn={() => {
-                    const centre = engine?.map().getCenter();
-                    if (centre) engine?.fly({ center: [centre.lng, centre.lat], zoom: TRACE_MIN_ZOOM + 2, duration: 1800 });
-                  }}
-                  onAddCentre={trace.addCentre}
-                  crosshair={trace.crosshair}
-                  onReplace={trace.replace}
-                  onUndo={trace.undo}
-                  onClear={trace.clear}
-                  onCancel={stopTrace}
-                  existing={yours.map((f) => f.id)}
-                  onSaved={(farmId) => {
-                    const corners = trace.corners;
-                    const lat = corners.reduce((s, c) => s + c[0], 0) / corners.length;
-                    const lon = corners.reduce((s, c) => s + c[1], 0) / corners.length;
-                    stopTrace();
-                    own.reload();
-                    pick({ kind: 'own', farm: farmId }, true);
-                    engine?.fly({ center: [lon, lat], zoom: 16, duration: 1800 });
-                  }}
-                />
-              ) : route ? (
-                <RoutePanel route={route} onChange={planner.patch} onClose={planner.close} onStart={planner.start} />
-              ) : farm && selection?.kind === 'farm' ? (
-                <FarmDetail farm={farm} field={selection.field} onRoute={planner.open} onFocus={() => engine?.focusFarm(farm)} onPick={pick} onOpenOps={onOpenOps} onOpen3d={() => openView(fromExample(farm, selection.field))} surroundings={surroundings} />
-              ) : ownFarm ? (
-                <OwnFarmDetail
-                  farm={ownFarm}
-                  onLink={(fieldId) => own.link(ownFarm.id, fieldId)}
-                  onOpen3d={() => openOwn(ownFarm.id, season?.farmId === ownFarm.id ? season.parcelId : null)}
-                  onFocus={() => {
-                    const centre = farmCentroid(ownFarm.spec);
-                    if (centre) engine?.fly({ center: [centre.lon, centre.lat], zoom: 15, duration: 2200 });
-                  }}
-                  onPlaySeason={(run, parcelId, replica) => {
-                    setSeason({ farmId: ownFarm.id, parcelId, run, year: 0, engine: 'own', tint: 'ponded_mm' });
-                    if (isPhone()) setPanels((p) => ({ ...p, right: false }));
-                    const ring = ownFarm.spec.parcels.find((p) => p.id === parcelId)?.boundary;
-                    if (ring?.length) engine?.fly({ center: [ring.reduce((s, c) => s + c[1], 0) / ring.length, ring.reduce((s, c) => s + c[0], 0) / ring.length], zoom: 17, duration: 2000 });
-                    setPlayback({ day: 0, playing: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches, speed: 4, carry: 0 });
-                    if (replica) openOwn(ownFarm.id, parcelId);
-                  }}
-                  extra={<DeliversTo farmId={ownFarm.id} parcels={ownFarm.spec.parcels.map((p) => p.id)} sites={millSites.sites} onChanged={millSites.reload} />}
-                />
-              ) : selection?.kind === 'own' ? (
-                <DetailSection>
-                  <p className="aq-fm-note">{t('farmMap.view.loadingFarm')}</p>
-                </DetailSection>
-              ) : site ? (
-                <SiteDetail site={site} onFocus={() => engine?.fly({ center: [site.centroid[1], site.centroid[0]], zoom: 16.5, duration: 2200 })} />
-              ) : poi ? (
-                <PoiDetail poi={poi} onRoute={planner.open} onPick={pick} />
-              ) : spot ? (
-                <>
-                  <DetailSection className="is-head">
-                    <h2 className="aq-title">{t('farmMap.view.landCheck')}</h2>
-                    <p className="aq-meta">{spot.lat.toFixed(SPOT_DECIMALS)}, {spot.lon.toFixed(SPOT_DECIMALS)} · {t('farmMap.view.spotNote')}</p>
-                  </DetailSection>
-                  <DetailSection>
-                    <TechniqueFit lat={spot.lat} lon={spot.lon} />
-                  </DetailSection>
-                </>
-              ) : (
-                <>
-                  <DetailSection>
-                    <AqSectionLabel aside={own.error ? t('farmMap.common.unavailableLower') : undefined}>{t('farmMap.view.yourFarms')}</AqSectionLabel>
-                    {own.error ? <p className="aq-fm-note">{t('farmMap.view.ownFailed', { error: own.error })}</p> : null}
-                    {!own.error && yours.length === 0 ? <p className="aq-fm-note">{t('farmMap.view.noOwn')}</p> : null}
-                    {own.error ? null : <FarmsRollup farms={ownFarms} />}
-                    <AqButton onClick={startTrace}><PenLine size={14} aria-hidden="true" />{t('farmMap.trace.title')}</AqButton>
-                    <PhotoLocate onFound={(lat, lon) => (inAsean({ lat, lon }) ? pick({ kind: 'coord', lat, lon }) : push({ tone: 'info', title: t('farmMap.search.label'), message: t('farmMap.search.outsideAsean') }))} />
-                    <SitesUpload onDone={millSites.reload} />
-                    {millSites.sites.map((s) => (
-                      <button key={s.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'mill', id: s.id })}>
-                        <i className="aq-fm-flag is-unknown" aria-hidden="true" />
-                        <span className="aq-fm-near-copy">
-                          <span className="aq-fm-near-name">{s.name}</span>
-                          <span className="aq-fm-near-sub">{t('farmMap.site.kind')} · {t('farmMap.site.suppliersN', { n: s.suppliers.length })}</span>
-                        </span>
-                      </button>
-                    ))}
-                    {[...yours, ...demos].map((f) => (
-                      <button key={f.id} type="button" className="aq-fm-near" onClick={() => pick({ kind: 'own', farm: f.id })}>
-                        <i className={`aq-fm-flag is-${f.status}`} aria-hidden="true" />
-                        <span className="aq-fm-near-copy">
-                          <span className="aq-fm-near-name">{f.spec.farm.name ?? f.id}</span>
-                          <span className="aq-fm-near-sub">{statusLabel(f.status)} · {t('farmMap.common.parcels', { n: f.spec.parcels.length })} · {f.seed ? t('farmMap.view.demoContract') : t('farmMap.view.fromFile')}</span>
-                        </span>
-                      </button>
-                    ))}
-                  </DetailSection>
-                  <OverviewPanel farms={inView} stats={stats} onPick={pick} />
-                </>
-              )}
+              {rightBody()}
             </div>
           </AqPanel>
         ) : (
