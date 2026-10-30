@@ -25,6 +25,9 @@ import { attachContextLossRecovery } from '../../lib/webglContextRecovery.ts';
 import { useT, type Key } from '../../lib/i18n.ts';
 import { CanvasErrorBoundary } from '../farm3d/CanvasErrorBoundary.tsx';
 import { FieldAnnotations } from './FieldAnnotations.tsx';
+import { PlannerPanel } from './PlannerPanel.tsx';
+import { TrenchRing } from './TrenchRing.tsx';
+import type { WaterPlan } from '../../lib/farmview/planner.ts';
 import { HomesteadModels } from './HomesteadModels.tsx';
 import { FieldLayer } from './FieldLayer.tsx';
 import { BUND_WIDTH_M, useFieldTextures } from './fieldKit.ts';
@@ -198,6 +201,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const [lost, setLost] = useState(false);
   const [eye, setEye] = useState(false);
   const [measures, setMeasures] = useState(true);
+  const [waterPlan, setWaterPlan] = useState<WaterPlan | null>(null);
   const [depth, setDepth] = useState(0);
   const [wxChoice, setWxChoice] = useState<WeatherChoice>('now');
   const [guideOpen, setGuideOpen] = useState(() => !guideSeen(browserStorage()));
@@ -362,6 +366,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           {target.kind === 'example' && main && hood.data && ground.status !== 'loading' ? <HomesteadModels main={placed.find((p) => p.main)?.ring ?? []} others={placed.filter((p) => !p.main).map((p) => p.ring)} buildings={hood.data.buildings} seed={target.id} paddy={/rice|paddy/i.test(main.crop ?? '')} groundAt={ground.groundAt} /> : null}
           <Weather seed={target.id} fx={fx} lowPower={budget.weak} centre={framing.centre} baseY={mainBase} />
           {depth > 0 && levelM !== null && originHeight !== null ? <WaterPlane y={waterSceneY(levelM, originHeight)} /> : null}
+          {waterPlan && placed.find((p) => p.main) ? <TrenchRing ring={placed.find((p) => p.main)!.ring} plan={waterPlan} groundAt={ground.groundAt} /> : null}
           {measures ? <FieldAnnotations fields={placed.map((p) => ({ id: p.field.id, ring: p.ring, main: p.main, stage: p.field.stage }))} groundAt={ground.groundAt} example={target.kind === 'example'} /> : null}
           {outlined ? <OutlineFields rings={placed.map((p) => p.ring)} groundAt={ground.groundAt} /> : null}
           {(outlined ? [] : layouts).map(({ placed: p, layout, seasonal }) => {
@@ -439,6 +444,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           </div>
         </details>
         <WeatherPanel fx={fx} live={liveWeather} condition={weatherKey(fx)} temperatureC={wxChoice === 'now' && !season ? wxNow?.temperature_2m ?? null : null} choice={wxChoice} onChoice={setWxChoice} />
+        {main ? <PlannerPanel lat={origin.lat} lon={origin.lon} areaHa={fieldFacts(placed.find((p) => p.main)?.ring ?? []).areaHa} perimeterM={fieldFacts(placed.find((p) => p.main)?.ring ?? []).perimeterM} rice={/rice|paddy/i.test(main.crop ?? '')} tempC={wxNow?.temperature_2m ?? null} onPlan={setWaterPlan} /> : null}
         <FloodPanel own={target.kind === 'own'} risk={risk} notes={floodNotes} depth={depth} onDepth={setDepth} heights={heights} basis={basis} onBasis={setBasis} result={floodResult} errorM={DEM_ERROR_M} />
       </div>
       <div className="aq-fm-replica-credits">

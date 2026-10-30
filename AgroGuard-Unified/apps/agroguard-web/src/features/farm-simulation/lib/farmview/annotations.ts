@@ -117,3 +117,20 @@ export function orientedBox(ring: readonly XZ[]): OrientedBox {
     fill: length * width > 0 ? ringArea(pts) / (length * width) : 0,
   };
 }
+
+export function insetRing(ring: readonly XZ[], distance: number): XZ[] {
+  const pts = open(ring);
+  const sign = signedTwice(pts) >= 0 ? 1 : -1;
+  return pts.map(([x, z], i) => {
+    const [px, pz] = pts[(i + pts.length - 1) % pts.length];
+    const [nx, nz] = pts[(i + 1) % pts.length];
+    const normal = (ax: number, az: number, bx: number, bz: number): XZ => {
+      const len = Math.hypot(bx - ax, bz - az) || 1;
+      return [(-sign * (bz - az)) / len, (sign * (bx - ax)) / len];
+    };
+    const a = normal(px, pz, x, z);
+    const b = normal(x, z, nx, nz);
+    const k = distance / (1 + a[0] * b[0] + a[1] * b[1]);
+    return [x + (a[0] + b[0]) * k, z + (a[1] + b[1]) * k];
+  });
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { acres, centroid, edgeMarks, fieldFacts, orientedBox, perimeter } from '../../src/features/farm-simulation/lib/farmview/annotations.ts';
+import { acres, centroid, edgeMarks, fieldFacts, insetRing, orientedBox, perimeter } from '../../src/features/farm-simulation/lib/farmview/annotations.ts';
 import type { XZ } from '../../src/features/farm-simulation/lib/fieldsim/localFrame.ts';
 
 const rect = (w: number, h: number, x = 0, z = 0): XZ[] => [[x, z], [x + w, z], [x + w, z + h], [x, z + h]];
@@ -68,4 +68,20 @@ test('Annotations: fill is the share of the oriented box a footprint covers', ()
   assert.ok(Math.abs(orientedBox(rect(20, 8)).fill - 1) < 1e-9);
   const ell: XZ[] = [[0, 0], [20, 0], [20, 4], [8, 4], [8, 8], [0, 8]];
   assert.ok(orientedBox(ell).fill < 0.8);
+});
+
+test('Annotations: insetting a rectangle by 2 m shrinks every side by 4 m and keeps the middle', () => {
+  const inner = insetRing(rect(100, 50, 10, 20), 2);
+  const xs = inner.map((p) => p[0]);
+  const zs = inner.map((p) => p[1]);
+  assert.ok(Math.abs(Math.min(...xs) - 12) < 1e-9 && Math.abs(Math.max(...xs) - 108) < 1e-9);
+  assert.ok(Math.abs(Math.min(...zs) - 22) < 1e-9 && Math.abs(Math.max(...zs) - 68) < 1e-9);
+  assert.deepEqual(centroid(inner), [60, 45]);
+});
+
+test('Annotations: the inset works whichever way the ring winds', () => {
+  const cw = [...rect(100, 50)].reverse();
+  const inner = insetRing(cw, 2);
+  const xs = inner.map((p) => p[0]);
+  assert.ok(Math.abs(Math.min(...xs) - 2) < 1e-9 && Math.abs(Math.max(...xs) - 98) < 1e-9);
 });

@@ -5,7 +5,7 @@ const base = 'models/farmmap/';
 
 export const riceModel = (stage: RiceStage, lod: 0 | 1) => `${base}rice_${stage}_lod${lod}.glb`;
 
-export const SCENERY = ['tree_broadleaf', 'tree_palm', 'tree_conifer', 'bamboo', 'shrub', 'rock_a', 'rock_b', 'rock_c', 'reeds', 'cloud', 'banana', 'farm_hut', 'buffalo'] as const;
+export const SCENERY = ['tree_broadleaf', 'tree_palm', 'tree_conifer', 'bamboo', 'shrub', 'rock_a', 'rock_b', 'rock_c', 'reeds', 'cloud', 'banana', 'farm_hut', 'buffalo', 'duck', 'chicken', 'chicken_coop'] as const;
 export type SceneryKind = (typeof SCENERY)[number];
 
 export const TRI_BUDGET: Record<SceneryKind, readonly [number, number]> = {
@@ -22,6 +22,9 @@ export const TRI_BUDGET: Record<SceneryKind, readonly [number, number]> = {
   banana: [1500, 140],
   farm_hut: [900, 120],
   buffalo: [1500, 260],
+  duck: [700, 120],
+  chicken: [800, 120],
+  chicken_coop: [800, 120],
 };
 
 export const SCENERY_MAX_BYTES = 300 * 1024;

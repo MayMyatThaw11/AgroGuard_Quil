@@ -34,6 +34,9 @@ BUDGET = {
     "banana": (1500, 140),
     "farm_hut": (900, 120),
     "buffalo": (1500, 260),
+    "duck": (700, 120),
+    "chicken": (800, 120),
+    "chicken_coop": (800, 120),
 }
 BARK = (0.20, 0.13, 0.08)
 CULM = (0.42, 0.50, 0.18)
@@ -564,6 +567,92 @@ def buffalo(lod: int) -> None:
     kit.finish("buffalo", lod)
 
 
+def duck(lod: int) -> None:
+    kit = Kit(f"duck_lod{lod}", ao=0.3 if lod == 0 else 0.0)
+    white, bill, foot = (0.92, 0.90, 0.84), (0.93, 0.55, 0.12), (0.88, 0.45, 0.10)
+    sub = 2 if lod == 0 else 0
+    plume = lambda co: jitter(white, co, 0.08, 6.0, 3.0)
+    kit.part(blob((0.0, 0.0, 0.2), (0.3, 0.17, 0.15), sub, amp=0.03, seed=1.0), plume)
+    kit.part(blob((-0.27, 0.0, 0.27), (0.12, 0.09, 0.07), sub, amp=0.02, seed=2.0), plume)
+    neck = [Vector((0.2, 0, 0.27)), Vector((0.27, 0, 0.36)), Vector((0.3, 0, 0.45))]
+    kit.part(tube(neck, [0.05, 0.042, 0.038], 7 if lod == 0 else 4), plume)
+    kit.part(blob((0.32, 0, 0.5), (0.065, 0.055, 0.055), sub, amp=0.02, seed=4.0), plume)
+    kit.part(blob((0.4, 0, 0.485), (0.06, 0.035, 0.015), 1 if lod == 0 else 0), flat(bill), smooth=True)
+    if lod == 0:
+        for side in (-1, 1):
+            kit.part(blob((0.32, side * 0.045, 0.52), (0.012, 0.012, 0.012), 0), flat((0.05, 0.05, 0.05)), smooth=False)
+            kit.part(box((0.0, side * 0.06, 0.04), (0.1, 0.05, 0.012)), flat(foot), smooth=False)
+            kit.part(blob((-0.02, side * 0.15, 0.2), (0.17, 0.035, 0.1), 1, amp=0.02, seed=5.0 + side), lambda co: jitter((0.86, 0.84, 0.78), co, 0.1, 8.0))
+    kit.finish("duck", lod)
+
+
+def chicken(lod: int) -> None:
+    kit = Kit(f"chicken_lod{lod}", ao=0.3 if lod == 0 else 0.0)
+    brown, dark, comb, leg = (0.52, 0.28, 0.12), (0.12, 0.08, 0.06), (0.78, 0.10, 0.10), (0.85, 0.65, 0.20)
+    sub = 2 if lod == 0 else 0
+    feather = lambda co: jitter(lerp(brown, dark, unit(0.5 - co.z * 1.6)), co, 0.18, 9.0, 1.5)
+    kit.part(blob((0.0, 0.0, 0.24), (0.24, 0.15, 0.17), sub, amp=0.04, seed=1.0), feather)
+    kit.part(blob((0.17, 0.0, 0.36), (0.1, 0.08, 0.12), sub, amp=0.03, seed=2.0), feather)
+    kit.part(blob((0.22, 0.0, 0.47), (0.05, 0.04, 0.05), 1 if lod == 0 else 0), feather)
+    kit.part(blob((0.275, 0.0, 0.465), (0.03, 0.012, 0.012), 0), flat((0.9, 0.7, 0.2)), smooth=False)
+    kit.part(blob((0.22, 0.0, 0.52), (0.015, 0.045, 0.035), 0), flat(comb), smooth=False)
+    if lod == 0:
+        kit.part(blob((0.255, 0.0, 0.42), (0.015, 0.02, 0.035), 0), flat(comb), smooth=False)
+        for i in range(5):
+            a = (i - 2) * 0.28
+            kit.part(blade(Vector((-0.2, 0.0, 0.3)), Vector((-0.8, a, 0.55)), 0.3, 0.035, 0.35, 3), lambda co: jitter((0.12, 0.2, 0.13), co, 0.5, 5.0), smooth=False)
+        for side in (-1, 1):
+            kit.part(tube([Vector((0.02, side * 0.06, 0.1)), Vector((0.03, side * 0.06, 0.0))], [0.012, 0.01], 4), flat(leg), smooth=False)
+            kit.part(box((0.06, side * 0.06, 0.006), (0.08, 0.02, 0.012)), flat(leg), smooth=False)
+            kit.part(blob((-0.01, side * 0.14, 0.26), (0.15, 0.03, 0.09), 1, amp=0.02, seed=5.0 + side), lambda co: jitter((0.45, 0.24, 0.1), co, 0.2, 7.0))
+    else:
+        kit.part(blade(Vector((-0.2, 0.0, 0.3)), Vector((-0.8, 0.0, 0.6)), 0.3, 0.06, 0.3, 2), flat(dark), smooth=False)
+    kit.finish("chicken", lod)
+
+
+def chicken_coop(lod: int) -> None:
+    kit = Kit(f"chicken_coop_lod{lod}", ao=0.6 if lod == 0 else 0.0)
+    wood, plank, tin = (0.30, 0.20, 0.12), (0.62, 0.50, 0.32), (0.52, 0.53, 0.52)
+    leg_h = 0.6
+    for x in (-0.9, 0.9):
+        for y in (-0.6, 0.6):
+            kit.part(box((x, y, leg_h / 2), (0.1, 0.1, leg_h)), lambda co: jitter(wood, co, 0.2, 5.0), smooth=False)
+    kit.part(box((0, 0, leg_h + 0.04), (2.1, 1.4, 0.08)), flat(wood), smooth=False)
+    shade = lambda co: jitter(plank, co, 0.15, 6.0) if int(co.x * 8 + 100) % 2 else tuple(c * 0.9 for c in jitter(plank, co, 0.15, 6.0))
+    for centre, size in (((0, -0.66, leg_h + 0.65), (1.9, 0.06, 1.1)), ((0, 0.66, leg_h + 0.65), (1.9, 0.06, 1.1)), ((-0.96, 0, leg_h + 0.65), (0.06, 1.3, 1.1)), ((0.96, 0, leg_h + 0.65), (0.06, 1.3, 1.1))):
+        kit.part(box(centre, size), shade if lod == 0 else flat(plank), smooth=False)
+    if lod == 0:
+        kit.part(box((0.4, -0.7, leg_h + 0.45), (0.45, 0.04, 0.55)), flat((0.12, 0.08, 0.05)), smooth=False)
+        kit.part(box((1.15, 0.0, leg_h + 0.7), (0.4, 0.5, 0.4)), shade, smooth=False)
+        kit.part(box((1.15, 0.0, leg_h + 0.95), (0.5, 0.6, 0.05)), flat(tin), smooth=False)
+        def ramp(bm: bmesh.types.BMesh) -> None:
+            lo, hi = (0.4, -1.55, 0.02), (0.4, -0.7, leg_h + 0.04)
+            w, t = 0.2, 0.04
+            pts = [bm.verts.new((lo[0] + dx * w, lo[1], lo[2] + dz)) for dx in (-1, 1) for dz in (0.0, t)]
+            top = [bm.verts.new((hi[0] + dx * w, hi[1], hi[2] + dz)) for dx in (-1, 1) for dz in (0.0, t)]
+            for i, j, k, m in ((0, 1, 3, 2), (0, 2, 6, 4), (1, 5, 7, 3), (0, 4, 5, 1), (2, 3, 7, 6)):
+                bm.faces.new((([*pts, *top])[i], ([*pts, *top])[j], ([*pts, *top])[k], ([*pts, *top])[m]))
+            bm.faces.new((top[0], top[2], top[3], top[1]))
+
+        kit.part(ramp, flat(wood), smooth=False)
+        for r in range(5):
+            f = (r + 0.5) / 5
+            kit.part(box((0.4, -1.55 + 0.85 * f, 0.02 + (leg_h + 0.02) * f + 0.05), (0.38, 0.03, 0.03)), flat((0.22, 0.15, 0.09)), smooth=False)
+
+    def roof(bm: bmesh.types.BMesh) -> None:
+        z0, z1 = leg_h + 1.2, leg_h + 1.65
+        w, d = 1.25, 0.95
+        a = [bm.verts.new(p) for p in ((-w, -d, z0), (w, -d, z0), (w, d, z0), (-w, d, z0))]
+        r0, r1 = bm.verts.new((-w + 0.1, 0, z1)), bm.verts.new((w - 0.1, 0, z1))
+        bm.faces.new((a[0], a[1], r1, r0))
+        bm.faces.new((a[2], a[3], r0, r1))
+        bm.faces.new((a[1], a[2], r1))
+        bm.faces.new((a[3], a[0], r0))
+
+    kit.part(roof, lambda co: jitter(lerp((0.36, 0.38, 0.38), (0.6, 0.58, 0.55), unit((co.z - 1.8) / 0.5)), co, 0.18, 2.0), smooth=False)
+    kit.finish("chicken_coop", lod)
+
+
 def cloud(lod: int) -> None:
     kit = Kit(f"cloud_lod{lod}")
     shade, top = (0.70, 0.75, 0.82), (1.0, 1.0, 1.0)
@@ -641,6 +730,9 @@ for lod in (0, 1):
     banana(lod)
     farm_hut(lod)
     buffalo(lod)
+    duck(lod)
+    chicken(lod)
+    chicken_coop(lod)
     for letter in "abc":
         rock(letter, lod)
     reeds(lod)

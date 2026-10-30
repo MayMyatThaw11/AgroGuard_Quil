@@ -32,6 +32,15 @@ await run(async (browser) => {
     await p.waitForTimeout(2500);
   }
   await shot(p, join(GATE, `${FARM}-${THEME}-${W}`));
+  if (process.env.PLANNER) {
+    await p.locator('summary:has-text("Water and mixed farm")').click();
+    await ready(p, 'water plan', '.aq-fm-pl-chart', 60000);
+    await p.waitForTimeout(1500);
+    await shot(p, join(GATE, `${FARM}-planner-${THEME}-${W}`));
+    await p.locator('.aq-fm-pl-row').first().scrollIntoViewIfNeeded();
+    await p.waitForTimeout(600);
+    await shot(p, join(GATE, `${FARM}-planner-mix-${THEME}-${W}`));
+  }
   await p.locator('.aq-fm-replica-tools button:has-text("Look from the field")').click();
   await p.waitForTimeout(2500);
   await shot(p, join(GATE, `${FARM}-eye-${THEME}-${W}`));

@@ -566,3 +566,50 @@
 .aq-fm-plate span { font-weight: 500; }
 .aq-fm-plate small { font: 500 10px/1.2 var(--aq-font-sans); color: var(--aq-text-muted, var(--aq-text-strong)); }
 .aq-fm-plate.is-main { border-color: var(--aq-leaf-500, var(--aq-text-strong)); }
+
+.aq-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.aq-fm-replica-planner { margin-top: var(--aq-space-3); }
+
+.aq-fm-pl-chart { margin: var(--aq-space-3) 0; }
+.aq-fm-pl-chart svg { width: 100%; height: auto; overflow: visible; }
+.aq-fm-pl-band { fill: color-mix(in srgb, var(--aq-water-500) 22%, transparent); }
+.aq-fm-pl-line { stroke: var(--aq-water-500); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.aq-fm-pl-min { stroke: var(--aq-text-secondary, var(--aq-text-strong)); stroke-width: 1; stroke-dasharray: 3 3; }
+.aq-fm-pl-axis { font: 500 10px/1 var(--aq-font-sans); fill: var(--aq-text-secondary, var(--aq-text-strong)); font-variant-numeric: tabular-nums; }
+
+.aq-fm-pl-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--aq-space-3);
+  margin: var(--aq-space-3) 0;
+}
+
+.aq-fm-pl-field { display: grid; gap: var(--aq-space-1); font: 500 11px/1.3 var(--aq-font-sans); }
+
+.aq-fm-pl-row {
+  display: grid;
+  gap: var(--aq-space-2);
+  padding: var(--aq-space-3) 0;
+  border-top: 1px solid var(--aq-border-subtle, var(--aq-stone-150));
+  font: 500 12px/1.45 var(--aq-font-sans);
+}
+
+.aq-fm-pl-row header { display: flex; justify-content: space-between; gap: var(--aq-space-3); }
+.aq-fm-pl-row p, .aq-fm-pl-row ul { margin: 0; }
+.aq-fm-pl-row ul { padding-left: var(--aq-space-4); }
+.aq-fm-pl-fit { font-weight: 600; }
+.aq-fm-pl-row[data-fit='strong'] .aq-fm-pl-fit { color: var(--aq-leaf-600, var(--aq-text-strong)); }
+.aq-fm-pl-row[data-fit='weak'] .aq-fm-pl-fit { color: var(--aq-text-secondary, var(--aq-text-strong)); }
+.aq-fm-pl-species { font-weight: 600; }
+.aq-fm-pl-caution { display: flex; gap: var(--aq-space-2); align-items: flex-start; }
+.aq-fm-pl-caution svg { flex: none; margin-top: 2px; }
+.aq-fm-pl-margin { font-weight: 600; font-variant-numeric: tabular-nums; }
+.aq-fm-pl-prices { display: grid; gap: var(--aq-space-2); }

@@ -54,6 +54,7 @@ from .. import (
     ops,
     pending,
     personas,
+    planner_api,
     producers,
     safety,
     season_run,
@@ -2266,6 +2267,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="AgriQill API", version="0.1.0", lifespan=_lifespan)
     router.include_router(market_api.public)
     router.include_router(market_api.build(_CALLER, _READER))
+    router.include_router(planner_api.build(_READER))
     app.include_router(router, prefix="/api/v1")
     _install_error_contract(app)
 
