@@ -98,6 +98,7 @@ const impactHighlights = [
 
 function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
   const [message, setMessage] = useState('')
+  const [emailInput, setEmailInput] = useState('')
 
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -123,7 +124,8 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
       setMessage('Password reset instructions have been sent to your email.')
       return
     }
-    signIn(new FormData(event.currentTarget).get('email'))
+    const targetEmail = emailInput || new FormData(event.currentTarget).get('email')
+    signIn(targetEmail)
   }
 
   const changeMode = (nextMode) => {
@@ -140,8 +142,8 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
         className="relative my-auto w-full max-w-md overflow-hidden rounded-[2rem] border border-white/80 bg-white p-5 shadow-[0_30px_100px_rgba(20,26,22,0.3)] sm:p-7"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-myanglow-lime/20 blur-2xl" />
-        <button type="button" onClick={onClose} aria-label="Close authentication" className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-xl text-slate-500 transition hover:bg-myanglow-sage/40 hover:text-myanglow-navy">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-myanglow-lime/20 blur-2xl" />
+        <button type="button" onClick={onClose} aria-label="Close authentication" className="absolute right-5 top-5 z-20 grid h-10 w-10 cursor-pointer place-items-center rounded-xl text-slate-500 transition hover:bg-myanglow-sage/40 hover:text-myanglow-navy">
           <X size={19} />
         </button>
 
@@ -176,7 +178,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
               Email address
               <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
                 <Mail size={17} className="text-myanglow-medium" />
-                <input required name="email" type="email" autoComplete="email" placeholder="farmer@example.com" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
+                <input required name="email" type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} autoComplete="email" placeholder="farmer@example.com" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
               </span>
             </label>
             {mode !== 'forgot' ? (
@@ -195,7 +197,7 @@ function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
                 <p className="font-semibold text-myanglow-navy">Demo accounts (any password)</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {['free@demo.com', 'pro@demo.com'].map((email) => (
-                    <button key={email} type="button" disabled={busy} onClick={() => signIn(email)} className="rounded-lg border border-myanglow-sage px-3 py-1.5 font-semibold text-myanglow-forest transition hover:bg-myanglow-sage/40 disabled:opacity-50">
+                    <button key={email} type="button" disabled={busy} onClick={() => { setEmailInput(email); signIn(email); }} className="rounded-lg border border-myanglow-sage px-3 py-1.5 font-semibold text-myanglow-forest transition hover:bg-myanglow-sage/40 disabled:opacity-50">
                       {email}
                     </button>
                   ))}
