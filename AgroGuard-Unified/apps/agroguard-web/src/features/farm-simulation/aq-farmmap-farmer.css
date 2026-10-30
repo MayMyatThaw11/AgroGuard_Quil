@@ -26,7 +26,7 @@
   padding: 0 6px;
   border-radius: 999px;
   font: 700 12px/1 var(--aq-font-sans);
-  color: var(--aq-leaf-700, #14532d);
+  color: var(--aq-leaf-700);
   background: var(--aq-surface-card);
 }
 
@@ -40,8 +40,8 @@
   color: var(--aq-text-strong);
 }
 
-.aq-fm-today-item.is-act { border-left: 4px solid var(--aq-alert-500, #dc2626); padding-left: var(--aq-space-3); }
-.aq-fm-today-item.is-watch { border-left: 4px solid var(--aq-amber-500, #d97706); padding-left: var(--aq-space-3); }
+.aq-fm-today-item.is-act { border-left: 4px solid var(--aq-clay-500); padding-left: var(--aq-space-3); }
+.aq-fm-today-item.is-watch { border-left: 4px solid var(--aq-grain-500); padding-left: var(--aq-space-3); }
 .aq-fm-today-item.is-info { border-left: 4px solid var(--aq-leaf-600); padding-left: var(--aq-space-3); }
 
 :lang(my) .aq-fm-today-text,

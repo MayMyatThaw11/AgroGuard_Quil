@@ -333,3 +333,16 @@
   color: var(--aq-stone-0);
   background: var(--status-simulated);
 }
+
+@media (max-width: 639px) {
+  .aq-fm-viewas-banner {
+    bottom: var(--aq-status-h);
+    left: 0;
+    right: 0;
+    transform: none;
+    padding: var(--aq-space-1) var(--aq-space-3);
+    border-radius: 0;
+    font-size: 11px;
+    text-align: center;
+  }
+}

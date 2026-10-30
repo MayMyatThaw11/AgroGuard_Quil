@@ -729,7 +729,7 @@
 .aq-fm-mk-hint {
   margin: 0;
   padding: var(--aq-space-2) var(--aq-space-3);
-  border-left: 3px solid var(--aq-amber-500, var(--aq-leaf-600));
+  border-left: 3px solid var(--aq-grain-500);
   font: 500 13px/1.5 var(--aq-font-sans);
   background: var(--aq-surface-tile);
 }
@@ -777,7 +777,7 @@
 }
 
 .aq-fm-steps-list li { display: inline-flex; align-items: center; gap: var(--aq-space-1); }
-.aq-fm-steps-list li.is-done { color: var(--aq-leaf-700, var(--aq-text-strong)); }
+.aq-fm-steps-list li.is-done { color: var(--aq-leaf-700); }
 .aq-fm-steps-list li.is-next { color: var(--aq-text-strong); font-weight: 700; }
 
 .aq-fm-epi {
@@ -789,5 +789,5 @@
   color: var(--aq-text-muted);
 }
 
-.aq-fm-epi.is-observed { color: var(--aq-leaf-700, var(--aq-text-strong)); border-color: var(--aq-leaf-600); }
+.aq-fm-epi.is-observed { color: var(--aq-leaf-700); border-color: var(--aq-leaf-600); }
 .aq-fm-epi.is-unknown { border-style: dashed; }
