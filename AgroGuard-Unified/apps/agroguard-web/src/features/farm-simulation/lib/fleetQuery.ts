@@ -82,6 +82,22 @@ export function countByStatus(rows: readonly { status: FleetStatus }[]): Record<
   return counts;
 }
 
+export function mosaicOrder<T extends { status: FleetStatus }>(rows: readonly T[], colorBy: 'status' | 'water' | 'ndvi'): T[] {
+  if (colorBy !== 'status') return [...rows];
+  return rows.map((row, i) => ({ row, i })).sort((a, b) => STATUS_ORDER[a.row.status] - STATUS_ORDER[b.row.status] || a.i - b.i).map((x) => x.row);
+}
+
+export function regionShares(rows: readonly { status: FleetStatus }[]): { status: FleetStatus; count: number; pct: number }[] {
+  const counts = countByStatus(rows);
+  const order = (Object.keys(STATUS_ORDER) as FleetStatus[]).sort((a, b) => STATUS_ORDER[a] - STATUS_ORDER[b]);
+  const total = rows.length || 1;
+  const shares = order.map((status) => ({ status, count: counts[status], pct: Math.round((counts[status] / total) * 100) }));
+  const drift = 100 - shares.reduce((sum, s) => sum + s.pct, 0);
+  const largest = shares.reduce((best, s) => (s.count > best.count ? s : best), shares[0]);
+  if (rows.length) largest.pct += drift;
+  return shares;
+}
+
 export function meanNdvi(rows: readonly { ndvi: number }[]): number {
   if (rows.length === 0) return 0;
   return rows.reduce((sum, row) => sum + row.ndvi, 0) / rows.length;

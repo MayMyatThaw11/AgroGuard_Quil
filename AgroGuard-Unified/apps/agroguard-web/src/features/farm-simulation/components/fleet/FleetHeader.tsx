@@ -54,7 +54,7 @@ export const FleetHeader: React.FC<FleetHeaderProps> = ({ total, safeDepthCm, co
       <MapIcon size={14} strokeWidth={1.9} aria-hidden="true" />
       Farm map
     </AqButton>
-    <AqButton variant="primary" large onClick={onExport}>
+    <AqButton variant="secondary" large onClick={onExport}>
       <Download size={14} strokeWidth={2.25} aria-hidden="true" />
       Export CSV
     </AqButton>

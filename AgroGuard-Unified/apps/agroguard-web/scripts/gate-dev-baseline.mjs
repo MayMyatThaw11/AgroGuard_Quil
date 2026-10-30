@@ -8,8 +8,6 @@ await run(async (browser) => {
   for (const theme of ['light', 'dark']) {
     const { context, page: p } = await page(browser, { theme });
     await signIn(p);
-    await ready(p, 'fleet monitor', '[aria-label="Farm map"]');
-    await shot(p, dir(`fleet-1440-${theme}`));
     await openFarmMap(p);
     await shot(p, dir(`map-1440-${theme}`));
     const search = p.locator('.aq-fm-search input');
@@ -24,6 +22,10 @@ await run(async (browser) => {
     await ready(p, '3D field', '.aq-fm-replica[data-ready="true"]', 90000);
     await p.waitForTimeout(2500);
     await shot(p, dir(`field-3d-1440-${theme}`));
+    await p.locator('button:has-text("All fields")').first().click();
+    await ready(p, 'fleet monitor', 'text=Fleet monitor');
+    await p.waitForTimeout(1500);
+    await shot(p, dir(`fleet-1440-${theme}`));
     await context.close();
   }
   console.log(`saved under ${OUT}`);

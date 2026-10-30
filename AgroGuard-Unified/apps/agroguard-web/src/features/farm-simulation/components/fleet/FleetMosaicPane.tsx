@@ -1,9 +1,11 @@
 import React from 'react';
 import type { FleetData } from '../../data/fleet/fleetFields.ts';
-import { countByStatus, type FleetRow } from '../../lib/fleetQuery.ts';
+import { countByStatus, mosaicOrder, regionShares, type FleetRow } from '../../lib/fleetQuery.ts';
 import { AqLegend } from '../aq/AqLegend.tsx';
 import { AqSectionLabel, AqTabs } from '../aq/aqLayout.tsx';
 import { FleetMosaic, type MosaicColor } from './FleetMosaic.tsx';
+
+const STATUS_WORD = { alert: 'alert', watch: 'watch', offline: 'offline', ok: 'on track' } as const;
 
 interface FleetMosaicPaneProps {
   fleet: FleetData;
@@ -17,7 +19,7 @@ interface FleetMosaicPaneProps {
 export const FleetMosaicPane: React.FC<FleetMosaicPaneProps> = ({ fleet, rows, colorBy, selectedId, onColorBy, onSelect }) => {
   const counts = countByStatus(rows);
   const groups = fleet.regions
-    .map((region) => ({ region, items: rows.filter((row) => row.regionCode === region.code) }))
+    .map((region) => ({ region, items: mosaicOrder(rows.filter((row) => row.regionCode === region.code), colorBy) }))
     .filter((group) => group.items.length > 0);
   return (
     <div className="aq-pane">
@@ -55,6 +57,15 @@ export const FleetMosaicPane: React.FC<FleetMosaicPaneProps> = ({ fleet, rows, c
             <AqSectionLabel aside={`${group.items.length.toLocaleString()} fields · ${group.items.filter((row) => row.status === 'alert').length} alerts`}>
               {group.region.name}
             </AqSectionLabel>
+            {colorBy === 'status' ? (
+              <div className="aq-mosaic-bar" role="img" aria-label={regionShares(group.items).map((s) => `${s.count} ${STATUS_WORD[s.status]}`).join(', ')}>
+                {regionShares(group.items).filter((s) => s.count > 0).map((s) => (
+                  <span key={s.status} className={`aq-mosaic-bar-seg is-${s.status}`} style={{ flexGrow: s.count }}>
+                    {s.pct >= 8 ? `${s.count.toLocaleString()} ${STATUS_WORD[s.status]}` : ''}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <FleetMosaic rows={group.items} colorBy={colorBy} selectedId={selectedId} onSelect={(row) => onSelect(row.id)} />
           </div>
         ))}

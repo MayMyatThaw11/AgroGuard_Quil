@@ -81,8 +81,6 @@
 .aq-eyebrow {
   margin: 0;
   font: var(--aq-type-eyebrow);
-  text-transform: uppercase;
-  letter-spacing: var(--aq-ls-eyebrow);
   color: var(--aq-text-muted);
 }
 

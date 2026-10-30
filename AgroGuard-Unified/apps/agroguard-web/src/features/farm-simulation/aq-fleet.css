@@ -122,6 +122,57 @@
   gap: var(--aq-space-4);
 }
 
+.aq-mosaic-bar {
+  display: flex;
+  gap: 2px;
+  height: 22px;
+  border-radius: var(--aq-radius-sm, 6px);
+  overflow: hidden;
+}
+
+.aq-mosaic-bar-seg {
+  display: flex;
+  align-items: center;
+  min-width: 4px;
+  padding: 0 var(--aq-space-3);
+  font: 600 12px/1 var(--aq-font-sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--aq-stone-900);
+}
+
+.aq-mosaic-bar-seg.is-alert {
+  background: linear-gradient(90deg, var(--aq-clay-700), var(--aq-clay-500));
+  background: linear-gradient(in oklch 90deg, var(--aq-clay-700), var(--aq-clay-500));
+  color: var(--aq-stone-0);
+}
+
+[data-theme='dark'] .aq-mosaic-bar-seg {
+  color: var(--aq-stone-0);
+}
+
+[data-theme='dark'] .aq-mosaic-bar-seg.is-ok {
+  background: var(--aq-leaf-400);
+}
+
+[data-theme='dark'] .aq-mosaic-bar-seg.is-alert {
+  background: linear-gradient(90deg, var(--aq-clay-500), var(--aq-clay-700));
+  background: linear-gradient(in oklch 90deg, var(--aq-clay-500), var(--aq-clay-700));
+}
+
+.aq-mosaic-bar-seg.is-watch {
+  background: var(--aq-grain-300);
+}
+
+.aq-mosaic-bar-seg.is-offline {
+  background: repeating-linear-gradient(135deg, var(--aq-stone-300) 0 4px, var(--aq-stone-200) 4px 8px);
+}
+
+.aq-mosaic-bar-seg.is-ok {
+  background: color-mix(in srgb, var(--aq-leaf-400) 55%, var(--aq-surface-card));
+}
+
 .aq-mosaic {
   position: relative;
   width: 100%;

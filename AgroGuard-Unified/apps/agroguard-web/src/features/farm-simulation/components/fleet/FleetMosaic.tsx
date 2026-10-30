@@ -33,6 +33,7 @@ function readTokens(el: HTMLElement) {
     water,
     ndvi,
     ink: token('--aq-stone-900'),
+    paper: token('--aq-surface-card'),
   };
 }
 
@@ -79,6 +80,20 @@ export const FleetMosaic: React.FC<FleetMosaicProps> = ({ rows, colorBy, selecte
       if (ctx.roundRect) ctx.roundRect(x, y, CELL, CELL, radius);
       else ctx.rect(x, y, CELL, CELL);
       ctx.fill();
+      if (colorBy === 'status' && row.status === 'alert') {
+        ctx.strokeStyle = palette.paper;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
+      } else if (colorBy === 'status' && row.status === 'offline') {
+        ctx.strokeStyle = palette.ink;
+        ctx.globalAlpha = 0.45;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 1, y + CELL - 1);
+        ctx.lineTo(x + CELL - 1, y + 1);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       if (row.id === selectedId) selectedIndex = i;
     });
     ctx.strokeStyle = palette.ink;
