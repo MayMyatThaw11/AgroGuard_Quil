@@ -80,6 +80,7 @@ export interface Offer {
   needed_by: string;
   price_offer_mmk_kg: number | null;
   buyer_km: number;
+  paid_on?: string;
   buyer_lat?: number;
   buyer_lon?: number;
   pickup: Pickup | null;

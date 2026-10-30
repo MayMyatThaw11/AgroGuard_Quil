@@ -2,6 +2,7 @@ import { ApiError } from '../apiError.ts';
 import { request, setProducerToken } from '../api.ts';
 import type { StorageLike } from '../paddySettings.ts';
 import type { Produce } from './market.ts';
+import type { CanOffer, Want } from './seasonMatch.ts';
 
 export type ProducerKind = 'individual' | 'household' | 'group';
 
@@ -34,6 +35,8 @@ export interface Producer {
   manager: string | null;
   manager_revoked: boolean;
   has_pin: boolean;
+  wants?: Want[];
+  can_offer?: CanOffer[];
 }
 
 export interface NearbyProfile {

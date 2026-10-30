@@ -139,13 +139,13 @@ def _price_reason(order: dict[str, Any]) -> dict[str, Any] | None:
 
 def _needs_met(order: dict[str, Any], record: dict[str, Any]) -> list[dict[str, Any]]:
     wants, offers = record.get("wants", []), record.get("can_offer", [])
-    met = [
-        {"id": "needs-met", "params": {"need": w}}
-        for w in wants
-        if set(WANT_MET_BY.get(w, ())) & set(order["offers"])
-    ]
+    met = []
+    for want in wants:
+        by = next((o for o in WANT_MET_BY.get(want, ()) if o in order["offers"]), None)
+        if by:
+            met.append({"id": "needs-met", "params": {"need": want, "by": by}})
     met += [
-        {"id": "needs-met", "params": {"need": n}}
+        {"id": "needs-met", "params": {"need": n, "by": n}}
         for n in order["needs"]
         if NEED_MET_BY.get(n) in offers
     ]

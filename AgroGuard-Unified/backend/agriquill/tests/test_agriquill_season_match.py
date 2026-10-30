@@ -126,9 +126,11 @@ def test_needs_met_pairs() -> None:
     record = profile(wants=["cash-at-harvest", "pickup-needed"], can_offer=["weekly-delivery"])
     order(offers=["pays-within-3d"], needs=["weekly-supply", "sorted-grade"])
     met = {
-        r["params"]["need"] for r in only_match(record["id"])["reasons"] if r["id"] == "needs-met"
+        r["params"]["need"]: r["params"]["by"]
+        for r in only_match(record["id"])["reasons"]
+        if r["id"] == "needs-met"
     }
-    assert met == {"cash-at-harvest", "weekly-supply"}
+    assert met == {"cash-at-harvest": "pays-within-3d", "weekly-supply": "weekly-supply"}
 
 
 @pytest.mark.parametrize(

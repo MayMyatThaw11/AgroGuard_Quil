@@ -23,6 +23,7 @@ import {
   type Produce,
   type Trip,
 } from '../../lib/farmmap/market.ts';
+import { markPaid } from '../../lib/farmmap/seasonMatch.ts';
 import { createProducer, loadActiveProducer, myProducers, saveActiveProducer, type Producer } from '../../lib/farmmap/producers.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { newId, useFieldQueue } from '../../lib/useFieldQueue.ts';
@@ -33,6 +34,7 @@ import { DetailSection } from './detailParts.tsx';
 import { HaulShare } from './HaulShare.tsx';
 import { ProducerSetup } from './ProducerSetup.tsx';
 import { ProducerSwitch } from './ProducerSwitch.tsx';
+import { SeasonMatchFarmer } from './SeasonMatch.tsx';
 import { TownOutlook, useWeight } from './TownOutlook.tsx';
 
 const READY_IN_DAYS = 21;
@@ -79,7 +81,13 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
     getMyOffers().then(setOffers, (e) => setError(message(e)));
   }, []);
   const loadProducers = useCallback(() => {
-    myProducers().then(setProducers, () => setProducers([]));
+    myProducers().then(
+      (rows) => {
+        setProducers(rows);
+        setActiveId((current) => current ?? (rows.length === 1 ? rows[0].id : null));
+      },
+      () => setProducers([]),
+    );
   }, []);
 
   useEffect(loadOutlook, [loadOutlook]);
@@ -227,6 +235,8 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
         ))}
       </DetailSection>
 
+      <SeasonMatchFarmer producer={producers.find((p) => p.id === activeId) ?? null} />
+
       {offers.length ? (
         <DetailSection>
           <p className="aq-fm-mk-subhead">{t('farmMap.market.offersTitle')}</p>
@@ -237,6 +247,9 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
               <div key={row.id} className={`aq-fm-mk-offer ${chosen ? 'is-selected' : ''}`}>
                 <p>{row.status === 'delivered' ? t('farmMap.market.deliveredRow', { buyer }) : chosen ? t('farmMap.market.selected', { buyer }) : t('farmMap.market.waiting', { buyer })}</p>
                 <p className="aq-fm-mk-quiet">{weight(row.qty_kg)}, {t('farmMap.market.away', { km: row.buyer_km })}</p>
+                {row.status === 'delivered' ? (
+                  row.paid_on ? <p className="aq-fm-mk-quiet">{t('farmMap.season.paidOn', { date: day(row.paid_on) })}</p> : <AqButton onClick={() => void markPaid(row.id).then(loadOffers, (e) => setError(message(e)))}>{t('farmMap.season.paid')}</AqButton>
+                ) : null}
                 {chosen && row.buyer_lat !== undefined && row.buyer_lon !== undefined ? (
                   <div className="aq-fm-mk-offer-actions">
                     {row.status === 'selected' ? <AqButton variant="primary" onClick={() => onDirections({ id: farm.id, label: farm.name, lat: farm.lat, lon: farm.lon }, { id: row.preorder_id, label: buyer, lat: row.buyer_lat as number, lon: row.buyer_lon as number })}>

@@ -22,6 +22,7 @@ import { AqButton } from '../aq/aqPrimitives.tsx';
 import { CandidateTransport } from './CandidateTransport.tsx';
 import { CoopFarmers } from './CoopFarmers.tsx';
 import { DetailSection } from './detailParts.tsx';
+import { SeasonOrdersBuyer } from './SeasonMatch.tsx';
 import { LEVEL_KEY, SupplyBars, TownOutlook, useWeight } from './TownOutlook.tsx';
 
 export interface BuyerPlace {
@@ -223,6 +224,7 @@ export const BuyerBoard: React.FC<{ place: BuyerPlace; onDirections: (from: Rout
               </div>
             ))}
           </DetailSection>
+          <SeasonOrdersBuyer place={place} />
         </>
       )}
       {farmers}
