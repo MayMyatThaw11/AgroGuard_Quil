@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { barWidth, outlookTone, pickupStep, produceForCrop, sortByDistance, viss } from '../../src/features/farm-simulation/lib/farmmap/market.ts';
+import { barWidth, outlookTone, pickupStep, produceForCrop, sortByDistance, sortByLanded, viss } from '../../src/features/farm-simulation/lib/farmmap/market.ts';
 
 test('Market: each outlook level has a tone and a word, never colour alone', () => {
   assert.equal(outlookTone('short'), 'ok');
@@ -53,4 +53,15 @@ test('Market: households and shops order in kg, bulk buyers in steps of 100 kg',
   assert.equal(kgStep('retail'), 1);
   assert.equal(kgStep('factory'), 100);
   assert.equal(kgStep(null), 100);
+});
+
+test('Market: candidates sort by lowest landed cost, unpriced last', () => {
+  const rows = [
+    { id: 'a', landed_low: 2100, km: 5 },
+    { id: 'b', landed_low: null, km: 1 },
+    { id: 'c', landed_low: 1950, km: 40 },
+    { id: 'd', landed_low: 1950, km: 12 },
+  ];
+  assert.deepEqual(sortByLanded(rows).map((r) => r.id), ['d', 'c', 'a', 'b']);
+  assert.deepEqual(rows.map((r) => r.id), ['a', 'b', 'c', 'd']);
 });

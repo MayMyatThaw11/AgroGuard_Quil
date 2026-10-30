@@ -300,3 +300,68 @@ def test_registering_for_someone_else_needs_the_explicit_flag_and_consent() -> N
         ).status_code
         == 403
     )
+
+
+def select_offer(order, offer) -> None:
+    client.post(f"{BASE}/preorders/{order['id']}/offers/{offer['id']}/select", headers=BUYER)
+
+
+def test_trip_409_before_selection_200_after_without_fares() -> None:
+    _, order, offer = offer_flow()
+    assert client.get(f"{BASE}/offers/{offer['id']}/trip", headers=FARMER).status_code == 409
+    select_offer(order, offer)
+    assert client.get(f"{BASE}/offers/{offer['id']}/trip", headers=FARMER_B).status_code == 403
+    response = client.get(f"{BASE}/offers/{offer['id']}/trip", headers=FARMER)
+    assert response.status_code == 200
+    assert response.json()["vehicle"] == "three-wheeler"
+
+
+def test_farmer_responses_have_no_fare_fields() -> None:
+    _, order, offer = offer_flow()
+    select_offer(order, offer)
+    bodies = [
+        client.get(f"{BASE}/offers/{offer['id']}/trip", headers=FARMER).text,
+        client.post(f"{BASE}/offers/{offer['id']}/pickup", headers=FARMER).text,
+        client.get(f"{BASE}/offers/mine", headers=FARMER).text,
+    ]
+    for text in bodies:
+        for banned in ("fare", "share_mmk", "low_mmk", "high_mmk", "per_kg", "landed", "transport"):
+            assert banned not in text.replace("price_offer_mmk_kg", "")
+
+
+def test_candidates_carry_transport_range_and_landed_cost() -> None:
+    listing = post_listing().json()
+    body = {
+        "produce": "tomato",
+        "qty_kg": 400,
+        "needed_by": READY,
+        "town": "Hmawbi",
+        "lat": 17.12,
+        "lon": 96.07,
+        "price_offer_mmk_kg": 1900,
+    }
+    order = client.post(f"{BASE}/preorders", json=body, headers=BUYER).json()
+    client.post(
+        f"{BASE}/preorders/{order['id']}/offers",
+        json={"listing_id": listing["id"], "qty_kg": 400},
+        headers=FARMER,
+    )
+    [row] = client.get(f"{BASE}/preorders/{order['id']}/offers", headers=BUYER).json()
+    lows = [t["low_mmk"] for t in row["transport"]]
+    assert lows == sorted(lows) or row["transport"][0]["fits"]
+    first = row["transport"][0]
+    assert row["landed_low"] == 1900 + first["low_per_kg"]
+    assert row["landed_high"] == 1900 + first["high_per_kg"]
+    assert row["landed_low"] < row["landed_high"]
+
+
+def test_delivery_by_other_buyer_403_and_farmer_sees_received() -> None:
+    _, order, offer = offer_flow()
+    select_offer(order, offer)
+    path = f"{BASE}/offers/{offer['id']}/delivery"
+    payload = {"received_kg": 380, "rejected_kg": 20, "reason": "bruised"}
+    assert client.post(path, json=payload, headers=BUYER_B).status_code == 403
+    assert client.post(path, json=payload, headers=FARMER).status_code == 403
+    assert client.post(path, json=payload, headers=BUYER).status_code == 200
+    trip = client.get(f"{BASE}/offers/{offer['id']}/trip", headers=FARMER).json()
+    assert trip["delivery"] == {"received_kg": 380, "rejected_kg": 20, "reason": "bruised"}

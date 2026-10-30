@@ -11,6 +11,7 @@ import {
   preorderOffers,
   PRODUCE,
   selectOffer,
+  sortByLanded,
   type Candidate,
   type MyPreorder,
   type Outlook,
@@ -18,6 +19,7 @@ import {
 } from '../../lib/farmmap/market.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { AqButton } from '../aq/aqPrimitives.tsx';
+import { CandidateTransport } from './CandidateTransport.tsx';
 import { CoopFarmers } from './CoopFarmers.tsx';
 import { DetailSection } from './detailParts.tsx';
 import { LEVEL_KEY, SupplyBars, TownOutlook, useWeight } from './TownOutlook.tsx';
@@ -48,24 +50,27 @@ const Candidates: React.FC<{ order: MyPreorder; place: BuyerPlace; onDirections:
   if (!rows.length) return <p className="aq-fm-mk-quiet">{t('farmMap.buyer.noOffers')}</p>;
   return (
     <div className="aq-fm-mk-candidates" role="table" aria-label={t('farmMap.buyer.candidates')}>
-      {rows.map((row) => (
-        <div key={row.id} role="row" className={`aq-fm-mk-candidate ${row.status === 'selected' ? 'is-selected' : ''}`}>
-          <span role="cell" className="aq-fm-mk-buyer-kind">{row.farmer_name ?? t('farmMap.buyer.farm')}</span>
-          <span role="cell">{weight(row.qty_kg)}</span>
-          <span role="cell" className="aq-fm-mk-quiet">{t('farmMap.buyer.ready', { date: day(row.ready_on) })}, {t('farmMap.market.away', { km: row.km })}</span>
-          <span role="cell">
-            {row.status === 'selected' ? (
-              row.farm_lat !== undefined && row.farm_lon !== undefined ? (
-                <AqButton variant="primary" onClick={() => onDirections({ id: 'buyer', label: place.town, lat: place.lat, lon: place.lon }, { id: row.id, label: row.farmer_name ?? row.farm_town ?? '', lat: row.farm_lat as number, lon: row.farm_lon as number })}>
-                  <Navigation size={14} aria-hidden="true" />{t('farmMap.market.directions')}
+      {sortByLanded(rows).map((row) => (
+        <div key={row.id} className="aq-fm-mk-cand">
+          <div role="row" className={`aq-fm-mk-candidate ${row.status !== 'candidate' ? 'is-selected' : ''}`}>
+            <span role="cell" className="aq-fm-mk-buyer-kind">{row.farmer_name ?? t('farmMap.buyer.farm')}</span>
+            <span role="cell">{weight(row.qty_kg)}</span>
+            <span role="cell" className="aq-fm-mk-quiet">{t('farmMap.buyer.ready', { date: day(row.ready_on) })}, {t('farmMap.market.away', { km: row.km })}</span>
+            <span role="cell">
+              {row.status !== 'candidate' ? (
+                row.status === 'selected' && row.farm_lat !== undefined && row.farm_lon !== undefined ? (
+                  <AqButton variant="primary" onClick={() => onDirections({ id: 'buyer', label: place.town, lat: place.lat, lon: place.lon }, { id: row.id, label: row.farmer_name ?? row.farm_town ?? '', lat: row.farm_lat as number, lon: row.farm_lon as number })}>
+                    <Navigation size={14} aria-hidden="true" />{t('farmMap.market.directions')}
+                  </AqButton>
+                ) : null
+              ) : (
+                <AqButton onClick={() => void selectOffer(order.id, row.id).then(load, (e) => setError(message(e)))}>
+                  <CheckCircle2 size={14} aria-hidden="true" />{t('farmMap.buyer.select')}
                 </AqButton>
-              ) : null
-            ) : (
-              <AqButton onClick={() => void selectOffer(order.id, row.id).then(load, (e) => setError(message(e)))}>
-                <CheckCircle2 size={14} aria-hidden="true" />{t('farmMap.buyer.select')}
-              </AqButton>
-            )}
-          </span>
+              )}
+            </span>
+          </div>
+          <CandidateTransport row={row} onChanged={load} />
         </div>
       ))}
     </div>

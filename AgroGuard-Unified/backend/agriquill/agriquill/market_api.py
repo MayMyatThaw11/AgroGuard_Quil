@@ -76,7 +76,7 @@ def _mine(farmer: str) -> list[dict[str, Any]]:
             "buyer_km": round(haul.route_km(offer), 1),
             "pickup": haul.farmer_view(haul.pickup_for(offer["id"])),
         }
-        if offer["status"] == "selected":
+        if offer["status"] in ("selected", "delivered"):
             row["buyer_lat"], row["buyer_lon"] = order["lat"], order["lon"]
         out.append(row)
     return sorted(out, key=lambda r: r["created_at"], reverse=True)
@@ -91,19 +91,43 @@ def _candidates(buyer: str, preorder_id: str) -> list[dict[str, Any]]:
         if offer["preorder_id"] != preorder_id:
             continue
         listing = next((x for x in market.listings() if x["id"] == offer["listing_id"]), None)
-        rows.append(
-            {
-                **offer,
-                "farmer_name": listing.get("farmer_name") if listing else None,
-                "ready_on": listing["ready_on"] if listing else None,
-                "farm_town": listing["town"] if listing else None,
-                "km": round(haul.route_km(offer), 1),
-                "pickup": haul.pickup_for(offer["id"]),
-            }
-        )
-        if listing and offer["status"] == "selected":
-            rows[-1]["farm_lat"], rows[-1]["farm_lon"] = listing["lat"], listing["lon"]
+        row = {
+            **offer,
+            "farmer_name": listing.get("farmer_name") if listing else None,
+            "ready_on": listing["ready_on"] if listing else None,
+            "farm_town": listing["town"] if listing else None,
+            "km": round(haul.route_km(offer), 1),
+            "pickup": haul.pickup_for(offer["id"]),
+        }
+        if listing:
+            exact = offer["status"] in ("selected", "delivered")
+            row.update(_transport(listing, order, offer, 0.0 if exact else 1.0))
+            if exact:
+                row["farm_lat"], row["farm_lon"] = listing["lat"], listing["lon"]
+                row["pool"] = haul.pool(offer["id"])
+        rows.append(row)
     return rows
+
+
+def _transport(
+    listing: dict[str, Any], order: dict[str, Any], offer: dict[str, Any], widen_km: float
+) -> dict[str, Any]:
+    options = haul.estimate(
+        (listing["lat"], listing["lon"]),
+        (order["lat"], order["lon"]),
+        offer["qty_kg"],
+        listing["produce"],
+        listing["ready_on"],
+        widen_km=widen_km,
+    )
+    price = listing.get("ask_mmk_kg") or order.get("price_offer_mmk_kg")
+    best = options[0]
+    return {
+        "transport": options,
+        "landed_basis": None if price is None else "ask" if listing.get("ask_mmk_kg") else "offer",
+        "landed_low": None if price is None else price + best["low_per_kg"],
+        "landed_high": None if price is None else price + best["high_per_kg"],
+    }
 
 
 def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
@@ -175,6 +199,24 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
     @r.get("/offers/mine")
     async def mine(caller: Any = caller_dep) -> list[dict[str, Any]]:
         return _mine(_farmer(caller))
+
+    @r.get("/offers/{offer_id}/trip")
+    async def trip(offer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
+        return _run(haul.trip, _farmer(caller), offer_id)
+
+    @r.post("/offers/{offer_id}/delivery")
+    async def delivery(
+        offer_id: str, body: dict[str, Any] = _BODY, caller: Any = caller_dep
+    ) -> dict[str, Any]:
+        buyer, _ = _buyer(caller)
+        return _run(
+            haul.confirm_delivery,
+            buyer,
+            offer_id,
+            body.get("received_kg"),
+            body.get("rejected_kg", 0),
+            body.get("reason"),
+        )
 
     @r.post("/offers/{offer_id}/pickup", status_code=201)
     async def pickup(offer_id: str, caller: Any = caller_dep) -> dict[str, Any]:

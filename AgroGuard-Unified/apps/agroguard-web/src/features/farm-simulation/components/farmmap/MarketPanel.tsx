@@ -9,6 +9,7 @@ import {
   getMyOffers,
   getOutlook,
   getPreorders,
+  getTrip,
   postListing,
   produceForCrop,
   sortByDistance,
@@ -20,6 +21,7 @@ import {
   type Pickup,
   type Preorder,
   type Produce,
+  type Trip,
 } from '../../lib/farmmap/market.ts';
 import { createProducer, loadActiveProducer, myProducers, saveActiveProducer, type Producer } from '../../lib/farmmap/producers.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
@@ -59,7 +61,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   const [offers, setOffers] = useState<Offer[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
-  const [pickup, setPickup] = useState<Pickup | null>(null);
+  const [pickup, setPickup] = useState<{ pickup: Pickup; trip: Trip | null; row: Offer } | null>(null);
   const [flash, setFlash] = useState('');
   const [producers, setProducers] = useState<Producer[]>([]);
   const [activeId, setActiveId] = useState<string | null>(() => loadActiveProducer(browserStorage()));
@@ -124,7 +126,8 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   const book = async (row: Offer) => {
     setBusy(row.id);
     try {
-      setPickup(row.pickup ?? (await bookPickup(row.id)));
+      const booked = row.pickup ?? (await bookPickup(row.id));
+      setPickup({ pickup: booked, trip: await getTrip(row.id).catch(() => null), row });
       loadOffers();
     } catch (e) {
       setError(message(e));
@@ -133,7 +136,7 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
     }
   };
 
-  if (pickup) return <HaulShare pickup={pickup} onBack={() => setPickup(null)} />;
+  if (pickup) return <HaulShare pickup={pickup.pickup} trip={pickup.trip} produce={pickup.row.produce} buyer={pickup.row.buyer_name ?? t(kindKey(pickup.row.buyer_kind))} onBack={() => setPickup(null)} />;
   if (setup) {
     return (
       <ProducerSetup
@@ -229,16 +232,16 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
           <p className="aq-fm-mk-subhead">{t('farmMap.market.offersTitle')}</p>
           {offers.map((row) => {
             const buyer = row.buyer_name ?? t(kindKey(row.buyer_kind));
-            const chosen = row.status === 'selected';
+            const chosen = row.status !== 'candidate';
             return (
               <div key={row.id} className={`aq-fm-mk-offer ${chosen ? 'is-selected' : ''}`}>
-                <p>{chosen ? t('farmMap.market.selected', { buyer }) : t('farmMap.market.waiting', { buyer })}</p>
+                <p>{row.status === 'delivered' ? t('farmMap.market.deliveredRow', { buyer }) : chosen ? t('farmMap.market.selected', { buyer }) : t('farmMap.market.waiting', { buyer })}</p>
                 <p className="aq-fm-mk-quiet">{weight(row.qty_kg)}, {t('farmMap.market.away', { km: row.buyer_km })}</p>
                 {chosen && row.buyer_lat !== undefined && row.buyer_lon !== undefined ? (
                   <div className="aq-fm-mk-offer-actions">
-                    <AqButton variant="primary" onClick={() => onDirections({ id: farm.id, label: farm.name, lat: farm.lat, lon: farm.lon }, { id: row.preorder_id, label: buyer, lat: row.buyer_lat as number, lon: row.buyer_lon as number })}>
+                    {row.status === 'selected' ? <AqButton variant="primary" onClick={() => onDirections({ id: farm.id, label: farm.name, lat: farm.lat, lon: farm.lon }, { id: row.preorder_id, label: buyer, lat: row.buyer_lat as number, lon: row.buyer_lon as number })}>
                       <Navigation size={14} aria-hidden="true" />{t('farmMap.market.directions')}
-                    </AqButton>
+                    </AqButton> : null}
                     <AqButton disabled={busy === row.id} onClick={() => void book(row)}><Truck size={14} aria-hidden="true" />{t('farmMap.market.pickup')}</AqButton>
                   </div>
                 ) : null}

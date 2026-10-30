@@ -70,7 +70,7 @@ export interface Offer {
   id: string;
   preorder_id: string;
   listing_id: string;
-  status: 'candidate' | 'selected';
+  status: 'candidate' | 'selected' | 'delivered';
   qty_kg: number;
   produce: Produce;
   buyer_name: string | null;
@@ -147,6 +147,21 @@ export const postListing = (body: { produce: Produce; qty_kg: number; ready_on: 
 export const applyToPreorder = (preorderId: string, listingId: string, qtyKg: number) =>
   request<Offer>(`${BASE}/preorders/${encodeURIComponent(preorderId)}/offers`, json({ listing_id: listingId, qty_kg: qtyKg }));
 export const getMyOffers = () => request<Offer[]>(`${BASE}/offers/mine`);
+export interface Trip {
+  offer_id: string;
+  qty_kg: number;
+  km: number;
+  vehicle: string | null;
+  when: { action: 'pick-early' | 'move-earlier'; before: string | null } | null;
+  freshness: { hours: number; max_hours: number | null; ok: boolean };
+  pack: 'crates-not-sacks' | 'shade-and-air' | 'dry-sacks';
+  storable: boolean;
+  buyer: { name: string | null; kind: string; town: string; lat: number; lon: number };
+  pool: { members: number; total_kg: number; vehicle: string | null } | null;
+  delivery: { received_kg: number; rejected_kg: number; reason: string | null } | null;
+}
+
+export const getTrip = (offerId: string) => request<Trip>(`${BASE}/offers/${encodeURIComponent(offerId)}/trip`);
 export const bookPickup = (offerId: string) => request<Pickup>(`${BASE}/offers/${encodeURIComponent(offerId)}/pickup`, json({}));
 
 export const PRODUCE: readonly Produce[] = ['rice', 'maize', 'pulses', 'onion', 'tomato', 'chili', 'potato', 'vegetables', 'fruit'];
@@ -157,10 +172,21 @@ export interface MyPreorder extends Preorder {
   offers: number;
 }
 
+export interface TransportOption {
+  vehicle: string;
+  fits: boolean;
+  trips: number;
+  low_mmk: number;
+  high_mmk: number;
+  low_per_kg: number;
+  high_per_kg: number;
+  reasons: string[];
+}
+
 export interface Candidate {
   id: string;
   preorder_id: string;
-  status: 'candidate' | 'selected';
+  status: 'candidate' | 'selected' | 'delivered';
   qty_kg: number;
   farmer_name: string | null;
   ready_on: string | null;
@@ -169,7 +195,20 @@ export interface Candidate {
   farm_lat?: number;
   farm_lon?: number;
   pickup: (Pickup & { fare_mmk?: number }) | null;
+  transport: TransportOption[];
+  landed_basis: 'ask' | 'offer' | null;
+  landed_low: number | null;
+  landed_high: number | null;
+  pool?: { members: string[]; total_kg: number; vehicle: string | null; fare_total: number };
+  received_kg?: number;
+  rejected_kg?: number;
 }
+
+export const sortByLanded = <T extends { landed_low: number | null; km: number }>(rows: readonly T[]): T[] =>
+  [...rows].sort((a, b) => (a.landed_low ?? Infinity) - (b.landed_low ?? Infinity) || a.km - b.km);
+
+export const confirmDelivery = (offerId: string, body: { received_kg: number; rejected_kg: number; reason?: string }) =>
+  request<Candidate>(`${BASE}/offers/${encodeURIComponent(offerId)}/delivery`, json(body));
 
 export const kgStep = (buyerKind: string | null): number => (buyerKind && SMALL_BUYERS.includes(buyerKind) ? 1 : 100);
 
