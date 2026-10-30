@@ -243,3 +243,46 @@ def test_verify_pin_checks_the_pin_and_locks_after_five_wrong() -> None:
             producers.verify_pin(FARMER, record["id"], "0000")
     with pytest.raises(PermissionError):
         producers.verify_pin(FARMER, record["id"], "4321")
+
+
+def _site(i: int) -> dict:
+    return body(
+        name=f"Farm {i}",
+        lat=17.0 + i * 0.01,
+        lon=96.0,
+        crops=[{"produce": "tomato", "area_ha": 10.0, "harvest_month": 3}],
+    )
+
+
+def test_coop_plan_ha_limit_blocks_over_100(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(producers.entitlements, "ha_limit", lambda account: 100)
+    for i in range(10):
+        producers.create(COOP, "cooperative", _site(i) | {"consent": CONSENT})
+    assert producers.plan_usage(COOP) == {"ha_used": 100.0, "ha_limit": 100}
+    with pytest.raises(producers.PlanLimit) as hit:
+        producers.create(
+            COOP,
+            "cooperative",
+            body(
+                name="Over",
+                lat=17.5,
+                lon=96.0,
+                crops=[{"produce": "tomato", "area_ha": 6.0, "harvest_month": 3}],
+                consent=CONSENT,
+            ),
+        )
+    assert "covers 100 ha" in str(hit.value) and "manage 100 ha" in str(hit.value)
+
+
+def test_coop_without_a_plan_has_no_limit_and_farmers_are_never_checked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(producers.entitlements, "ha_limit", lambda account: None)
+    assert producers.plan_usage(COOP) == {"ha_used": 0.0, "ha_limit": None}
+    producers.create(COOP, "cooperative", _site(0) | {"consent": CONSENT})
+
+    def boom(account: str) -> int:
+        raise AssertionError("farmers must not be checked against a plan")
+
+    monkeypatch.setattr(producers.entitlements, "ha_limit", boom)
+    producers.create(FARMER, None, _site(1))

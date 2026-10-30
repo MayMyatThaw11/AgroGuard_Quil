@@ -13,6 +13,7 @@ await run(async (browser) => {
       sessionStorage.setItem('aq-fm-view-as', 'buyer');
     } catch {}
   });
+  await p.route('**/market/producers/plan', (route) => route.fulfill({ json: { ha_used: 62, ha_limit: 100 } }));
   await signIn(p);
   await openFarmMap(p);
   const search = p.locator('.aq-fm-search input');

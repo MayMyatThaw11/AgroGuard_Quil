@@ -758,6 +758,7 @@ export const FIL: Dictionary = {
   'farmMap.producer.registerNext': 'Irehistro ang susunod na magsasaka',
   'farmMap.producer.coopTitle': 'Mga magsasaka ko',
   'farmMap.producer.coopNone': 'Wala pang nakarehistrong magsasaka.',
+  'farmMap.producer.haUsed': '{used} sa {limit} ha ang nagamit',
   'farmMap.producer.register': 'Magrehistro ng magsasaka',
   'farmMap.producer.claimed': 'nakontrol na',
   'farmMap.producer.setup': 'I-set up ang aking profile',

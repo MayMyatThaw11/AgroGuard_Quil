@@ -37,6 +37,7 @@ def _to_response(value: service.Entitlements) -> EntitlementsResponse:
         farms_limit=value.farms_limit,
         farms_left=value.farms_left,
         current_period_end=value.current_period_end,
+        ha_limit=value.ha_limit,
     )
 
 
@@ -75,6 +76,11 @@ async def mock_checkout(
         raise HTTPException(status_code=422, detail="Card number is not valid.")
     if not payload.cvc.isdigit():
         raise HTTPException(status_code=422, detail="CVC is not valid.")
+    coop = payload.plan == service.COOP_PLAN
+    if coop and not (user.account_type == "buyer" and user.buyer_kind == "cooperative"):
+        raise HTTPException(
+            status_code=403, detail="The cooperative season plan is for cooperative accounts."
+        )
     now = datetime.now(UTC)
     if (payload.exp_year, payload.exp_month) < (now.year, now.month):
         raise HTTPException(status_code=422, detail="Card has expired.")
@@ -84,7 +90,7 @@ async def mock_checkout(
     declined = number == DECLINED_CARD
     payment = Payment(
         user_id=user.id,
-        amount_cents=PRO_PRICE_CENTS,
+        amount_cents=service.COOP_PRICE_CENTS if coop else PRO_PRICE_CENTS,
         currency=PRO_CURRENCY,
         status="declined" if declined else "succeeded",
         card_last4=last4,
@@ -94,16 +100,17 @@ async def mock_checkout(
     if declined:
         await session.commit()
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Card declined.")
-    period_end = now + timedelta(days=get_settings().pro_period_days)
+    days = service.COOP_PERIOD_DAYS if coop else get_settings().pro_period_days
+    period_end = now + timedelta(days=days)
     subscription = await session.get(Subscription, user.id)
     if subscription is None:
         session.add(
             Subscription(
-                user_id=user.id, plan="pro", status="active", current_period_end=period_end
+                user_id=user.id, plan=payload.plan, status="active", current_period_end=period_end
             )
         )
     else:
-        subscription.plan = "pro"
+        subscription.plan = payload.plan
         subscription.status = "active"
         subscription.current_period_end = period_end
         subscription.updated_at = now
@@ -130,6 +137,17 @@ async def cancel(
         subscription.updated_at = datetime.now(UTC)
         await session.commit()
     return _to_response(await service.get_entitlements(session, user.id))
+
+
+@router.get("/internal/entitlements/{user_id}", response_model=EntitlementsResponse)
+async def internal_entitlements(
+    user_id: int,
+    _: Annotated[None, Depends(require_service_key)],
+    session: Annotated[AsyncSession, Depends(get_db_session)] = None,
+) -> EntitlementsResponse:
+    if await session.get(User, user_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown user.")
+    return _to_response(await service.get_entitlements(session, user_id))
 
 
 @router.post("/internal/entitlements/consume-farm", response_model=ConsumeFarmResponse)

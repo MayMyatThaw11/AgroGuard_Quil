@@ -758,6 +758,7 @@ export const ID: Dictionary = {
   'farmMap.producer.registerNext': 'Daftarkan petani berikutnya',
   'farmMap.producer.coopTitle': 'Petani saya',
   'farmMap.producer.coopNone': 'Belum ada petani yang terdaftar.',
+  'farmMap.producer.haUsed': '{used} dari {limit} ha terpakai',
   'farmMap.producer.register': 'Daftarkan petani',
   'farmMap.producer.claimed': 'sudah mengambil alih',
   'farmMap.producer.setup': 'Atur profil saya',

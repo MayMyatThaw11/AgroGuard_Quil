@@ -108,6 +108,7 @@ const cleaned = (draft: ProducerDraft) => ({ ...draft, crops: draft.crops.filter
 
 export const createProducer = (draft: ProducerDraft, extra: { pin?: string; on_behalf?: boolean; consent?: { read_aloud: boolean; text_version: string; by: string } } = {}) =>
   request<Producer & { claim_code: string }>(`${BASE}/producers`, json('POST', { ...cleaned(draft), ...extra }));
+export const planUsage = () => request<{ ha_used: number; ha_limit: number | null }>(`${BASE}/producers/plan`);
 export const myProducers = () => request<Producer[]>(`${BASE}/producers/mine`);
 export const joinGroup = (id: string, name: string) => request<Producer>(`${BASE}/producers/${encodeURIComponent(id)}/members`, json('POST', { name }));
 export const revokeManager = (id: string) => request<Producer>(`${BASE}/producers/${encodeURIComponent(id)}/revoke-manager`, json('POST', {}));

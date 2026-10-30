@@ -4,7 +4,9 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 AccountType = Literal["farmer", "buyer"]
-BuyerKind = Literal["household", "retail", "restaurant", "cooperative", "processor", "factory", "msme"]
+BuyerKind = Literal[
+    "household", "retail", "restaurant", "cooperative", "processor", "factory", "msme"
+]
 
 
 class DemoLoginRequest(BaseModel):
@@ -46,6 +48,7 @@ class EntitlementsResponse(BaseModel):
     farms_limit: int | None
     farms_left: int | None
     current_period_end: datetime | None = None
+    ha_limit: int | None = None
 
 
 class CheckoutRequest(BaseModel):
@@ -53,6 +56,7 @@ class CheckoutRequest(BaseModel):
     exp_month: int = Field(ge=1, le=12)
     exp_year: int = Field(ge=2000, le=2100)
     cvc: str = Field(min_length=3, max_length=4)
+    plan: Literal["pro", "coop_season"] = "pro"
 
 
 class CheckoutResponse(BaseModel):

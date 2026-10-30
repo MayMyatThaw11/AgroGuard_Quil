@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { UserPlus } from 'lucide-react';
-import { createProducer, myProducers, type Producer } from '../../lib/farmmap/producers.ts';
+import { createProducer, myProducers, planUsage, type Producer } from '../../lib/farmmap/producers.ts';
 import { useT, type Key } from '../../lib/i18n.ts';
 import { AqButton } from '../aq/aqPrimitives.tsx';
 import { DetailSection } from './detailParts.tsx';
@@ -13,12 +13,14 @@ export const CoopFarmers: React.FC<{ by: string; point: { lat: number; lon: numb
   const [rows, setRows] = useState<Producer[]>([]);
   const [registering, setRegistering] = useState(false);
   const [card, setCard] = useState<Registered | null>(null);
+  const [usage, setUsage] = useState<{ ha_used: number; ha_limit: number | null } | null>(null);
   const mode = (on: boolean) => {
     setRegistering(on);
     onRegistering(on);
   };
   const load = useCallback(() => {
     myProducers().then(setRows, () => setRows([]));
+    planUsage().then(setUsage, () => setUsage(null));
   }, []);
   useEffect(load, [load]);
 
@@ -42,6 +44,7 @@ export const CoopFarmers: React.FC<{ by: string; point: { lat: number; lon: numb
   return (
     <DetailSection className="aq-fm-pr-coop">
       <p className="aq-fm-mk-subhead">{t('farmMap.producer.coopTitle')}</p>
+      {usage?.ha_limit ? <p className="aq-fm-mk-quiet">{t('farmMap.producer.haUsed', { used: usage.ha_used, limit: usage.ha_limit })}</p> : null}
       {card ? (
         <div className="aq-fm-pr-card" role="status">
           <p className="aq-fm-mk-quiet">{t('farmMap.producer.cardHint', { name: card.name })}</p>

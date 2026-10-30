@@ -46,6 +46,8 @@ def _run(fn: Callable[..., Any], *args: Any) -> Any:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except haul.NotSelected as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except producers.PlanLimit as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
     except producers.NearbyProfile as exc:
         raise HTTPException(
             status_code=409, detail={"message": str(exc), "profile": exc.profile}
@@ -185,6 +187,10 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         if body.get("on_behalf") is True:
             return _run(producers.create, account_of(caller), caller.buyer_kind or "", body)
         return _run(producers.create, _farmer(caller), None, body)
+
+    @r.get("/producers/plan")
+    async def plan(caller: Any = caller_dep) -> dict[str, Any]:
+        return producers.plan_usage(account_of(caller))
 
     @r.get("/producers/mine")
     async def my_producers(caller: Any = caller_dep) -> list[dict[str, Any]]:

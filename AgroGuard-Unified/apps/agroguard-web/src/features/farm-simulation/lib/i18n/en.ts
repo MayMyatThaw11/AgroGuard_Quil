@@ -757,6 +757,7 @@ export const EN = {
   'farmMap.producer.registerNext': 'Register the next farmer',
   'farmMap.producer.coopTitle': 'My farmers',
   'farmMap.producer.coopNone': 'No farmers registered yet.',
+  'farmMap.producer.haUsed': '{used} of {limit} ha used',
   'farmMap.producer.register': 'Register a farmer',
   'farmMap.producer.claimed': 'took control',
   'farmMap.producer.setup': 'Set up my profile',

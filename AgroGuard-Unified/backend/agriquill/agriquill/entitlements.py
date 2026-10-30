@@ -15,6 +15,8 @@ from .config import get_settings
 
 CONSUME_PATH = "/api/v1/internal/entitlements/consume-farm"
 RELEASE_PATH = "/api/v1/internal/entitlements/release-farm"
+PLAN_PATH = "/api/v1/internal/entitlements/"
+PLAN_TIMEOUT_S = 10.0
 
 
 @dataclass(frozen=True)
@@ -108,3 +110,17 @@ async def release_farm(reservation: Reservation | None) -> None:
             )
     except httpx.HTTPError:
         return
+
+
+def ha_limit(account: str) -> int | None:
+    settings = get_settings()
+    if not account.startswith("ag:") or not settings.agroguard_url:
+        return None
+    url = settings.agroguard_url.rstrip("/") + PLAN_PATH + account[3:]
+    try:
+        response = httpx.get(url, headers=_service_headers(), timeout=PLAN_TIMEOUT_S)
+        response.raise_for_status()
+        limit = response.json().get("ha_limit")
+    except (httpx.HTTPError, ValueError):
+        return None
+    return int(limit) if limit is not None else None

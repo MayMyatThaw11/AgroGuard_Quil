@@ -7,6 +7,7 @@ import time
 import uuid
 from typing import Any
 
+from . import entitlements
 from .config import SMALL_MEDIUM_MAX_HA, get_settings
 from .ledger import get_ledger
 from .store import RecordCache, now_iso
@@ -28,6 +29,10 @@ class NearbyProfile(Exception):
     def __init__(self, profile: dict[str, Any]) -> None:
         super().__init__(f"{profile['name']} is already registered here")
         self.profile = profile
+
+
+class PlanLimit(Exception):
+    pass
 
 
 def _hash(secret: str, salt: str) -> str:
@@ -108,6 +113,30 @@ def all_profiles() -> list[dict[str, Any]]:
     return _STORE.items(PRODUCER)
 
 
+def managed_area(account: str) -> float:
+    return sum(
+        total_area(r)
+        for r in all_profiles()
+        if r["manager"] == account and not r["manager_revoked"]
+    )
+
+
+def plan_usage(account: str) -> dict[str, Any]:
+    return {"ha_used": round(managed_area(account), 2), "ha_limit": entitlements.ha_limit(account)}
+
+
+def _check_plan(manager: str | None, added_ha: float) -> None:
+    if manager is None or added_ha <= 0:
+        return
+    limit = entitlements.ha_limit(manager)
+    used = managed_area(manager)
+    if limit is not None and used + added_ha > limit:
+        raise PlanLimit(
+            f"Your plan covers {limit} ha. You manage {used:.0f} ha; "
+            f"this farm adds {added_ha:.0f} ha."
+        )
+
+
 def get(producer_id: str) -> dict[str, Any]:
     hit = _STORE.get(PRODUCER, producer_id)
     if hit is None:
@@ -164,6 +193,7 @@ def create(actor: str, actor_buyer_kind: str | None, body: dict[str, Any]) -> di
     existing = nearby_profile(lat, lon)
     if existing is not None:
         raise NearbyProfile(public_view(existing))
+    _check_plan(record["manager"], total_area(record))
     code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
     salt = secrets.token_hex(8)
     record["claim_salt"], record["claim_hash"] = salt, _hash(code, salt)
@@ -204,6 +234,11 @@ def _change(producer_id: str, fn: Any) -> dict[str, Any]:
     return record
 
 
+def _check_managed_growth(old: dict[str, Any], new: dict[str, Any]) -> None:
+    if not old["manager_revoked"]:
+        _check_plan(old["manager"], total_area(new) - total_area(old))
+
+
 def update(account: str, producer_id: str, body: dict[str, Any]) -> dict[str, Any]:
     require_act(account, producer_id)
 
@@ -215,6 +250,7 @@ def update(account: str, producer_id: str, body: dict[str, Any]) -> dict[str, An
             new["crops"] = _crops(body["crops"])
         if total_area(new) > MAX_FARM_HA:
             raise ValueError(f"Farm Map is for farms up to {MAX_FARM_HA:.0f} ha for now")
+        _check_managed_growth(old, new)
         return new
 
     record = _change(producer_id, apply)
@@ -229,6 +265,7 @@ def add_member(account: str, producer_id: str, member: dict[str, Any]) -> dict[s
         new = {**old, "members": old["members"] + _members([member])}
         if total_area(new) > MAX_FARM_HA:
             raise ValueError(f"Farm Map is for farms up to {MAX_FARM_HA:.0f} ha for now")
+        _check_managed_growth(old, new)
         return new
 
     record = _change(producer_id, apply)

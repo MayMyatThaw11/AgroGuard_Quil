@@ -758,6 +758,7 @@ export const TH: Dictionary = {
   'farmMap.producer.registerNext': 'ลงทะเบียนเกษตรกรคนถัดไป',
   'farmMap.producer.coopTitle': 'เกษตรกรของฉัน',
   'farmMap.producer.coopNone': 'ยังไม่มีเกษตรกรที่ลงทะเบียน',
+  'farmMap.producer.haUsed': 'ใช้แล้ว {used} จาก {limit} เฮกตาร์',
   'farmMap.producer.register': 'ลงทะเบียนเกษตรกร',
   'farmMap.producer.claimed': 'ควบคุมแล้ว',
   'farmMap.producer.setup': 'ตั้งค่าโปรไฟล์ของฉัน',

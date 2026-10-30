@@ -4,13 +4,14 @@ import { useLanguage } from '../contexts/LanguageContext.jsx'
 export function planLabel(entitlements, t) {
   if (!entitlements) return ''
   if (entitlements.plan === 'pro') return t('plan.pro')
+  if (entitlements.plan === 'coop_season') return t('plan.coop', { limit: entitlements.ha_limit })
   return t('plan.freeLeft', { left: entitlements.farms_left, limit: entitlements.farms_limit })
 }
 
 export default function PlanChip({ entitlements, className = '' }) {
   const { t } = useLanguage()
   if (!entitlements) return null
-  const pro = entitlements.plan === 'pro'
+  const pro = entitlements.plan === 'pro' || entitlements.plan === 'coop_season'
   return (
     <span
       data-testid="plan-chip"

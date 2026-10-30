@@ -758,6 +758,7 @@ export const MY: Dictionary = {
   'farmMap.producer.registerNext': 'နောက်စိုက်ပျိုးသူ ထည့်ရန်',
   'farmMap.producer.coopTitle': 'ကျွန်ုပ်၏ စိုက်ပျိုးသူများ',
   'farmMap.producer.coopNone': 'စိုက်ပျိုးသူ မထည့်ရသေးပါ။',
+  'farmMap.producer.haUsed': '{used} / {limit} ဟက်တာ အသုံးပြုပြီး',
   'farmMap.producer.register': 'စိုက်ပျိုးသူ ထည့်ရန်',
   'farmMap.producer.claimed': 'ထိန်းချုပ်ခဲ့သည်',
   'farmMap.producer.setup': 'ကျွန်ုပ်၏ပရိုဖိုင် ပြင်ဆင်ရန်',

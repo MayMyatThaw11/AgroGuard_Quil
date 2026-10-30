@@ -13,7 +13,7 @@ import {
 const input =
   'w-full rounded-xl border border-(--ag-line) bg-(--ag-card-2) px-3 py-2.5 text-sm text-(--ag-text) focus:border-(--ag-accent) focus:outline-none'
 
-export default function CheckoutModal({ onClose, onPaid }) {
+export default function CheckoutModal({ onClose, onPaid, plan = 'pro' }) {
   const { t } = useLanguage()
   const [number, setNumber] = useState('')
   const [expiry, setExpiry] = useState('')
@@ -21,6 +21,7 @@ export default function CheckoutModal({ onClose, onPaid }) {
   const [errors, setErrors] = useState({})
   const [phase, setPhase] = useState('idle')
   const [message, setMessage] = useState('')
+  const coop = plan === 'coop_season'
 
   const submit = async (event) => {
     event.preventDefault()
@@ -38,6 +39,7 @@ export default function CheckoutModal({ onClose, onPaid }) {
           exp_month: parsed.month,
           exp_year: parsed.year,
           cvc,
+          plan,
         }),
       })
       if (response.ok) {
@@ -97,8 +99,9 @@ export default function CheckoutModal({ onClose, onPaid }) {
           <form onSubmit={submit} className="space-y-4" noValidate>
             <div className="flex items-center gap-3">
               <CreditCard size={22} className="text-(--ag-accent)" aria-hidden="true" />
-              <h2 className="text-xl font-semibold">{t('checkout.title')}</h2>
+              <h2 className="text-xl font-semibold">{t(coop ? 'checkout.coop.title' : 'checkout.title')}</h2>
             </div>
+            {coop ? <p className="text-sm font-semibold">{t('checkout.coop.offer')}</p> : null}
             <p className="rounded-xl bg-(--ag-card-2) px-3 py-2 text-xs text-(--ag-muted)">
               {t('checkout.testHint', { card: TEST_SUCCESS_CARD })}
             </p>
@@ -164,7 +167,7 @@ export default function CheckoutModal({ onClose, onPaid }) {
               className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-(--ag-accent) px-5 py-3 text-sm font-bold text-(--ag-bg) transition hover:opacity-90 disabled:opacity-60"
             >
               {phase === 'processing' ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
-              {phase === 'processing' ? t('checkout.processing') : t('checkout.pay')}
+              {phase === 'processing' ? t('checkout.processing') : t(coop ? 'checkout.coop.pay' : 'checkout.pay')}
             </button>
           </form>
         )}

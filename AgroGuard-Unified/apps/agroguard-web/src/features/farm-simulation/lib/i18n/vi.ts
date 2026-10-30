@@ -758,6 +758,7 @@ export const VI: Dictionary = {
   'farmMap.producer.registerNext': 'Đăng ký nông dân tiếp theo',
   'farmMap.producer.coopTitle': 'Nông dân của tôi',
   'farmMap.producer.coopNone': 'Chưa có nông dân nào được đăng ký.',
+  'farmMap.producer.haUsed': 'Đã dùng {used} / {limit} ha',
   'farmMap.producer.register': 'Đăng ký nông dân',
   'farmMap.producer.claimed': 'đã kiểm soát',
   'farmMap.producer.setup': 'Thiết lập hồ sơ của tôi',

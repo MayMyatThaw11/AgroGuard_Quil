@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import CheckoutModal from '../components/CheckoutModal.jsx'
 import PlanChip from '../components/PlanChip.jsx'
+import { buyerKind } from '../lib/account.js'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 import { useEntitlements } from '../lib/session.js'
 
@@ -22,6 +23,7 @@ function FarmSimulationPage() {
   const params = new URLSearchParams(search)
   const openToAll = params.has('story') || params.has('field')
   const [checkout, setCheckout] = useState(false)
+  const coop = buyerKind() === 'cooperative'
   const frame = useRef(null)
 
   useEffect(() => {
@@ -60,13 +62,13 @@ function FarmSimulationPage() {
         <span className="truncate text-slate-400">{t('nav.farmSimulation')}</span>
         <span className="ml-auto flex items-center gap-2">
           <PlanChip entitlements={entitlements} />
-          {entitlements && entitlements.plan !== 'pro' ? (
+          {entitlements && entitlements.plan !== 'pro' && entitlements.plan !== 'coop_season' ? (
             <button
               type="button"
               onClick={() => setCheckout(true)}
-              className="rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-600"
+              className="whitespace-nowrap rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-600"
             >
-              {t('plan.upgrade')}
+              {t(coop ? 'plan.coop.choose' : 'plan.upgrade')}
             </button>
           ) : null}
         </span>
@@ -78,7 +80,7 @@ function FarmSimulationPage() {
         allow="fullscreen; clipboard-write"
         className="block min-h-0 w-full flex-1 border-0"
       />
-      {checkout ? <CheckoutModal onClose={() => setCheckout(false)} onPaid={paid} /> : null}
+      {checkout ? <CheckoutModal plan={coop ? 'coop_season' : 'pro'} onClose={() => setCheckout(false)} onPaid={paid} /> : null}
     </div>
   )
 }

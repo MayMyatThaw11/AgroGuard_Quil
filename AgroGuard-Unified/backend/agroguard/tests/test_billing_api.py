@@ -185,3 +185,17 @@ async def test_downgrade_keeps_tried_farms_and_blocks_new_ones(client):
     assert cancelled.json()["farms_left"] == 0
     assert (await _consume(client, user_id, "p0")).status_code == 200
     assert (await _consume(client, user_id, "new")).status_code == 402
+
+async def test_coop_season_plan_is_for_cooperatives_and_reports_its_ha_limit(client):
+    card = {"card_number": "4242424242424242", "exp_month": 12, "exp_year": 2099, "cvc": "123"}
+    url = "/api/v1/billing/mock-checkout"
+    _, farmer = await _login(client, "free@demo.com")
+    refused = await client.post(url, json={**card, "plan": "coop_season"}, headers=farmer)
+    assert refused.status_code == 403
+    user_id, coop = await _login(client, "buyer@demo.com")
+    paid = await client.post(url, json={**card, "plan": "coop_season"}, headers=coop)
+    assert paid.status_code == 200
+    assert paid.json()["entitlements"]["plan"] == "coop_season"
+    assert paid.json()["entitlements"]["ha_limit"] == 100
+    seen = await client.get(f"/api/v1/internal/entitlements/{user_id}", headers=KEY)
+    assert seen.json()["ha_limit"] == 100

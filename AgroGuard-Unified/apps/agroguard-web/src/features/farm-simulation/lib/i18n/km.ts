@@ -758,6 +758,7 @@ export const KM: Dictionary = {
   'farmMap.producer.registerNext': 'ចុះឈ្មោះកសិករបន្ទាប់',
   'farmMap.producer.coopTitle': 'កសិកររបស់ខ្ញុំ',
   'farmMap.producer.coopNone': 'មិនទាន់មានកសិករចុះឈ្មោះទេ។',
+  'farmMap.producer.haUsed': 'បានប្រើ {used} នៃ {limit} ហិកតា',
   'farmMap.producer.register': 'ចុះឈ្មោះកសិករ',
   'farmMap.producer.claimed': 'បានគ្រប់គ្រង',
   'farmMap.producer.setup': 'កំណត់ប្រវត្តិរូបរបស់ខ្ញុំ',
