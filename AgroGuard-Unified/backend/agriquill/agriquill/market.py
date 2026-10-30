@@ -6,6 +6,7 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
+from . import baseline
 from .data import prices
 from .store import RecordCache, connect, now_iso
 
@@ -116,7 +117,9 @@ def km_between(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 def counted_kg(produce: str, qty_kg: int, area_ha: float | None) -> int:
     if area_ha is None or area_ha <= 0:
         return qty_kg
-    cap = int(area_ha * YIELD_T_HA[produce] * 1000 * LISTING_CAP_FACTOR)
+    official = baseline.official_yield(baseline.DEFAULT_COUNTRY, produce)
+    kg_ha = official.get("kg_ha") or YIELD_T_HA[produce] * 1000
+    cap = int(area_ha * kg_ha * LISTING_CAP_FACTOR)
     return min(qty_kg, cap)
 
 
@@ -435,6 +438,7 @@ def outlook(town: str, produce: str, on: str, today: date | None = None) -> dict
         "price": price,
         "advice": advice,
         "nearby": nearby,
+        "baseline": baseline.summary(baseline.DEFAULT_COUNTRY, produce, today),
         "yield_status": YIELD_STATUS,
     }
     _OUTLOOKS[key] = (time.time() + CACHE_TTL_S, result)
