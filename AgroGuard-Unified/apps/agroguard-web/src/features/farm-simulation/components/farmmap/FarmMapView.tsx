@@ -56,6 +56,7 @@ import { useFarmMapKeys } from './useFarmMapKeys.ts';
 import { useFarmMapPick } from './useFarmMapPick.ts';
 import { useFarmMapSync } from './useFarmMapSync.ts';
 import { useRoutePlanner, type Selection } from './useRoutePlanner.ts';
+import { useUiMode } from './useUiMode.ts';
 import { useToasts } from './useToasts.ts';
 import { useViewCounts } from './useViewCounts.ts';
 
@@ -136,6 +137,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   }, [engine, theme]);
 
   const guideLayout = useCallback((active: boolean) => setPanels({ left: !active, right: true }), []);
+  const ui = useUiMode();
   const planner = useRoutePlanner({ engine, selection, onRestore: setSelection, onFocusRight: guideLayout, toast: push });
   const { route, guide } = planner;
 
@@ -429,7 +431,12 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         onRoute={planner.open}
         onKeys={() => setKeysOpen(true)}
         onOpenFleet={onOpenFleet}
+        viewAs={ui.viewAs}
+        onViewAs={ui.mode === 'dev' ? ui.setViewAs : undefined}
       />
+      {ui.mode === 'dev' && ui.viewAs ? (
+        <p className="aq-fm-viewas-banner" role="status">{t('farmMap.mode.banner', { mode: t(ui.viewAs === 'farmer' ? 'farmMap.mode.farmer' : 'farmMap.mode.buyer') })}</p>
+      ) : null}
       <div className="aq-fm-left">
         {panels.left ? (
           <FarmMapLayerPanel

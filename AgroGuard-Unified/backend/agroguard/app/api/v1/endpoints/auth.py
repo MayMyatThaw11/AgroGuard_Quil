@@ -24,6 +24,8 @@ DEMO_ACCOUNTS = {"buyer@demo.com": ("buyer", "cooperative")}
 
 
 def account_for(email: str, payload: DemoLoginRequest) -> tuple[str, str | None]:
+    if email.strip().lower() in {e.strip().lower() for e in get_settings().dev_emails}:
+        return "dev", None
     if payload.account_type is not None:
         return payload.account_type, payload.buyer_kind
     return DEMO_ACCOUNTS.get(email, ("farmer", None))

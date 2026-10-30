@@ -34,3 +34,10 @@ test('Account: unknown values fall back to farmer', () => {
 test('Account: every buyer kind the API accepts is offered', () => {
   assert.deepEqual(BUYER_KINDS.map((k: { value: string }) => k.value), ['household', 'retail', 'restaurant', 'cooperative', 'processor', 'factory', 'msme']);
 });
+
+test('Account: a dev account is kept as dev', () => {
+  saveAccount({ account_type: 'dev' });
+  assert.equal(accountType(), 'dev');
+  assert.equal(buyerKind(), null);
+  clearAccount();
+});

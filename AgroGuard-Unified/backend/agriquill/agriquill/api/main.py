@@ -152,9 +152,13 @@ def _agroguard_caller(authorization: str | None) -> Caller | None:
     except HTTPException:
         return None
     name = str(claims.get("name") or f"agroguard-user-{claims['sub']}")
-    roles = frozenset({"buyer"}) if claims.get("role") == "buyer" else frozenset({"crew"})
+    role = claims.get("role")
+    account = f"ag:{claims['sub']}"
+    if role == "dev":
+        return Caller(name, ROLES, None, account, "cooperative")
+    roles = frozenset({"buyer"}) if role == "buyer" else frozenset({"crew"})
     kind = claims.get("buyer_kind") if "buyer" in roles else None
-    return Caller(name, roles, frozenset(), f"ag:{claims['sub']}", kind)
+    return Caller(name, roles, frozenset(), account, kind)
 
 
 def _reader(

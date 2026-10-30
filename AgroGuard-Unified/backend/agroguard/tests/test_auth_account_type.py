@@ -50,3 +50,18 @@ def test_buyer_demo_user_exists() -> None:
 def test_factory_and_msme_buyers_can_sign_up(kind: str) -> None:
     req = DemoLoginRequest(email="free@demo.com", account_type="buyer", buyer_kind=kind)
     assert account_for("free@demo.com", req) == ("buyer", kind)
+
+
+def test_dev_email_gets_dev_account(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.config import get_settings
+
+    monkeypatch.setenv("AGROGUARD_DEV_EMAILS", '["lead@demo.com"]')
+    get_settings.cache_clear()
+    try:
+        assert account_for("lead@demo.com", DemoLoginRequest(email="lead@demo.com")) == ("dev", None)
+        assert account_for("free@demo.com", DemoLoginRequest(email="free@demo.com")) == ("farmer", None)
+        chosen = DemoLoginRequest(email="lead@demo.com", account_type="buyer", buyer_kind="factory")
+        assert account_for("lead@demo.com", chosen) == ("dev", None)
+        assert claims(sign_token(5, "Lead", role="dev"))["role"] == "dev"
+    finally:
+        get_settings.cache_clear()

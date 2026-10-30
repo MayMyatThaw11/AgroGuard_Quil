@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     # AgriQill refuses actuation over HTTP and needs --allow-actuation on stdio,
     # so this is the unattended-chat guard, not the only barrier.
     mcp_chat_deny: list[str] = ["lorawan_actuate", "drone_spray_guard"]
+    dev_emails: list[str] = []
 
     jwt_secret: SecretStr | None = None
     jwt_ttl_minutes: int = 720

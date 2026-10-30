@@ -37,7 +37,8 @@ export function clearAccount() {
 }
 
 export function accountType() {
-  return read().account_type === 'buyer' ? 'buyer' : 'farmer'
+  const type = read().account_type
+  return type === 'buyer' || type === 'dev' ? type : 'farmer'
 }
 
 export function buyerKind() {

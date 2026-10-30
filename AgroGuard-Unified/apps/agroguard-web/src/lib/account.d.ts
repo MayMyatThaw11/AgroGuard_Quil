@@ -1,4 +1,4 @@
-export type AccountType = 'farmer' | 'buyer';
+export type AccountType = 'farmer' | 'buyer' | 'dev';
 export type BuyerKind = 'household' | 'retail' | 'restaurant' | 'cooperative' | 'processor' | 'factory' | 'msme';
 
 export const ACCOUNT_KEY: string;

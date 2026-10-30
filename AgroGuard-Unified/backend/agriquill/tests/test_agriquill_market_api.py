@@ -216,3 +216,9 @@ def test_coop_registers_farmer_who_claims_from_a_phone_without_account() -> None
         f"{BASE}/listings", json=listing, headers={"X-AgriQuill-Producer-Token": "nope"}
     )
     assert bad.status_code == 401
+
+
+def test_dev_token_gets_every_role() -> None:
+    dev = token(9, "Lead", role="dev")
+    assert post_listing(dev).status_code == 201
+    assert post_preorder(dev).status_code == 201
