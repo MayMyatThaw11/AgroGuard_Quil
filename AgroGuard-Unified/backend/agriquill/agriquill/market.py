@@ -51,6 +51,7 @@ SHORT_BELOW, GLUT_ABOVE = 0.8, 1.25
 PLANTING_AHEAD_DAYS = 45
 PRICE_FELL_PCT = -10.0
 CACHE_TTL_S = 60.0
+CACHE_MAX = 1000
 MAX_KG = 1_000_000
 _OUTLOOKS: dict[str, tuple[float, dict[str, Any]]] = {}
 
@@ -58,6 +59,16 @@ _OUTLOOKS: dict[str, tuple[float, dict[str, Any]]] = {}
 def market_open(town: str) -> bool:
     towns = {t.strip().lower() for t in get_settings().farm_market_towns.split(",") if t.strip()}
     return not towns or town.strip().lower() in towns
+
+
+def _remember(key: str, result: dict[str, Any]) -> None:
+    now = time.time()
+    if len(_OUTLOOKS) >= CACHE_MAX:
+        for stale in [k for k, (until, _) in _OUTLOOKS.items() if until <= now]:
+            _OUTLOOKS.pop(stale, None)
+    while len(_OUTLOOKS) >= CACHE_MAX:
+        _OUTLOOKS.pop(next(iter(_OUTLOOKS)))
+    _OUTLOOKS[key] = (now + CACHE_TTL_S, result)
 
 
 def clear_cache() -> None:
@@ -495,7 +506,7 @@ def outlook(town: str, produce: str, on: str, today: date | None = None) -> dict
         **({"no_reach": no_reach} if no_reach else {}),
         "yield_status": YIELD_STATUS,
     }
-    _OUTLOOKS[key] = (time.time() + CACHE_TTL_S, result)
+    _remember(key, result)
     return result
 
 

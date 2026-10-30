@@ -65,10 +65,11 @@ def _now(minutes_ago: int = 1) -> str:
 # ── B-W0-2: auth fails closed ────────────────────────────────────────────────
 
 
-def test_the_server_default_is_production() -> None:
+def test_the_server_default_is_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AGRIQUILL_ENVIRONMENT", raising=False)
     assert Settings.model_fields["environment"].default == "production"
     assert Settings(environment="development").is_development
-    assert not Settings().is_development
+    assert not Settings(_env_file=None).is_development
 
 
 def test_blank_settings_count_as_not_set(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -76,7 +77,7 @@ def test_blank_settings_count_as_not_set(monkeypatch: pytest.MonkeyPatch) -> Non
     # must not look like a configured token, or production would start with no sign-in.
     monkeypatch.setenv("AGRIQUILL_WRITE_TOKEN", "")
     monkeypatch.setenv("AGRIQUILL_USERS", "")
-    settings = Settings()
+    settings = Settings(_env_file=None)
     assert settings.write_token is None and settings.users is None
     settings.builtin_user = None
     with pytest.raises(RuntimeError, match="no sign-in is configured"):

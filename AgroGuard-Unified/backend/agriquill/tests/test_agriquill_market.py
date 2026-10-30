@@ -259,3 +259,11 @@ def test_towns_balance_lists_towns_with_data_and_their_centre() -> None:
     assert market.towns_balance("onion", ON.isoformat(), TODAY) == []
     with pytest.raises(ValueError):
         market.towns_balance("gold", ON.isoformat(), TODAY)
+
+
+def test_outlook_cache_stays_bounded_when_callers_vary_the_town() -> None:
+    for i in range(market.CACHE_MAX + 200):
+        market.outlook(f"Town {i}", "tomato", ON.isoformat(), TODAY)
+    assert len(market._OUTLOOKS) <= market.CACHE_MAX
+    again = market.outlook("Town 5", "tomato", ON.isoformat(), TODAY)
+    assert again["town"] == "Town 5"

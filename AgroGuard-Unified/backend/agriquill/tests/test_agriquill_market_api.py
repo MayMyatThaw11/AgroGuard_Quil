@@ -15,6 +15,7 @@ from agriquill import market, store
 from agriquill.api.main import create_app
 from agriquill.config import get_settings
 
+DAY = 86_400
 SECRET = "jwt-test-secret"
 BASE = "/api/v1/agriquill/market"
 READY = (date.today() + timedelta(days=20)).isoformat()
@@ -28,7 +29,7 @@ def b64(raw: bytes) -> str:
 def token(sub: int, name: str, **extra: str) -> dict[str, str]:
     header = b64(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
     body = b64(
-        json.dumps({"sub": str(sub), "name": name, "exp": int(time.time()) + 600, **extra}).encode()
+        json.dumps({"sub": str(sub), "name": name, "exp": int(time.time()) + DAY, **extra}).encode()
     )
     sig = b64(hmac.new(SECRET.encode(), f"{header}.{body}".encode(), hashlib.sha256).digest())
     return {"Authorization": f"Bearer {header}.{body}.{sig}"}
