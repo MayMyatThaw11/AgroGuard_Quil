@@ -46,3 +46,11 @@ test('Market: direct buyers within 50 km, bulk buyers within 300 km', async () =
   assert.deepEqual(withinReach(rows, 'direct').map((r) => r.id), ['near', 'unknown']);
   assert.deepEqual(withinReach(rows, 'bulk').map((r) => r.id), ['near', 'mid', 'unknown']);
 });
+
+test('Market: households and shops order in kg, bulk buyers in steps of 100 kg', async () => {
+  const { kgStep } = await import('../../src/features/farm-simulation/lib/farmmap/market.ts');
+  assert.equal(kgStep('household'), 1);
+  assert.equal(kgStep('retail'), 1);
+  assert.equal(kgStep('factory'), 100);
+  assert.equal(kgStep(null), 100);
+});

@@ -58,6 +58,7 @@ import { useFarmMapSync } from './useFarmMapSync.ts';
 import { useRoutePlanner, type Selection } from './useRoutePlanner.ts';
 import { useUiMode } from './useUiMode.ts';
 import { MarketPanel } from './MarketPanel.tsx';
+import { BuyerBoard, type BuyerPlace } from './BuyerBoard.tsx';
 import type { Farm } from '../../lib/farmmap/farmMapTypes.ts';
 import { marketEnabled } from '../../lib/farmmap/market.ts';
 import { useToasts } from './useToasts.ts';
@@ -316,6 +317,14 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const setLayer = (key: LayerKey, on: boolean) => setLayers((current) => ({ ...current, [key]: on }));
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
 
+  const buyerPlace = (): BuyerPlace => {
+    const centre = engine?.map().getCenter();
+    const lat = centre?.lat ?? data.anchors[0].lat;
+    const lon = centre?.lng ?? data.anchors[0].lon;
+    const near = data.anchors.reduce((best, a) => ((a.lat - lat) ** 2 + (a.lon - lon) ** 2 < (best.lat - lat) ** 2 + (best.lon - lon) ** 2 ? a : best), data.anchors[0]);
+    return { town: near.town, lat: near.lat, lon: near.lon };
+  };
+
   const rightBody = () => {
     if (tracing) return (
       <TraceDetail
@@ -394,6 +403,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         </DetailSection>
       </>
     );
+    if (ui.shown === 'buyer' && marketOn) return <BuyerBoard place={buyerPlace()} onDirections={(from, to) => planner.openTo(from, to)} />;
     return (
       <>
         <DetailSection>

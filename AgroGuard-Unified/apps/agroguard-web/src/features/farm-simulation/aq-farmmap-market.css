@@ -332,3 +332,44 @@
   .aq-fm-mk-offer,
   .aq-fm-mk-driver { animation: none; }
 }
+
+.aq-fm-mk-order-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aq-space-3);
+  padding: 0;
+  border: 0;
+  font: 500 13px/1.45 var(--aq-font-sans);
+  text-align: left;
+  color: var(--aq-text-strong);
+  background: none;
+  cursor: pointer;
+}
+
+.aq-fm-mk-candidates {
+  display: grid;
+  gap: var(--aq-space-2);
+  margin-top: var(--aq-space-3);
+}
+
+.aq-fm-mk-candidate {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--aq-space-1) var(--aq-space-3);
+  padding: var(--aq-space-3);
+  border-radius: var(--aq-radius-md);
+  font: 500 13px/1.4 var(--aq-font-sans);
+  font-variant-numeric: tabular-nums;
+  background: var(--aq-surface-tile);
+}
+
+.aq-fm-mk-candidate > :nth-child(3) { grid-column: 1; }
+.aq-fm-mk-candidate > :nth-child(4) { grid-column: 2; grid-row: 1 / span 3; }
+
+.aq-fm-mk-candidate.is-selected {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--aq-leaf-400) 22%, var(--aq-surface-card)), var(--aq-surface-tile));
+  background: linear-gradient(in oklch 135deg, color-mix(in oklch, var(--aq-leaf-400) 22%, var(--aq-surface-card)), var(--aq-surface-tile));
+}

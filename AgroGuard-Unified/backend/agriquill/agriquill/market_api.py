@@ -99,6 +99,8 @@ def _candidates(buyer: str, preorder_id: str) -> list[dict[str, Any]]:
                 "pickup": haul.pickup_for(offer["id"]),
             }
         )
+        if listing and offer["status"] == "selected":
+            rows[-1]["farm_lat"], rows[-1]["farm_lon"] = listing["lat"], listing["lon"]
     return rows
 
 
@@ -128,6 +130,16 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         caller: Any = caller_dep,
     ) -> list[dict[str, Any]]:
         return market.list_preorders(town, produce, channel, lat, lon)
+
+    @r.get("/preorders/mine")
+    async def my_preorders(caller: Any = caller_dep) -> list[dict[str, Any]]:
+        buyer, _ = _buyer(caller)
+        counts: dict[str, int] = {}
+        for offer in market.offers():
+            counts[offer["preorder_id"]] = counts.get(offer["preorder_id"], 0) + 1
+        rows = [p for p in market.preorders() if p["buyer"] == buyer]
+        rows.sort(key=lambda p: p["created_at"], reverse=True)
+        return [{**p, "offers": counts.get(p["id"], 0)} for p in rows]
 
     @r.post("/preorders", status_code=201)
     async def post_preorder(

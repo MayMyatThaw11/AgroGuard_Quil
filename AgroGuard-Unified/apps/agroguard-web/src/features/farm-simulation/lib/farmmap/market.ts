@@ -149,3 +149,34 @@ export const applyToPreorder = (preorderId: string, listingId: string, qtyKg: nu
   request<Offer>(`${BASE}/preorders/${encodeURIComponent(preorderId)}/offers`, json({ listing_id: listingId, qty_kg: qtyKg }));
 export const getMyOffers = () => request<Offer[]>(`${BASE}/offers/mine`);
 export const bookPickup = (offerId: string) => request<Pickup>(`${BASE}/offers/${encodeURIComponent(offerId)}/pickup`, json({}));
+
+export const PRODUCE: readonly Produce[] = ['rice', 'maize', 'pulses', 'onion', 'tomato', 'chili', 'potato', 'vegetables', 'fruit'];
+export const SMALL_BUYERS: readonly string[] = ['household', 'retail'];
+
+export interface MyPreorder extends Preorder {
+  status: 'open' | 'closed';
+  offers: number;
+}
+
+export interface Candidate {
+  id: string;
+  preorder_id: string;
+  status: 'candidate' | 'selected';
+  qty_kg: number;
+  farmer_name: string | null;
+  ready_on: string | null;
+  farm_town: string | null;
+  km: number;
+  farm_lat?: number;
+  farm_lon?: number;
+  pickup: (Pickup & { fare_mmk?: number }) | null;
+}
+
+export const kgStep = (buyerKind: string | null): number => (buyerKind && SMALL_BUYERS.includes(buyerKind) ? 1 : 100);
+
+export const postPreorder = (body: { produce: Produce; qty_kg: number; needed_by: string; town: string; lat: number; lon: number; price_offer_mmk_kg?: number }) =>
+  request<Preorder>(`${BASE}/preorders`, json(body));
+export const myPreorders = () => request<MyPreorder[]>(`${BASE}/preorders/mine`);
+export const preorderOffers = (preorderId: string) => request<Candidate[]>(`${BASE}/preorders/${encodeURIComponent(preorderId)}/offers`);
+export const selectOffer = (preorderId: string, offerId: string) =>
+  request<Candidate>(`${BASE}/preorders/${encodeURIComponent(preorderId)}/offers/${encodeURIComponent(offerId)}/select`, json({}));

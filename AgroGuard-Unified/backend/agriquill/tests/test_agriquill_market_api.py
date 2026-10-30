@@ -234,3 +234,21 @@ def test_manager_access_code_is_dev_and_can_buy() -> None:
         assert post_listing(code).status_code == 201
     finally:
         settings.users = saved
+
+
+def test_buyer_sees_only_their_own_preorders_with_offer_counts() -> None:
+    _, order, _ = offer_flow()
+    post_preorder(BUYER_B)
+    mine = client.get(f"{BASE}/preorders/mine", headers=BUYER).json()
+    assert [p["id"] for p in mine] == [order["id"]]
+    assert mine[0]["offers"] == 1
+    assert client.get(f"{BASE}/preorders/mine", headers=FARMER).status_code == 403
+
+
+def test_buyer_sees_farm_location_only_after_selecting() -> None:
+    _, order, offer = offer_flow()
+    [row] = client.get(f"{BASE}/preorders/{order['id']}/offers", headers=BUYER).json()
+    assert "farm_lat" not in row
+    client.post(f"{BASE}/preorders/{order['id']}/offers/{offer['id']}/select", headers=BUYER)
+    [chosen] = client.get(f"{BASE}/preorders/{order['id']}/offers", headers=BUYER).json()
+    assert chosen["farm_lat"] == 17.1 and chosen["farm_lon"] == 96.05
