@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { outlookTone, pickupStep, produceForCrop, scaleAngle, sortByDistance, viss } from '../../src/features/farm-simulation/lib/farmmap/market.ts';
+import { barWidth, outlookTone, pickupStep, produceForCrop, sortByDistance, viss } from '../../src/features/farm-simulation/lib/farmmap/market.ts';
 
 test('Market: each outlook level has a tone and a word, never colour alone', () => {
   assert.equal(outlookTone('short'), 'ok');
@@ -23,12 +23,12 @@ test('Market: the pickup timeline advances one step every 40 seconds and stops a
   assert.equal(pickupStep('2026-10-30T10:00:00Z', start + 3_600_000), 4);
 });
 
-test('Market: the scale tilts toward the heavier side and never past 14 degrees', () => {
-  assert.equal(scaleAngle(1), 0);
-  assert.equal(scaleAngle(2), 12);
-  assert.equal(scaleAngle(10), 14);
-  assert.equal(scaleAngle(0.1), -10.8);
-  assert.equal(scaleAngle(null), 0);
+test('Market: bars share one scale and a small non-zero amount stays visible', () => {
+  assert.equal(barWidth(50, 100), 50);
+  assert.equal(barWidth(100, 100), 100);
+  assert.equal(barWidth(0, 100), 0);
+  assert.equal(barWidth(1, 10000), 2);
+  assert.equal(barWidth(5, 0), 0);
 });
 
 test('Market: viss is 1.63293 kg', () => {

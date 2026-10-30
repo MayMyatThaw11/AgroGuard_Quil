@@ -10,6 +10,8 @@
   --aq-status-h: 28px;
   --aq-fm-left-w: 284px;
   --aq-fm-right-w: 360px;
+  --aq-fm-supply: var(--aq-leaf-600);
+  --aq-fm-demand: #2f6fd0;
   --aq-fm-gutter: 10px;
   --aq-space-7: 14px;
   --aq-fm-ramp-default: linear-gradient(90deg, var(--aq-water-300), var(--aq-water-500));
@@ -73,5 +75,7 @@
 :root[data-theme='dark'] .aq-root {
   --aq-attrib-bg: rgba(15, 19, 17, 0.82);
   --aq-map-sea: #153a3e;
+  --aq-fm-supply: var(--aq-leaf-500);
+  --aq-fm-demand: #5b8ff0;
   --aq-map-space: radial-gradient(120% 90% at 50% 45%, #14201d 0%, #101a19 45%, #0b1214 100%);
 }

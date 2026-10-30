@@ -71,6 +71,7 @@ interface FarmMapViewProps {
 }
 
 const RIGHT_WIDTH = 360;
+const BUYER_WIDTH = 620;
 const NO_FILTERS: Filters = { crops: null, status: null, organic: false };
 const OFFICE_ANCHOR = 'T0';
 const SPOT_DECIMALS = 4;
@@ -316,6 +317,8 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const rightKey = tracing ? 'trace' : route ? 'route' : selection ? `${selection.kind}-${selection.id}` : spot ? `site-${spot.lat}-${spot.lon}` : 'overview';
   const setLayer = (key: LayerKey, on: boolean) => setLayers((current) => ({ ...current, [key]: on }));
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
+  const buyerView = ui.shown === 'buyer' && marketOn;
+  const rightWidth = buyerView ? Math.max(RIGHT_WIDTH, Math.min(BUYER_WIDTH, mapWidth - 420)) : RIGHT_WIDTH;
 
   const buyerPlace = (): BuyerPlace => {
     const centre = engine?.map().getCenter();
@@ -403,7 +406,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         </DetailSection>
       </>
     );
-    if (ui.shown === 'buyer' && marketOn) return <BuyerBoard place={buyerPlace()} onDirections={(from, to) => planner.openTo(from, to)} />;
+    if (buyerView) return <BuyerBoard place={buyerPlace()} onDirections={(from, to) => planner.openTo(from, to)} />;
     return (
       <>
         <DetailSection>
@@ -439,7 +442,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   };
 
   return (
-    <div ref={rootRef} className={`aq-root aq-farmmap${tracing ? ' is-tracing' : ''}${panels.right ? ' has-details' : ''}`}>
+    <div ref={rootRef} className={`aq-root aq-farmmap${tracing ? ' is-tracing' : ''}${buyerView ? ' is-buyer' : ''}${panels.right ? ' has-details' : ''}`} style={buyerView ? ({ '--aq-fm-right-w': `${rightWidth}px` } as React.CSSProperties) : undefined}>
       <div className="aq-fm-stage">
         <div ref={mapRef} className="aq-fm-map" />
         <canvas ref={fogRef} className="aq-fm-fog" aria-hidden="true" />
@@ -501,7 +504,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
           pitch={stats.pitch}
           terrain={terrain}
           cinematic={cinematic}
-          rightOffset={panels.right ? RIGHT_WIDTH + 22 : 56}
+          rightOffset={panels.right ? rightWidth + 22 : 56}
           onTerrain={setTerrain}
           onCinematic={setCinematic}
           onLocate={locate}

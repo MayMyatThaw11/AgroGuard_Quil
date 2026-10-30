@@ -5,6 +5,7 @@ import type { RouteStop } from '../../lib/farmmap/engine/engineTypes.ts';
 import {
   getOutlook,
   kgStep,
+  outlookTone,
   myPreorders,
   postPreorder,
   preorderOffers,
@@ -18,7 +19,7 @@ import {
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { AqButton } from '../aq/aqPrimitives.tsx';
 import { DetailSection } from './detailParts.tsx';
-import { TownOutlook, useWeight } from './TownOutlook.tsx';
+import { LEVEL_KEY, SupplyBars, TownOutlook, useWeight } from './TownOutlook.tsx';
 
 export interface BuyerPlace {
   town: string;
@@ -70,6 +71,46 @@ const Candidates: React.FC<{ order: MyPreorder; place: BuyerPlace; onDirections:
   );
 };
 
+const SupplyChart: React.FC<{ town: string; on: string; onPick: (p: Produce) => void }> = ({ town, on, onPick }) => {
+  const t = useT();
+  const [rows, setRows] = useState<Outlook[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    setRows(null);
+    void Promise.allSettled(PRODUCE.map((p) => getOutlook(town, p, on))).then((all) => {
+      if (!live) return;
+      const found = all.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+      setRows(found.filter((o) => o.supply_kg > 0 || o.demand_kg > 0).sort((a, b) => b.supply_kg - a.supply_kg));
+    });
+    return () => {
+      live = false;
+    };
+  }, [town, on]);
+  const max = Math.max(0, ...(rows ?? []).flatMap((o) => [o.supply_kg, o.demand_kg]));
+  return (
+    <DetailSection className="aq-fm-mk-supply">
+      <p className="aq-fm-mk-subhead">{t('farmMap.buyer.supplyTitle', { town })}</p>
+      <p className="aq-fm-mk-quiet">{t('farmMap.buyer.supplyHint')}</p>
+      <p className="aq-fm-mk-legend" aria-hidden="true">
+        <span className="is-supply">{t('farmMap.market.chart.supply')}</span>
+        <span className="is-demand">{t('farmMap.market.chart.demand')}</span>
+        <span className="is-early">{t('farmMap.market.chart.early')}</span>
+      </p>
+      {rows === null ? <p className="aq-fm-mk-quiet">…</p> : null}
+      {rows && !rows.length ? <p className="aq-fm-mk-quiet">{t('farmMap.buyer.supplyEmpty', { town })}</p> : null}
+      {rows?.map((o) => (
+        <button key={o.produce} type="button" className="aq-fm-mk-supply-row" onClick={() => onPick(o.produce)}>
+          <span className="aq-fm-mk-supply-head">
+            <strong>{t(produceKey(o.produce))}</strong>
+            <span className={`aq-fm-mk-level is-${outlookTone(o.level)}`}><i aria-hidden="true" />{t(LEVEL_KEY[o.level])}</span>
+          </span>
+          <SupplyBars supply={o.supply_kg} demand={o.demand_kg} max={max} early={o.coverage.label === 'early'} />
+        </button>
+      ))}
+    </DetailSection>
+  );
+};
+
 export const BuyerBoard: React.FC<{ place: BuyerPlace; onDirections: (from: RouteStop, to: RouteStop) => void }> = ({ place, onDirections }) => {
   const t = useT();
   const weight = useWeight();
@@ -92,7 +133,11 @@ export const BuyerBoard: React.FC<{ place: BuyerPlace; onDirections: (from: Rout
   useEffect(loadOrders, [loadOrders]);
   useEffect(() => setTown(place.town), [place.town]);
   useEffect(() => {
-    getOutlook(town, produce, needed).then(setOutlook, () => setOutlook(null));
+    let live = true;
+    getOutlook(town, produce, needed).then((o) => live && setOutlook(o), () => live && setOutlook(null));
+    return () => {
+      live = false;
+    };
   }, [town, produce, needed]);
 
   const post = async () => {
@@ -146,7 +191,9 @@ export const BuyerBoard: React.FC<{ place: BuyerPlace; onDirections: (from: Rout
         </DetailSection>
       ) : null}
 
-      {outlook ? <TownOutlook outlook={outlook} crop="veg" produceWord={t(produceKey(produce))} /> : null}
+      {open && outlook ? <TownOutlook outlook={outlook} produceWord={t(produceKey(produce))} /> : null}
+
+      {!open ? <SupplyChart town={place.town} on={needed} onPick={(p) => { setProduce(p); setOpen(true); }} /> : null}
 
       <DetailSection>
         <p className="aq-fm-mk-subhead">{t('farmMap.buyer.mine')}</p>

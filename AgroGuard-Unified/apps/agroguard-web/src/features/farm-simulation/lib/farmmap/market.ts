@@ -109,7 +109,6 @@ const CROP_PRODUCE: Record<CropId, Produce[]> = {
 const TONE: Record<OutlookLevel, Tone> = { short: 'ok', balanced: 'info', glut: 'risk', 'no-buyers': 'watch', 'no-data': 'info' };
 const KG_PER_VISS = 1.63293;
 const STEP_MS = 40_000;
-const SCALE_MAX_DEG = 14;
 const BASE = '/api/v1/agriquill/market';
 
 export const outlookTone = (level: OutlookLevel): Tone => TONE[level];
@@ -121,9 +120,9 @@ export function pickupStep(createdAt: string, now: number): number {
   return Math.max(0, Math.min(4, Math.floor((now - Date.parse(createdAt)) / STEP_MS)));
 }
 
-export function scaleAngle(ratio: number | null): number {
-  if (ratio === null) return 0;
-  return Math.round(Math.max(-SCALE_MAX_DEG, Math.min(SCALE_MAX_DEG, (ratio - 1) * 12)) * 10) / 10;
+export function barWidth(value: number, max: number): number {
+  if (value <= 0 || max <= 0) return 0;
+  return Math.max(2, Math.round((value / max) * 100));
 }
 
 export const REACH_KM: Record<Channel, number> = { direct: 50, bulk: 300 };

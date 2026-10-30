@@ -1,12 +1,10 @@
 import React from 'react';
 import { ArrowDownRight, Layers, MapPin, Package, Sprout, Store, TrendingDown } from 'lucide-react';
-import { CROPS } from '../../lib/farmmap/farmMapTheme.ts';
-import type { CropId } from '../../lib/farmmap/farmMapTypes.ts';
-import { isPrice, outlookTone, scaleAngle, viss, type Advice, type Outlook, type OutlookLevel } from '../../lib/farmmap/market.ts';
+import { barWidth, isPrice, outlookTone, viss, type Advice, type Outlook, type OutlookLevel } from '../../lib/farmmap/market.ts';
 import { activeLocale, useT, type Key } from '../../lib/i18n.ts';
 import { DetailSection } from './detailParts.tsx';
 
-const LEVEL_KEY: Record<OutlookLevel, Key> = {
+export const LEVEL_KEY: Record<OutlookLevel, Key> = {
   short: 'farmMap.market.level.short',
   balanced: 'farmMap.market.level.balanced',
   glut: 'farmMap.market.level.glut',
@@ -48,44 +46,30 @@ export function useWeight(): (kg: number) => string {
 
 const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(activeLocale(), { day: 'numeric', month: 'short' });
 
-export const MarketScale: React.FC<{ outlook: Outlook; crop: CropId; early: boolean }> = ({ outlook, crop, early }) => {
+export const SupplyBars: React.FC<{ supply: number; demand: number; max?: number; early?: boolean }> = ({ supply, demand, max, early = false }) => {
   const t = useT();
   const weight = useWeight();
-  const angle = scaleAngle(outlook.demand_kg ? outlook.supply_kg / outlook.demand_kg : outlook.supply_kg ? 2 : null);
-  const drop = Math.sin((angle * Math.PI) / 180) * 84;
-  const colour = CROPS[crop]?.color ?? 'var(--aq-leaf-400)';
+  const top = max ?? Math.max(supply, demand);
+  const rows = [
+    { kind: 'supply', label: t('farmMap.market.chart.supply'), value: supply },
+    { kind: 'demand', label: t('farmMap.market.chart.demand'), value: demand },
+  ];
   return (
-    <figure className={`aq-fm-mk-scale ${early ? 'is-early' : ''}`} aria-label={`${t('farmMap.market.coming', { w: weight(outlook.supply_kg) })}, ${t('farmMap.market.wanted', { w: weight(outlook.demand_kg) })}`}>
-      <svg viewBox="0 0 240 132" role="presentation">
-        <defs>
-          <linearGradient id="aq-fm-mk-harvest" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={colour} stopOpacity="0.95" />
-            <stop offset="1" stopColor={colour} stopOpacity="0.55" />
-          </linearGradient>
-        </defs>
-        <path className="aq-fm-mk-post" d="M120 30 V118 M96 120 H144" />
-        <g className="aq-fm-mk-beam" style={{ transform: `rotate(${angle}deg)` }}>
-          <path d="M36 30 H204" />
-        </g>
-        <circle className="aq-fm-mk-pivot" cx="120" cy="30" r="5" />
-        <g className="aq-fm-mk-pan" style={{ transform: `translateY(${drop}px)` }}>
-          <path className="aq-fm-mk-string" d="M36 30 L18 72 M36 30 L54 72" />
-          <path className="aq-fm-mk-bowl is-harvest" d="M12 72 Q36 96 60 72 Z" fill="url(#aq-fm-mk-harvest)" />
-        </g>
-        <g className="aq-fm-mk-pan" style={{ transform: `translateY(${-drop}px)` }}>
-          <path className="aq-fm-mk-string" d="M204 30 L186 72 M204 30 L222 72" />
-          <path className="aq-fm-mk-bowl is-buyers" d="M180 72 Q204 96 228 72 Z" />
-        </g>
-      </svg>
-      <figcaption>
-        <span>{t('farmMap.market.coming', { w: weight(outlook.supply_kg) })}</span>
-        <span>{t('farmMap.market.wanted', { w: weight(outlook.demand_kg) })}</span>
-      </figcaption>
-    </figure>
+    <div className={`aq-fm-mk-bars ${early ? 'is-early' : ''}`}>
+      {rows.map((row) => (
+        <div key={row.kind} className={`aq-fm-mk-bar is-${row.kind}`} title={`${row.label}: ${weight(row.value)}`}>
+          <span className="aq-fm-mk-bar-label">{row.label}</span>
+          <span className="aq-fm-mk-bar-value">{weight(row.value)}</span>
+          <span className="aq-fm-mk-bar-track" aria-hidden="true">
+            <span className="aq-fm-mk-bar-fill" style={{ width: `${barWidth(row.value, top)}%` }} />
+          </span>
+        </div>
+      ))}
+    </div>
   );
 };
 
-export const TownOutlook: React.FC<{ outlook: Outlook; crop: CropId; produceWord: string; onAdvice?: (advice: Advice) => void }> = ({ outlook, crop, produceWord, onAdvice }) => {
+export const TownOutlook: React.FC<{ outlook: Outlook; produceWord: string; onAdvice?: (advice: Advice) => void }> = ({ outlook, produceWord, onAdvice }) => {
   const t = useT();
   const weight = useWeight();
   const tone = outlookTone(outlook.level);
@@ -104,7 +88,7 @@ export const TownOutlook: React.FC<{ outlook: Outlook; crop: CropId; produceWord
         </span>
       </div>
       {early ? <p className="aq-fm-mk-early">{t('farmMap.market.early', { n: outlook.coverage.listings, b: outlook.coverage.buyers })}</p> : null}
-      <MarketScale outlook={outlook} crop={crop} early={early} />
+      <SupplyBars supply={outlook.supply_kg} demand={outlook.demand_kg} early={early} />
       <p className="aq-fm-mk-quiet">{t('farmMap.market.window', { from: day(from), to: day(to) })}</p>
       {isPrice(price) ? (
         <div className="aq-fm-mk-price">
