@@ -16,6 +16,8 @@ _STORE = RecordCache("contracts.sqlite")
 PRODUCER = "producer"
 URL = "agriquill://producers"
 KINDS = frozenset({"individual", "household", "group"})
+WANTS = ("cash-at-harvest", "pickup-needed", "inputs-needed", "flexible-date")
+CAN_OFFER = ("weekly-delivery", "grade-sorting", "group-volume")
 CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
 CODE_LENGTH = 6
 SAME_PLACE_M = 50.0
@@ -75,6 +77,13 @@ def _crops(raw: Any) -> list[dict[str, Any]]:
     if not crops:
         raise ValueError("add at least one crop with its harvest month")
     return crops
+
+
+def _flags(raw: Any, allowed: tuple[str, ...], field: str) -> list[str]:
+    picked = [str(x) for x in raw or []]
+    if any(x not in allowed for x in picked):
+        raise ValueError(f"{field} must be from: {', '.join(allowed)}")
+    return [x for x in allowed if x in picked]
 
 
 def _members(raw: Any) -> list[dict[str, Any]]:
@@ -174,6 +183,8 @@ def create(actor: str, actor_buyer_kind: str | None, body: dict[str, Any]) -> di
         "name": name,
         "members": _members(body.get("members")),
         "crops": _crops(body.get("crops")),
+        "wants": _flags(body.get("wants"), WANTS, "wants"),
+        "can_offer": _flags(body.get("can_offer"), CAN_OFFER, "can_offer"),
         "lat": lat,
         "lon": lon,
         "public_lat": round(lat, PUBLIC_DECIMALS),
@@ -248,6 +259,10 @@ def update(account: str, producer_id: str, body: dict[str, Any]) -> dict[str, An
             new["name"] = str(body["name"]).strip()[:80] or old["name"]
         if "crops" in body:
             new["crops"] = _crops(body["crops"])
+        if "wants" in body:
+            new["wants"] = _flags(body["wants"], WANTS, "wants")
+        if "can_offer" in body:
+            new["can_offer"] = _flags(body["can_offer"], CAN_OFFER, "can_offer")
         if total_area(new) > MAX_FARM_HA:
             raise ValueError(f"Farm Map is for farms up to {MAX_FARM_HA:.0f} ha for now")
         _check_managed_growth(old, new)

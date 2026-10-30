@@ -114,12 +114,15 @@ def km_between(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 6371.0 * 2 * math.asin(math.sqrt(a))
 
 
+def yield_kg_ha(produce: str) -> float:
+    official = baseline.official_yield(baseline.DEFAULT_COUNTRY, produce)
+    return official.get("kg_ha") or YIELD_T_HA[produce] * 1000
+
+
 def counted_kg(produce: str, qty_kg: int, area_ha: float | None) -> int:
     if area_ha is None or area_ha <= 0:
         return qty_kg
-    official = baseline.official_yield(baseline.DEFAULT_COUNTRY, produce)
-    kg_ha = official.get("kg_ha") or YIELD_T_HA[produce] * 1000
-    cap = int(area_ha * kg_ha * LISTING_CAP_FACTOR)
+    cap = int(area_ha * yield_kg_ha(produce) * LISTING_CAP_FACTOR)
     return min(qty_kg, cap)
 
 

@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
-from . import haul, market, producers
+from . import haul, market, producers, season_match
 from .config import get_settings
 
 
@@ -198,7 +198,51 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
 
     @r.get("/offers/mine")
     async def mine(caller: Any = caller_dep) -> list[dict[str, Any]]:
-        return _mine(_farmer(caller))
+        farmer = _farmer(caller)
+        season_match.activate()
+        return _mine(farmer)
+
+    @r.post("/season-orders", status_code=201)
+    async def post_season_order(
+        body: dict[str, Any] = _BODY, caller: Any = caller_dep
+    ) -> dict[str, Any]:
+        buyer, kind = _buyer(caller)
+        return _run(season_match.post_order, buyer, kind, {**body, "buyer_name": caller.name})
+
+    @r.get("/season-orders/mine")
+    async def my_season_orders(caller: Any = caller_dep) -> list[dict[str, Any]]:
+        buyer, _ = _buyer(caller)
+        return season_match.mine(buyer)
+
+    @r.get("/season-orders/matches")
+    async def season_matches(
+        producer_id: str = Query(..., max_length=40), caller: Any = caller_dep
+    ) -> list[dict[str, Any]]:
+        farmer = _farmer(caller)
+        season_match.activate()
+        return _run(season_match.matches, farmer, producer_id)
+
+    @r.post("/season-orders/{order_id}/reserve", status_code=201)
+    async def reserve_season(
+        order_id: str, body: dict[str, Any] = _BODY, caller: Any = caller_dep
+    ) -> dict[str, Any]:
+        return _run(
+            season_match.reserve,
+            _farmer(caller),
+            str(body.get("producer_id") or ""),
+            order_id,
+            body.get("kg"),
+        )
+
+    @r.post("/offers/{offer_id}/paid")
+    async def paid(
+        offer_id: str, body: dict[str, Any] = _BODY, caller: Any = caller_dep
+    ) -> dict[str, Any]:
+        return _run(season_match.mark_paid, _farmer(caller), offer_id, body.get("paid_on"))
+
+    @r.get("/buyers/{account}/reliability")
+    async def buyer_record(account: str, caller: Any = caller_dep) -> dict[str, Any]:
+        return season_match.buyer_reliability(account)
 
     @r.get("/offers/{offer_id}/trip")
     async def trip(offer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
