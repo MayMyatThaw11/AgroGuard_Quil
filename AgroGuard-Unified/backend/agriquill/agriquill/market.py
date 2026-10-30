@@ -256,11 +256,14 @@ def list_preorders(
     channel: str | None = None,
     lat: float | None = None,
     lon: float | None = None,
+    farmer: str | None = None,
 ) -> list[dict[str, Any]]:
+    mine = {x["id"] for x in listings() if farmer and x["farmer"] == farmer}
     rows = [
         p
         for p in preorders()
         if p["status"] == "open"
+        and (not p["target_listing_ids"] or mine & set(p["target_listing_ids"]))
         and (town is None or p["town"].lower() == town.lower())
         and (produce is None or p["produce"] == produce)
         and (channel is None or p["channel"] == channel)
@@ -282,6 +285,8 @@ def apply(farmer: str, preorder_id: str, body: dict[str, Any]) -> dict[str, Any]
     hit = _STORE.get(LISTING, str(body.get("listing_id") or ""))
     if hit is None or hit["payload"]["farmer"] != farmer:
         raise PermissionError("that listing is not yours")
+    if order["target_listing_ids"] and hit["payload"]["id"] not in order["target_listing_ids"]:
+        raise PermissionError("this order was sent to other farms")
     kg = _kg(body)
     record = {
         "id": f"off-{uuid.uuid4().hex[:12]}",

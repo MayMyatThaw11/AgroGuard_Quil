@@ -5,7 +5,7 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
-from . import market, producers, reach, season_match
+from . import market, producers, reach, season_match, supply
 from .store import RecordCache
 
 _STORE = RecordCache("contracts.sqlite")
@@ -141,6 +141,51 @@ def cues(
                 break
         row = {"id": key, "producer_id": producer_id, "cue": cue}
         _STORE.update(CUE, key, lambda _old: row, URL)
+    else:
+        row = hit["payload"]
+    cue = row["cue"]
+    if cue is None or (since and cue["issued_on"] <= since):
+        return []
+    return [cue]
+
+
+def buyer_cues(
+    buyer: str, since: str | None = None, today: date | None = None
+) -> list[dict[str, Any]]:
+    today = today or date.today()
+    key = f"buyer:{buyer}|{today.isoformat()}"
+    hit = _STORE.get(CUE, key)
+    if hit is None:
+        cue = None
+        for search in supply.searches(buyer):
+            found = supply.supply(
+                search["produce"],
+                search["lat"],
+                search["lon"],
+                search["radius_km"],
+                search["kg"],
+                search["budget_mmk_kg"],
+                today + timedelta(days=search["by_in_days"]),
+                today,
+            )
+            fits = [
+                r for g in found["groups"] for r in g["listings"] if r["band"] in (None, "within")
+            ]
+            if fits:
+                cue = {
+                    "id": f"cue-{uuid.uuid4().hex[:12]}",
+                    "kind": "supply-match",
+                    "params": {
+                        "produce": search["produce"],
+                        "n": len(fits),
+                        "kg": sum(r["qty_kg"] for r in fits),
+                    },
+                    "issued_on": today.isoformat(),
+                }
+                break
+        row = {"id": key, "producer_id": f"buyer:{buyer}", "cue": cue}
+        if cue:
+            _STORE.update(CUE, key, lambda _old: row, URL)
     else:
         row = hit["payload"]
     cue = row["cue"]

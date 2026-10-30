@@ -178,3 +178,40 @@ def test_cues_and_season_routes_require_the_farmer_and_candidates_carry_reliabil
     )
     rows = client.get(f"{BASE}/preorders/{pre['id']}/offers", headers=BUYER).json()
     assert rows[0]["reliability"] == {"delivered": 0, "on_time": 0}
+
+
+def test_supply_search_is_for_buyers_and_hides_points_and_owners() -> None:
+    client.post(
+        f"{BASE}/listings",
+        json={
+            "produce": "tomato",
+            "qty_kg": 400,
+            "ready_on": "2027-03-15",
+            "town": "Hmawbi",
+            "lat": 17.1,
+            "lon": 96.05,
+            "ask_mmk_kg": 1500,
+        },
+        headers=FARMER,
+    )
+    params = {"produce": "tomato", "lat": 17.1, "lon": 96.05, "by": "2027-03-20"}
+    assert client.get(f"{BASE}/supply", params=params, headers=FARMER).status_code == 403
+    found = client.get(f"{BASE}/supply", params=params, headers=BUYER)
+    assert found.status_code == 200
+    [group] = found.json()["groups"]
+    assert group["town"] == "Hmawbi" and group["listings"][0]["landed_low"] > 1500
+    assert "ag:1" not in found.text and '"lat"' not in found.text
+    saved = client.post(
+        f"{BASE}/saved-searches",
+        json={"produce": "tomato", "lat": 17.1, "lon": 96.05, "radius_km": 50},
+        headers=BUYER,
+    )
+    assert saved.status_code == 201
+    bad = client.post(
+        f"{BASE}/saved-searches",
+        json={"produce": "tomato", "lat": 17.1, "lon": 96.05, "radius_km": 5000},
+        headers=BUYER,
+    )
+    assert bad.status_code == 422
+    assert client.get(f"{BASE}/cues/buyer", headers=FARMER).status_code == 403
+    assert client.get(f"{BASE}/cues/buyer", headers=BUYER).status_code == 200

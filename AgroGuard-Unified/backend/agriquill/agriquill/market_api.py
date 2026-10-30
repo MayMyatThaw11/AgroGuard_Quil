@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
-from . import cropvalue, cues, haul, market, market_signals, producers, reach, season_match
+from . import cropvalue, cues, haul, market, market_signals, producers, reach, season_match, supply
 from .config import get_settings
 from .data import regions
 
@@ -158,7 +158,8 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         lon: float | None = Query(None, ge=-180, le=180),
         caller: Any = caller_dep,
     ) -> list[dict[str, Any]]:
-        return market.list_preorders(town, produce, channel, lat, lon)
+        farmer = account_of(caller) if {"crew", "manager"} & set(caller.roles) else None
+        return market.list_preorders(town, produce, channel, lat, lon, farmer)
 
     @r.get("/preorders/mine")
     async def my_preorders(caller: Any = caller_dep) -> list[dict[str, Any]]:
@@ -201,6 +202,33 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
     @r.get("/producers/{producer_id}/season")
     async def season(producer_id: str, caller: Any = caller_dep) -> dict[str, Any]:
         return _run(season_match.season_record, _farmer(caller), producer_id)
+
+    @r.get("/supply")
+    async def supply_search(
+        produce: str = Query(..., max_length=40),
+        lat: float = Query(..., ge=-90, le=90),
+        lon: float = Query(..., ge=-180, le=180),
+        radius_km: float = Query(supply.DEFAULT_RADIUS_KM, gt=0, le=supply.MAX_RADIUS_KM),
+        kg: int | None = Query(None, ge=1),
+        budget: float | None = Query(None, gt=0),
+        by: str | None = Query(None, max_length=10),
+        caller: Any = caller_dep,
+    ) -> dict[str, Any]:
+        _buyer(caller)
+        by_date = market._day(by, "by") if by else None
+        return _run(supply.supply, produce, lat, lon, radius_km, kg, budget, by_date)
+
+    @r.post("/saved-searches", status_code=201)
+    async def save_search(body: dict[str, Any] = _BODY, caller: Any = caller_dep) -> dict[str, Any]:
+        buyer, _ = _buyer(caller)
+        return _run(supply.save_search, buyer, body)
+
+    @r.get("/cues/buyer")
+    async def buyer_cues(
+        since: str | None = Query(None, max_length=10), caller: Any = caller_dep
+    ) -> list[dict[str, Any]]:
+        buyer, _ = _buyer(caller)
+        return cues.buyer_cues(buyer, since)
 
     @r.get("/surplus")
     async def surplus(
