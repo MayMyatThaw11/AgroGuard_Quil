@@ -366,6 +366,33 @@ def _balance(town: str, produce: str, on: date) -> dict[str, Any]:
     }
 
 
+def towns_balance(produce: str, on: str, today: date | None = None) -> list[dict[str, Any]]:
+    produce = produce.strip().lower()
+    if produce not in PRODUCE:
+        raise ValueError(f"produce must be one of {', '.join(sorted(PRODUCE))}")
+    on_day = _day(on, "on")
+    names = {x["town"] for x in listings() if x["produce"] == produce}
+    names |= {p["town"] for p in preorders() if p["produce"] == produce and p["status"] == "open"}
+    rows = []
+    for town in sorted(names):
+        here = _balance(town, produce, on_day)
+        if here["level"] == "no-data" or not here["centre"]:
+            continue
+        rows.append(
+            {
+                "town": town,
+                "level": here["level"],
+                "supply_kg": here["supply_kg"],
+                "demand_kg": here["demand_kg"],
+                "listings": here["listings"],
+                "buyers": here["buyers"],
+                "lat": round(here["centre"][0], 4),
+                "lon": round(here["centre"][1], 4),
+            }
+        )
+    return rows
+
+
 def coverage(listing_count: int, buyer_count: int) -> str:
     if listing_count < 10 or buyer_count < 3:
         return "early"

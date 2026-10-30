@@ -215,3 +215,26 @@ def test_supply_search_is_for_buyers_and_hides_points_and_owners() -> None:
     assert bad.status_code == 422
     assert client.get(f"{BASE}/cues/buyer", headers=FARMER).status_code == 403
     assert client.get(f"{BASE}/cues/buyer", headers=BUYER).status_code == 200
+
+
+def test_outlook_towns_route_lists_towns_with_data() -> None:
+    client.post(
+        f"{BASE}/listings",
+        json={
+            "produce": "tomato",
+            "qty_kg": 400,
+            "ready_on": "2027-03-15",
+            "town": "Hmawbi",
+            "lat": 17.1,
+            "lon": 96.05,
+        },
+        headers=FARMER,
+    )
+    rows = client.get(
+        f"{BASE}/outlook/towns", params={"produce": "tomato", "on": "2027-03-15"}, headers=FARMER
+    ).json()
+    assert [r["town"] for r in rows] == ["Hmawbi"] and rows[0]["level"] == "no-buyers"
+    bad = client.get(
+        f"{BASE}/outlook/towns", params={"produce": "gold", "on": "2027-03-15"}, headers=FARMER
+    )
+    assert bad.status_code == 422

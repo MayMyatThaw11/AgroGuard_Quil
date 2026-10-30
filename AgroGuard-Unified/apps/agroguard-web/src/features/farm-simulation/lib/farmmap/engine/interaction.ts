@@ -66,6 +66,11 @@ function onHover(ctx: EngineContext, event: MapMouseEvent) {
     return;
   }
   const layer = feature.layer.id;
+  if (layer === 'balance-ring') {
+    setHoverState(ctx, null);
+    cb.onHover(null);
+    return;
+  }
   setHoverState(ctx, layer === 'paddies' || layer === 'crops' ? Number(feature.id) : null);
   cb.onHover({ ...targetOf(layer, feature.properties as Props), x: event.point.x, y: event.point.y });
 }
@@ -84,6 +89,10 @@ function onClick(ctx: EngineContext, event: MapMouseEvent) {
   }
   const layer = feature.layer.id;
   const p = feature.properties as Props;
+  if (layer === 'balance-ring') {
+    cb.onBalance?.(text(p, 'town'));
+    return;
+  }
   if (layer === 'clusters') {
     const source = map.getSource('aq-farms') as GeoJSONSource;
     const geometry = feature.geometry;

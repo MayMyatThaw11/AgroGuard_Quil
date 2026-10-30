@@ -17,6 +17,7 @@ export const EMPTY_STATS: EngineStats = {
 interface Handlers {
   onSelect: (target: PickTarget | null) => void;
   onChunkError: (key: string) => void;
+  onBalance?: (town: string) => void;
 }
 
 export function useFarmMapEngine(
@@ -52,6 +53,7 @@ export function useFarmMapEngine(
         onCursor: (position) => window.dispatchEvent(new CustomEvent<CursorDetail>(CURSOR_EVENT, { detail: { lat: position.lat, lng: position.lng } })),
         onChunkError: (key) => latest.current.onChunkError(key),
         onSelect: (target) => latest.current.onSelect(target),
+        onBalance: (town) => latest.current.onBalance?.(town),
       });
       setEngine(instance);
     } catch {

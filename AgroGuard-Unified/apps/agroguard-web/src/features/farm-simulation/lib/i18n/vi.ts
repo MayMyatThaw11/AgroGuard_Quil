@@ -194,6 +194,7 @@ export const VI: Dictionary = {
   'farmMap.layer.storage': 'Kho và nhà máy xay',
   'farmMap.layer.machinery': 'Máy móc',
   'farmMap.layer.livestock': 'Vật nuôi',
+  'farmMap.layer.balance': 'Cân bằng thị trường',
   'farmMap.poi.market': 'Chợ',
   'farmMap.poi.storage': 'Kho',
   'farmMap.poi.mill': 'Nhà máy xay',

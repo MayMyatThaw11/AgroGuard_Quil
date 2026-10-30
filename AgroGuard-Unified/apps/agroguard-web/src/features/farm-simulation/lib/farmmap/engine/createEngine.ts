@@ -65,6 +65,7 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
   let own: OwnFeatures = { polygons: [], points: [] };
   let trace: FeatureCollection = { type: 'FeatureCollection', features: [] };
   let sites: FeatureCollection = { type: 'FeatureCollection', features: [] };
+  let balance: FeatureCollection = { type: 'FeatureCollection', features: [] };
   let season: SeasonView | null = null;
   let seasonKey: string | null = null;
   const paintSeason = () => {
@@ -79,6 +80,7 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     source?.setData({ type: 'FeatureCollection', features: [...own.polygons, ...own.points] });
     (map.getSource('aq-trace') as GeoJSONSource | undefined)?.setData(trace);
     (map.getSource('aq-sites') as GeoJSONSource | undefined)?.setData(sites);
+    (map.getSource('aq-balance') as GeoJSONSource | undefined)?.setData(balance);
   };
 
   const loop = (now: number) => {
@@ -143,6 +145,10 @@ export function createFarmMapEngine(container: HTMLElement, fog: HTMLCanvasEleme
     },
     setSites: (features) => {
       sites = features;
+      if (ctx.state.ready) paintOwn();
+    },
+    setBalance: (features) => {
+      balance = features;
       if (ctx.state.ready) paintOwn();
     },
     setSeasonView: (view) => {

@@ -1,4 +1,5 @@
 import type { LayerKey } from './farmMapLayerKeys.ts';
+import { LEVEL_COLOR } from './marketBalance.ts';
 import { tr } from '../i18n.ts';
 import { CROPS, CROP_IDS, MAP_COLOR, POI_COLOR, RICE_STAGES, SOILS, STATUS_COLOR } from './farmMapTheme.ts';
 import { cropLabel, soilLabel, stageAt, statusLabel } from './farmMapText.ts';
@@ -39,6 +40,8 @@ export function legendFor(key: LayerKey): LegendSpec | null {
       return { items: [{ tint: POI_COLOR.machine, label: tr('farmMap.legend.machinery') }] };
     case 'livestock':
       return { items: [{ tint: POI_COLOR.livestock, label: tr('farmMap.legend.livestock') }] };
+    case 'balance':
+      return { items: [{ tint: LEVEL_COLOR.short, label: tr('farmMap.market.level.short') }, { tint: LEVEL_COLOR.balanced, label: tr('farmMap.market.level.balanced') }, { tint: LEVEL_COLOR.glut, label: tr('farmMap.market.level.glut') }, { tint: LEVEL_COLOR['no-buyers'], label: tr('farmMap.market.level.noBuyers') }] };
   }
 }
 

@@ -194,6 +194,7 @@ export const TH: Dictionary = {
   'farmMap.layer.storage': 'โกดังและโรงสี',
   'farmMap.layer.machinery': 'เครื่องจักร',
   'farmMap.layer.livestock': 'ปศุสัตว์',
+  'farmMap.layer.balance': 'ความสมดุลของตลาด',
   'farmMap.poi.market': 'ตลาด',
   'farmMap.poi.storage': 'โกดัง',
   'farmMap.poi.mill': 'โรงสี',

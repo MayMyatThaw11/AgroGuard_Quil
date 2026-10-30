@@ -194,6 +194,7 @@ export const MY: Dictionary = {
   'farmMap.layer.storage': 'ဂိုဒေါင်နှင့် ဆန်စက်',
   'farmMap.layer.machinery': 'စက်ကိရိယာ',
   'farmMap.layer.livestock': 'မွေးမြူရေး',
+  'farmMap.layer.balance': 'စျေးကွက် မျှတမှု',
   'farmMap.poi.market': 'ဈေး',
   'farmMap.poi.storage': 'ဂိုဒေါင်',
   'farmMap.poi.mill': 'ဆန်စက်',

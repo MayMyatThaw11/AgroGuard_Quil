@@ -194,6 +194,7 @@ export const KM: Dictionary = {
   'farmMap.layer.storage': 'ឃ្លាំង និងរោងម៉ាស៊ីនកិន',
   'farmMap.layer.machinery': 'គ្រឿងចក្រ',
   'farmMap.layer.livestock': 'សត្វចិញ្ចឹម',
+  'farmMap.layer.balance': 'តុល្យភាពទីផ្សារ',
   'farmMap.poi.market': 'ផ្សារ',
   'farmMap.poi.storage': 'ឃ្លាំង',
   'farmMap.poi.mill': 'រោងម៉ាស៊ីនកិន',

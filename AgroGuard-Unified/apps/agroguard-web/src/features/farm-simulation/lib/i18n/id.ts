@@ -194,6 +194,7 @@ export const ID: Dictionary = {
   'farmMap.layer.storage': 'Gudang dan penggilingan',
   'farmMap.layer.machinery': 'Mesin',
   'farmMap.layer.livestock': 'Ternak',
+  'farmMap.layer.balance': 'Keseimbangan pasar',
   'farmMap.poi.market': 'Pasar',
   'farmMap.poi.storage': 'Gudang',
   'farmMap.poi.mill': 'Penggilingan',

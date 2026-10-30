@@ -149,6 +149,14 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
     ) -> dict[str, Any]:
         return _run(market.outlook, town, produce, on)
 
+    @r.get("/outlook/towns")
+    async def outlook_towns(
+        produce: str = Query(..., max_length=40),
+        on: str = Query(..., max_length=10),
+        caller: Any = caller_dep,
+    ) -> list[dict[str, Any]]:
+        return _run(market.towns_balance, produce, on)
+
     @r.get("/preorders")
     async def preorders(
         town: str | None = Query(None, max_length=80),

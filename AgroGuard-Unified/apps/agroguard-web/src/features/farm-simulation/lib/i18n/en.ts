@@ -193,6 +193,7 @@ export const EN = {
   'farmMap.layer.storage': 'Storage & mills',
   'farmMap.layer.machinery': 'Machinery',
   'farmMap.layer.livestock': 'Livestock',
+  'farmMap.layer.balance': 'Market balance',
   'farmMap.poi.market': 'Market',
   'farmMap.poi.storage': 'Storage',
   'farmMap.poi.mill': 'Mill',

@@ -61,6 +61,11 @@ import { useFarmMapSync } from './useFarmMapSync.ts';
 import { useRoutePlanner, type Selection } from './useRoutePlanner.ts';
 import { useUiMode } from './useUiMode.ts';
 import { MarketPanel } from './MarketPanel.tsx';
+import { RingDetail } from './RingDetail.tsx';
+import { LEVEL_KEY } from './TownOutlook.tsx';
+import { balanceFeatures, getTownsBalance } from '../../lib/farmmap/marketBalance.ts';
+import { loadActiveProducer, myProducers } from '../../lib/farmmap/producers.ts';
+import type { Produce } from '../../lib/farmmap/market.ts';
 import { type BuyerPlace } from './BuyerBoard.tsx';
 import { BuyerMapShell } from './BuyerMapShell.tsx';
 import type { Farm } from '../../lib/farmmap/farmMapTypes.ts';
@@ -123,8 +128,12 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const pickRef = useRef<(target: PickTarget | null, fromMap: boolean) => void>(() => undefined);
   const openRef = useRef<(target: PickTarget | null) => void>(() => undefined);
 
+  const [ringTown, setRingTown] = useState<string | null>(null);
+  const [balanceProduce, setBalanceProduce] = useState<Produce>('tomato');
   const { engine, boot, bootFail, stats, hover } = useFarmMapEngine(mapRef, fogRef, {
+    onBalance: (town) => setRingTown(town),
     onSelect: (target) => {
+      setRingTown(null);
       pickRef.current(target, true);
       openRef.current(target);
     },
@@ -156,6 +165,26 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
       alive = false;
     };
   }, []);
+  useEffect(() => {
+    if (!marketOn) return;
+    myProducers().then((rows) => {
+      const id = loadActiveProducer(browserStorage());
+      const mine = rows.find((p) => p.id === id) ?? (rows.length === 1 ? rows[0] : null);
+      if (mine?.crops[0]) setBalanceProduce(mine.crops[0].produce);
+    }, () => undefined);
+  }, [marketOn]);
+  useEffect(() => {
+    if (!engine || !marketOn) return undefined;
+    let alive = true;
+    const on = new Date(Date.now() + 21 * 86400000).toISOString().slice(0, 10);
+    getTownsBalance(balanceProduce, on).then(
+      (rows) => alive && engine.setBalance(balanceFeatures(rows, (level) => t(LEVEL_KEY[level]))),
+      () => alive && engine.setBalance(balanceFeatures([], () => '')),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [engine, marketOn, balanceProduce, t]);
   const planner = useRoutePlanner({ engine, selection, onRestore: setSelection, onFocusRight: guideLayout, toast: push });
   const { route, guide } = planner;
 
@@ -318,7 +347,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
   const poi = selection?.kind === 'poi' ? data.poiById[selection.id] : null;
   const ownFarm = selection?.kind === 'own' ? ownFarms.find((f) => f.id === selection.id) ?? null : null;
   const site = selection?.kind === 'mill' ? millSites.sites.find((s) => s.id === selection.id) ?? null : null;
-  const rightKey = tracing ? 'trace' : route ? 'route' : selection ? `${selection.kind}-${selection.id}` : spot ? `site-${spot.lat}-${spot.lon}` : 'overview';
+  const rightKey = tracing ? 'trace' : route ? 'route' : ringTown && !selection ? `ring-${ringTown}` : selection ? `${selection.kind}-${selection.id}` : spot ? `site-${spot.lat}-${spot.lon}` : 'overview';
   const setLayer = (key: LayerKey, on: boolean) => setLayers((current) => ({ ...current, [key]: on }));
   const mapWidth = rootRef.current?.clientWidth ?? 1280;
   const buyerView = ui.shown === 'buyer' && marketOn;
@@ -422,6 +451,7 @@ export const FarmMapView: React.FC<FarmMapViewProps> = ({ onOpenFleet, onOpenOps
         </DetailSection>
       </>
     );
+    if (ringTown && !selection) return <RingDetail town={ringTown} produce={balanceProduce} onProduce={setBalanceProduce} onClose={() => setRingTown(null)} />;
     if (buyerView) return <BuyerMapShell place={buyerPlace()} onDirections={(from, to) => planner.openTo(from, to)} />;
     if (farmerView && !selection) return <TodayCard farm={centreFarm()} onSell={sellFromTop} />;
     return (

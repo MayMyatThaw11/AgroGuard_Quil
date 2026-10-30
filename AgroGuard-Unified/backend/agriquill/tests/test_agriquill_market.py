@@ -245,3 +245,17 @@ def test_demo_reseed_replaces_old_demo_rows_and_keeps_real_ones() -> None:
     ids = {x["id"] for x in market.listings()}
     assert real["id"] in ids
     assert not any(x["qty_kg"] == 99999 for x in market.listings())
+
+
+def test_towns_balance_lists_towns_with_data_and_their_centre() -> None:
+    listing(5000)
+    preorder(1000)
+    listing(300, town="Taikkyi", at=TAIKKYI)
+    rows = {r["town"]: r for r in market.towns_balance("tomato", ON.isoformat(), TODAY)}
+    assert set(rows) == {"Hmawbi", "Taikkyi"}
+    assert rows["Hmawbi"]["level"] == "glut" and rows["Hmawbi"]["supply_kg"] == 5000
+    assert rows["Taikkyi"]["level"] == "no-buyers"
+    assert rows["Hmawbi"]["lat"] == pytest.approx(HMAWBI[0], abs=0.01)
+    assert market.towns_balance("onion", ON.isoformat(), TODAY) == []
+    with pytest.raises(ValueError):
+        market.towns_balance("gold", ON.isoformat(), TODAY)

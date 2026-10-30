@@ -78,6 +78,7 @@ export interface EngineCallbacks {
   onCursor: (position: LngLat) => void;
   onChunkError: (key: string) => void;
   onSelect: (target: PickTarget | null) => void;
+  onBalance?: (town: string) => void;
 }
 
 export interface RouteStop {
@@ -174,6 +175,7 @@ export interface FarmMapEngine {
   setOwnFarms: (features: OwnFeatures) => void;
   setTrace: (features: FeatureCollection) => void;
   setSites: (features: FeatureCollection) => void;
+  setBalance: (features: FeatureCollection) => void;
   setSeasonView: (view: SeasonView | null) => void;
   setView: (view: MapView) => void;
   setTheme: (dark: boolean) => void;

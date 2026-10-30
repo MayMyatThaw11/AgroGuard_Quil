@@ -194,6 +194,7 @@ export const FIL: Dictionary = {
   'farmMap.layer.storage': 'Bodega at kiskisan',
   'farmMap.layer.machinery': 'Makinarya',
   'farmMap.layer.livestock': 'Hayop',
+  'farmMap.layer.balance': 'Balanse ng merkado',
   'farmMap.poi.market': 'Pamilihan',
   'farmMap.poi.storage': 'Bodega',
   'farmMap.poi.mill': 'Kiskisan',
