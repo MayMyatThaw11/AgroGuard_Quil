@@ -773,11 +773,11 @@
   padding: 0;
   list-style: none;
   font: 500 12px/1.3 var(--aq-font-sans);
-  color: var(--aq-text-muted);
+  color: var(--aq-text-body);
 }
 
 .aq-fm-steps-list li { display: inline-flex; align-items: center; gap: var(--aq-space-1); }
-.aq-fm-steps-list li.is-done { color: var(--aq-leaf-700); }
+.aq-fm-steps-list li.is-done svg { color: var(--aq-leaf-500); }
 .aq-fm-steps-list li.is-next { color: var(--aq-text-strong); font-weight: 700; }
 
 .aq-fm-epi {
