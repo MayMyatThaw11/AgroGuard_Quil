@@ -16,8 +16,9 @@ export const REPLICA_COLOR = {
 
 type Rgb = readonly [number, number, number];
 
-export const REPLICA_PALETTE: { walls: readonly Rgb[]; road: Rgb; track: Rgb; river: Rgb; rock: Rgb; basalt: Rgb; outline: Rgb } = {
+export const REPLICA_PALETTE: { walls: readonly Rgb[]; roofs: readonly Rgb[]; road: Rgb; track: Rgb; river: Rgb; rock: Rgb; basalt: Rgb; outline: Rgb } = {
   walls: [[0.82, 0.78, 0.7], [0.76, 0.7, 0.6], [0.68, 0.72, 0.74], [0.8, 0.64, 0.52], [0.7, 0.58, 0.5], [0.84, 0.84, 0.8]],
+  roofs: [[0.55, 0.27, 0.19], [0.46, 0.47, 0.48], [0.62, 0.4, 0.29], [0.4, 0.3, 0.26]],
   road: [0.55, 0.54, 0.51],
   track: [0.58, 0.5, 0.38],
   river: [0.31, 0.62, 0.69],

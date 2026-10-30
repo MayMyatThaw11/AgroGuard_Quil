@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree, type RootState } from '@react-three/fiber';
 import { OrbitControls, Sky } from '@react-three/drei';
-import { Box, CircleHelp, Eye, Info, Loader, Map as MapIcon, X } from 'lucide-react';
+import { Box, CircleHelp, Eye, Info, Loader, Map as MapIcon, Ruler, X } from 'lucide-react';
 import type { SeasonReplay } from '../../lib/api.ts';
 import { SAT_ATTRIBUTION } from '../../lib/farmmap/basemapTheme.ts';
 import { engineDays } from '../../lib/farmmap/seasonPlayback.ts';
 import { sunAt } from '../../lib/farmmap/sun.ts';
+import { fieldFacts } from '../../lib/farmview/annotations.ts';
 import { fieldLayout, type FieldLayout } from '../../lib/farmview/fieldLayout.ts';
 import { mainField, type FarmTarget, type TargetField } from '../../lib/farmview/farmTarget.ts';
 import { sunPosition, weedDensity } from '../../lib/farmview/seasonField.ts';
@@ -23,6 +24,8 @@ import { REPLICA_COLOR } from '../../lib/fieldsim/replicaTheme.ts';
 import { attachContextLossRecovery } from '../../lib/webglContextRecovery.ts';
 import { useT, type Key } from '../../lib/i18n.ts';
 import { CanvasErrorBoundary } from '../farm3d/CanvasErrorBoundary.tsx';
+import { FieldAnnotations } from './FieldAnnotations.tsx';
+import { HomesteadModels } from './HomesteadModels.tsx';
 import { FieldLayer } from './FieldLayer.tsx';
 import { BUND_WIDTH_M, useFieldTextures } from './fieldKit.ts';
 import { ReplicaModels } from './ReplicaModels.tsx';
@@ -194,6 +197,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
   const detach = useRef<() => void>(() => {});
   const [lost, setLost] = useState(false);
   const [eye, setEye] = useState(false);
+  const [measures, setMeasures] = useState(true);
   const [depth, setDepth] = useState(0);
   const [wxChoice, setWxChoice] = useState<WeatherChoice>('now');
   const [guideOpen, setGuideOpen] = useState(() => !guideSeen(browserStorage()));
@@ -211,6 +215,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
     if (!frame) return [];
     return target.fields.map((field) => ({ field, ring: openRing(field.ring.map(([la, lo]) => frame.toLocal(la, lo))), main: field.id === main?.id }));
   }, [frame, target.fields, main]);
+  const totalHa = useMemo(() => placed.reduce((sum, p) => sum + fieldFacts(p.ring).areaHa, 0), [placed]);
   const rings = useMemo(() => (frame ? ringPlan(target.bbox, frame.origin) : null), [frame, target.bbox]);
   const ground = useGround(frame, rings, useMemo(() => placed.map((p) => p.ring), [placed]), target.kind === 'own');
   const outlined = ground.steep && target.kind !== 'own';
@@ -354,8 +359,10 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           <directionalLight position={lightPos} intensity={(sun.elevationDeg > -6 ? 2.2 : 0.5) * lightScale(fx)} color={sun.elevationDeg < 12 ? REPLICA_COLOR.sunLow : REPLICA_COLOR.sunDay} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-framing.span} shadow-camera-right={framing.span} shadow-camera-top={framing.span} shadow-camera-bottom={-framing.span} shadow-camera-far={900} />
           <GroundPatches patches={ground.patches} />
           {hood.data && ground.status !== 'loading' ? <Neighbourhood data={hood.data} groundAt={ground.groundAt} profile={profile} seed={target.id} /> : null}
+          {target.kind === 'example' && main && hood.data && ground.status !== 'loading' ? <HomesteadModels main={placed.find((p) => p.main)?.ring ?? []} others={placed.filter((p) => !p.main).map((p) => p.ring)} buildings={hood.data.buildings} seed={target.id} paddy={/rice|paddy/i.test(main.crop ?? '')} groundAt={ground.groundAt} /> : null}
           <Weather seed={target.id} fx={fx} lowPower={budget.weak} centre={framing.centre} baseY={mainBase} />
           {depth > 0 && levelM !== null && originHeight !== null ? <WaterPlane y={waterSceneY(levelM, originHeight)} /> : null}
+          {measures ? <FieldAnnotations fields={placed.map((p) => ({ id: p.field.id, ring: p.ring, main: p.main, stage: p.field.stage }))} groundAt={ground.groundAt} example={target.kind === 'example'} /> : null}
           {outlined ? <OutlineFields rings={placed.map((p) => p.ring)} groundAt={ground.groundAt} /> : null}
           {(outlined ? [] : layouts).map(({ placed: p, layout, seasonal }) => {
             const stage: RiceStage | null = seasonal ? stageForDvs(dvs) : riceStageFromName(p.field.stage);
@@ -393,6 +400,10 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
           {eye ? <MapIcon size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
           <span className="aq-fm-replica-view-label">{eye ? t('farmMap.replica.overview') : t('farmMap.replica.eye')}</span>
         </button>
+        <button type="button" className="aq-btn aq-btn-secondary" aria-pressed={measures} onClick={() => setMeasures((value) => !value)}>
+          <Ruler size={14} aria-hidden="true" />
+          <span className="aq-fm-replica-view-label">{t('farmMap.farmView.measures')}</span>
+        </button>
         <button type="button" className="aq-icon-btn" aria-label={t('farmMap.farmView.help')} onClick={() => setGuideOpen(true)}><CircleHelp size={16} aria-hidden="true" /></button>
         <button ref={closeRef} type="button" className="aq-icon-btn" aria-label={t('farmMap.farmView.close')} onClick={onClose}><X size={16} aria-hidden="true" /></button>
       </div>
@@ -403,6 +414,7 @@ export const FarmView: React.FC<FarmViewProps> = ({ target, season, capture, onC
         {target.kind === 'example' ? <span>{t('farmMap.farmView.example')}</span> : null}
         {!season && target.kind === 'own' ? <span>{t('farmMap.farmView.noSeason')}</span> : null}
         {dryRun ? <span>{t('farmMap.replica.noBoundary')}</span> : null}
+        {placed.length ? <span>{t('farmMap.farmView.sizeLine', { ha: totalHa.toFixed(totalHa >= 10 ? 1 : 2), n: placed.length })}</span> : null}
         {landLine ? <span>{landLine}</span> : null}
         {plan && row ? (
           <>

@@ -5,20 +5,23 @@ const base = 'models/farmmap/';
 
 export const riceModel = (stage: RiceStage, lod: 0 | 1) => `${base}rice_${stage}_lod${lod}.glb`;
 
-export const SCENERY = ['tree_broadleaf', 'tree_palm', 'tree_conifer', 'bamboo', 'shrub', 'rock_a', 'rock_b', 'rock_c', 'reeds', 'cloud'] as const;
+export const SCENERY = ['tree_broadleaf', 'tree_palm', 'tree_conifer', 'bamboo', 'shrub', 'rock_a', 'rock_b', 'rock_c', 'reeds', 'cloud', 'banana', 'farm_hut', 'buffalo'] as const;
 export type SceneryKind = (typeof SCENERY)[number];
 
 export const TRI_BUDGET: Record<SceneryKind, readonly [number, number]> = {
-  tree_broadleaf: [1500, 150],
-  tree_palm: [1200, 120],
-  tree_conifer: [1200, 120],
-  bamboo: [1500, 150],
-  shrub: [400, 60],
-  rock_a: [300, 40],
-  rock_b: [300, 40],
-  rock_c: [300, 40],
-  reeds: [400, 80],
+  tree_broadleaf: [3200, 250],
+  tree_palm: [2800, 200],
+  tree_conifer: [1500, 150],
+  bamboo: [3000, 200],
+  shrub: [900, 80],
+  rock_a: [700, 50],
+  rock_b: [700, 50],
+  rock_c: [700, 50],
+  reeds: [800, 90],
   cloud: [700, 90],
+  banana: [1500, 140],
+  farm_hut: [900, 120],
+  buffalo: [1500, 260],
 };
 
 export const SCENERY_MAX_BYTES = 300 * 1024;

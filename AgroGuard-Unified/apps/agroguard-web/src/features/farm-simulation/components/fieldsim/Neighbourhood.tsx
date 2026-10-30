@@ -24,7 +24,7 @@ const NO_TINT: Rgb = [1, 1, 1];
 type GroundAt = (x: number, z: number) => number;
 type Rgb = readonly [number, number, number];
 
-interface Placed {
+export interface Placed {
   x: number;
   y: number;
   z: number;
@@ -62,7 +62,7 @@ const PlacedMesh: React.FC<{ geometry: THREE.BufferGeometry; material: THREE.Mat
   return <instancedMesh ref={ref} args={[geometry, material, items.length]} frustumCulled={false} />;
 };
 
-const Instances: React.FC<{ file: string; items: readonly Placed[]; tint?: Rgb | null }> = ({ file, items, tint = null }) => {
+export const Instances: React.FC<{ file: string; items: readonly Placed[]; tint?: Rgb | null }> = ({ file, items, tint = null }) => {
   const gltf = useGLTF(`${MODEL}${file}.glb`, DRACO);
   const meshes = useMemo(() => meshesOf(gltf.scene), [gltf]);
   if (!items.length) return null;

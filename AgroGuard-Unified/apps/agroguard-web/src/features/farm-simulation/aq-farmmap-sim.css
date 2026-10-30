@@ -541,3 +541,28 @@
 @media (max-width: 639px) {
   .aq-fm-replica-weather .aq-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.aq-fm-dim,
+.aq-fm-plate {
+  display: grid;
+  gap: 1px;
+  border: 1px solid color-mix(in srgb, var(--aq-text-strong) 18%, transparent);
+  border-radius: var(--aq-radius-sm);
+  font: 600 11px/1.25 var(--aq-font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--aq-text-strong);
+  background: color-mix(in srgb, var(--aq-surface-card) 92%, transparent);
+  white-space: nowrap;
+}
+
+.aq-fm-dim { padding: 1px 6px; }
+
+.aq-fm-plate {
+  padding: 5px 9px;
+  text-align: center;
+}
+
+.aq-fm-plate b { font-size: 13px; }
+.aq-fm-plate span { font-weight: 500; }
+.aq-fm-plate small { font: 500 10px/1.2 var(--aq-font-sans); color: var(--aq-text-muted, var(--aq-text-strong)); }
+.aq-fm-plate.is-main { border-color: var(--aq-leaf-500, var(--aq-text-strong)); }
