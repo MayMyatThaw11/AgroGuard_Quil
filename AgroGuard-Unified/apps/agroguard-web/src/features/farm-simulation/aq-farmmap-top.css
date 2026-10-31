@@ -321,10 +321,9 @@
 
 .aq-fm-viewas-banner {
   position: absolute;
-  bottom: calc(var(--aq-status-h) + var(--aq-space-5));
-  left: 50%;
+  top: calc(var(--aq-top-h) + 56px);
+  left: var(--aq-fm-gutter);
   z-index: var(--aq-z-banner);
-  transform: translateX(-50%);
   margin: 0;
   pointer-events: none;
   padding: var(--aq-space-3) var(--aq-space-5);
@@ -336,10 +335,10 @@
 
 @media (max-width: 639px) {
   .aq-fm-viewas-banner {
+    top: auto;
     bottom: var(--aq-status-h);
     left: 0;
     right: 0;
-    transform: none;
     padding: var(--aq-space-1) var(--aq-space-3);
     border-radius: 0;
     font-size: 11px;

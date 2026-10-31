@@ -37,6 +37,7 @@
 }
 
 .aq-farmmap .maplibregl-ctrl-attrib {
+  max-width: 100%;
   font: 12px var(--aq-font-sans);
   background: var(--aq-attrib-bg);
 }
