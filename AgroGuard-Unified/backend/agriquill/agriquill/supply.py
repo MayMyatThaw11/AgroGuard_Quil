@@ -128,16 +128,21 @@ def save_search(buyer: str, body: dict[str, Any]) -> dict[str, Any]:
     if not 0 < radius <= MAX_RADIUS_KM:
         raise ValueError(f"radius_km must be between 0 and {MAX_RADIUS_KM:.0f}")
     budget = body.get("budget_mmk_kg")
+    lat, lon, days = float(body["lat"]), float(body["lon"]), int(body.get("by_in_days") or 30)
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ValueError("lat or lon is out of range")
+    if not 1 <= days <= 365:
+        raise ValueError("by_in_days must be between 1 and 365")
     record = {
         "id": f"srch-{uuid.uuid4().hex[:12]}",
         "buyer": buyer,
         "produce": produce,
-        "lat": float(body["lat"]),
-        "lon": float(body["lon"]),
+        "lat": lat,
+        "lon": lon,
         "radius_km": radius,
         "kg": int(body["kg"]) if body.get("kg") else None,
         "budget_mmk_kg": float(budget) if budget else None,
-        "by_in_days": int(body.get("by_in_days") or 30),
+        "by_in_days": days,
         "created_at": now_iso(),
     }
     return market._save(SAVED, record)

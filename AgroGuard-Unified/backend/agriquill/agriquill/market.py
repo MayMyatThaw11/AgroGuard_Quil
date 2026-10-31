@@ -170,6 +170,8 @@ def post_listing(farmer: str, body: dict[str, Any]) -> dict[str, Any]:
     contributions = _contributions(body.get("contributions"), kg)
     area = body.get("area_ha")
     area_ha = float(area) if area not in (None, "") else None
+    if area_ha is not None and not 0 < area_ha < 1e6:
+        raise ValueError("area_ha must be a positive number")
     ask = body.get("ask_mmk_kg")
     ready = _day(body.get("ready_on"), "ready_on").isoformat()
     again = next(
@@ -562,12 +564,16 @@ DEMO_SEED_VERSION = "2"
 
 
 def _clear_demo() -> None:
+    gone = {x["id"] for x in listings() + preorders() if x.get("demo")}
+    orphans = [o["id"] for o in offers() if {o["listing_id"], o["preorder_id"]} & gone]
     conn, lock = connect("contracts.sqlite")
     with lock:
         conn.execute(
             "DELETE FROM records WHERE source IN (?, ?) AND json_extract(payload, '$.demo') = 1",
             (LISTING, PREORDER),
         )
+        for offer_id in orphans:
+            conn.execute("DELETE FROM records WHERE source = ? AND key = ?", (OFFER, offer_id))
         conn.commit()
     clear_cache()
 

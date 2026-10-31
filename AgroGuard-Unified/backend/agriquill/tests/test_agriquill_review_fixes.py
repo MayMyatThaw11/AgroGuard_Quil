@@ -218,3 +218,51 @@ def test_town_balance_is_cached_until_a_write_for_that_produce(monkeypatch) -> N
     assert market.towns_balance("tomato", READY) == first and not calls
     post_listing(FARMER_B, kg=700)
     assert market.towns_balance("tomato", READY)[0]["supply_kg"] > first[0]["supply_kg"]
+
+
+def test_bad_inputs_are_422_not_500() -> None:
+    _, order, offer = offer_flow()
+    select_offer(order, offer)
+    delivery = client.post(f"{BASE}/offers/{offer['id']}/delivery", json={}, headers=BUYER)
+    assert delivery.status_code == 422
+    body = {
+        "produce": "tomato",
+        "qty_kg": 50,
+        "ready_on": READY,
+        "town": "Hmawbi",
+        "lat": 17.1,
+        "lon": 96.05,
+        "area_ha": "inf",
+    }
+    assert client.post(f"{BASE}/listings", json=body, headers=FARMER).status_code == 422
+    params = {"produce": "tomato", "lat": 17.0, "lon": 96.0, "by": "2026-13-01"}
+    assert client.get(f"{BASE}/supply", params=params, headers=BUYER).status_code == 422
+    search = {"produce": "tomato", "lat": 1000, "lon": 96.0}
+    assert client.post(f"{BASE}/saved-searches", json=search, headers=BUYER).status_code == 422
+    far = {"produce": "tomato", "lat": 17.0, "lon": 96.0, "by_in_days": 10**12}
+    assert client.post(f"{BASE}/saved-searches", json=far, headers=BUYER).status_code == 422
+
+
+def test_clearing_demo_data_also_removes_offers_made_on_it() -> None:
+    market.seed_demo()
+    order = next(p for p in market.preorders() if p.get("demo"))
+    listing = post_listing(FARMER).json()
+    made = client.post(
+        f"{BASE}/preorders/{order['id']}/offers",
+        json={"listing_id": listing["id"], "qty_kg": 100},
+        headers=FARMER,
+    )
+    if made.status_code == 201:
+        market._clear_demo()
+        assert not [o for o in market.offers() if o["preorder_id"] == order["id"]]
+    assert client.get(f"{BASE}/offers/mine", headers=FARMER).status_code == 200
+
+
+def test_planner_needs_sign_in_when_the_server_requires_it() -> None:
+    settings = get_settings()
+    saved = settings.users
+    settings.users = SecretStr("Lead:CODE-1:manager,crew")
+    try:
+        assert client.get("/api/v1/agriquill/planner/catalogue").status_code == 401
+    finally:
+        settings.users = saved

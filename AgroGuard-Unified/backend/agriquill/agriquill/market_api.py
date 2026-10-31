@@ -223,7 +223,7 @@ def build(caller_dep: Any, reader_dep: Any) -> APIRouter:
         caller: Any = caller_dep,
     ) -> dict[str, Any]:
         _buyer(caller)
-        by_date = market._day(by, "by") if by else None
+        by_date = _run(market._day, by, "by") if by else None
         return _run(supply.supply, produce, lat, lon, radius_km, kg, budget, by_date)
 
     @r.post("/saved-searches", status_code=201)

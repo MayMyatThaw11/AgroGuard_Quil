@@ -292,7 +292,10 @@ def confirm_delivery(
         raise PermissionError("only the buyer on this offer can confirm its delivery")
     if offer["status"] != "selected":
         raise NotSelected("a delivery can be confirmed only for a selected offer")
-    got, bad = int(received_kg), int(rejected_kg)
+    try:
+        got, bad = int(received_kg), int(rejected_kg)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("received_kg and rejected_kg must be whole numbers") from exc
     if got < 0 or bad < 0 or got + bad > market.MAX_KG:
         raise ValueError("received and rejected kg must be zero or more")
 
