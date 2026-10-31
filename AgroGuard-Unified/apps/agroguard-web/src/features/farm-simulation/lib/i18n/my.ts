@@ -644,7 +644,7 @@ export const MY: Dictionary = {
   'farmMap.market.advice.staggerHarvest': 'ရိတ်သိမ်းမှုကို ခွဲရိတ်ပါ သို့မဟုတ် တစ်စိတ်တစ်ပိုင်း သိုလှောင်ပါ။ ဒီသီးနှံက ကြာကြာ ခံပါတယ်။',
   'farmMap.market.advice.priceFell': 'လွန်ခဲ့သော ၃ လအတွင်း ဈေးနှုန်း {pct}% ကျသွားတယ်။',
   'farmMap.market.advice.plantOther': 'ဒီရာသီမှာ မြေအချို့ကို အခြားသီးနှံ စိုက်ဖို့ စဉ်းစားပါ။',
-  'farmMap.market.advice.reachProcessors': 'ဒီနေရာမှာ ဝယ်သူ မရှိသေးပါ။ {km} km အတွင်း အစားအစာ လုပ်ငန်း {n} ခုက {produce} လိုချင်နေကြတယ်။',
+  'farmMap.market.advice.reachProcessors': '{km} km အတွင်း အစားအစာ လုပ်ငန်း {n} ခုက {produce} လိုချင်နေကြတယ်။',
   'farmMap.market.nearby': 'အနီးရှိ မြို့များ',
   'farmMap.market.harvestTitle': 'ဘာသီးနှံကို ရိတ်မလဲ?',
   'farmMap.market.produce': 'သီးနှံ',

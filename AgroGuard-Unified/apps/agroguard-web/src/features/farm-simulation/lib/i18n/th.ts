@@ -644,7 +644,7 @@ export const TH: Dictionary = {
   'farmMap.market.advice.staggerHarvest': 'เก็บเกี่ยวทยอยกันไป หรือเก็บบางส่วนไว้ พืชนี้เก็บได้นาน',
   'farmMap.market.advice.priceFell': 'ราคาลดลง {pct}% ใน 3 เดือนที่ผ่านมา',
   'farmMap.market.advice.plantOther': 'ลองปลูกพืชอื่นในบางส่วนของที่ดินในฤดูนี้',
-  'farmMap.market.advice.reachProcessors': 'ยังไม่มีผู้ซื้อแถวนี้ มีโรงแปรรูป {n} แห่งภายใน {km} km ต้องการ {produce}',
+  'farmMap.market.advice.reachProcessors': 'มีโรงแปรรูป {n} แห่งภายใน {km} km ต้องการ {produce}',
   'farmMap.market.nearby': 'เมืองใกล้เคียง',
   'farmMap.market.harvestTitle': 'คุณจะเก็บเกี่ยวอะไร?',
   'farmMap.market.produce': 'พืชผล',

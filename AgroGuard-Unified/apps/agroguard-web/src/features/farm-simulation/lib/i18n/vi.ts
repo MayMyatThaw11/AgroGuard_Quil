@@ -644,7 +644,7 @@ export const VI: Dictionary = {
   'farmMap.market.advice.staggerHarvest': 'Thu hoạch so le hoặc cất giữ một phần: loại cây này để được lâu.',
   'farmMap.market.advice.priceFell': 'Giá đã giảm {pct}% trong 3 tháng qua.',
   'farmMap.market.advice.plantOther': 'Nên cân nhắc trồng cây khác trên một phần đất trong vụ này.',
-  'farmMap.market.advice.reachProcessors': 'Chưa có người mua ở đây. {n} cơ sở chế biến trong vòng {km} km cần {produce}.',
+  'farmMap.market.advice.reachProcessors': '{n} cơ sở chế biến trong vòng {km} km cần {produce}.',
   'farmMap.market.nearby': 'Thị trấn gần đây',
   'farmMap.market.harvestTitle': 'Bạn sẽ thu hoạch gì?',
   'farmMap.market.produce': 'Cây trồng',

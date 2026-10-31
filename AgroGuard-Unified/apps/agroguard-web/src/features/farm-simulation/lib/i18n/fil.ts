@@ -644,7 +644,7 @@ export const FIL: Dictionary = {
   'farmMap.market.advice.staggerHarvest': 'Hatiin ang ani sa ilang beses o itabi ang bahagi nito: tumatagal ang pananim na ito.',
   'farmMap.market.advice.priceFell': 'Bumaba ang presyo ng {pct}% sa nakaraang 3 buwan.',
   'farmMap.market.advice.plantOther': 'Isaalang-alang ang pagtatanim ng ibang pananim sa bahagi ng lupa ngayong season.',
-  'farmMap.market.advice.reachProcessors': 'Wala pang mamimili rito. {n} processor sa loob ng {km} km ang gusto ng {produce}.',
+  'farmMap.market.advice.reachProcessors': '{n} processor sa loob ng {km} km ang gusto ng {produce}.',
   'farmMap.market.nearby': 'Mga kalapit na bayan',
   'farmMap.market.harvestTitle': 'Ano ang iaani mo?',
   'farmMap.market.produce': 'Pananim',

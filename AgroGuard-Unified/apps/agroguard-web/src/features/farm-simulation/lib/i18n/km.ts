@@ -644,7 +644,7 @@ export const KM: Dictionary = {
   'farmMap.market.advice.staggerHarvest': 'ប្រមូលផលជាដំណាក់កាល ឬរក្សាទុកមួយផ្នែក៖ ដំណាំនេះរក្សាបានយូរ។',
   'farmMap.market.advice.priceFell': 'តម្លៃបានធ្លាក់ {pct}% ក្នុង 3 ខែចុងក្រោយ។',
   'farmMap.market.advice.plantOther': 'សូមពិចារណាដាំដំណាំផ្សេងនៅផ្នែកខ្លះនៃដីរបស់អ្នកក្នុងរដូវនេះ។',
-  'farmMap.market.advice.reachProcessors': 'មិនទាន់មានអ្នកទិញនៅទីនេះទេ។ អ្នកកែច្នៃ {n} នាក់ក្នុងចម្ងាយ {km} km ត្រូវការ {produce}។',
+  'farmMap.market.advice.reachProcessors': 'អ្នកកែច្នៃ {n} នាក់ក្នុងចម្ងាយ {km} km ត្រូវការ {produce}។',
   'farmMap.market.nearby': 'ក្រុងនៅជិតៗ',
   'farmMap.market.harvestTitle': 'តើអ្នកនឹងប្រមូលអ្វី?',
   'farmMap.market.produce': 'ដំណាំ',

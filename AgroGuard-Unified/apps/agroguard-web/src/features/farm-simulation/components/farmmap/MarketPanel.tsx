@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Handshake, Navigation, RefreshCw, Truck } from 'lucide-react';
 import type { RouteStop } from '../../lib/farmmap/engine/engineTypes.ts';
 import { CROPS } from '../../lib/farmmap/farmMapTheme.ts';
@@ -82,14 +82,18 @@ export const MarketPanel: React.FC<{ farm: Farm; onClose: () => void; onDirectio
   const [setup, setSetup] = useState(false);
   const queue = useFieldQueue();
 
+  const latestOutlook = useRef(0);
   const loadOutlook = useCallback(() => {
+    const mine = ++latestOutlook.current;
     getOutlook(farm.town, produce, ready).then(
       (o) => {
+        if (mine !== latestOutlook.current) return;
         setOutlook(o);
         setSavedAt(null);
         saveOutlook(browserStorage(), farm.town, produce, o);
       },
       (e) => {
+        if (mine !== latestOutlook.current) return;
         const kept = loadKept(browserStorage(), farm.town, produce);
         if (kept) {
           setOutlook(kept.outlook);

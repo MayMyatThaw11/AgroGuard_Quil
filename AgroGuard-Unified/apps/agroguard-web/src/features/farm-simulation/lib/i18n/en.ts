@@ -643,7 +643,7 @@ export const EN = {
   'farmMap.market.advice.staggerHarvest': 'Stagger the harvest or store part of it: this crop keeps.',
   'farmMap.market.advice.priceFell': 'The price fell {pct}% in the last 3 months.',
   'farmMap.market.advice.plantOther': 'Consider part of your land for another crop this season.',
-  'farmMap.market.advice.reachProcessors': 'No buyers here yet. {n} processors within {km} km want {produce}.',
+  'farmMap.market.advice.reachProcessors': '{n} processors within {km} km want {produce}.',
   'farmMap.market.nearby': 'Nearby towns',
   'farmMap.market.harvestTitle': 'What will you harvest?',
   'farmMap.market.produce': 'Crop',

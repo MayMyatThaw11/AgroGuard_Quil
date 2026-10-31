@@ -644,7 +644,7 @@ export const ID: Dictionary = {
   'farmMap.market.advice.staggerHarvest': 'Atur panen bertahap atau simpan sebagian: tanaman ini bisa disimpan lama.',
   'farmMap.market.advice.priceFell': 'Harga turun {pct}% dalam 3 bulan terakhir.',
   'farmMap.market.advice.plantOther': 'Pertimbangkan menanam tanaman lain di sebagian lahan musim ini.',
-  'farmMap.market.advice.reachProcessors': 'Belum ada pembeli di sini. {n} pengolah dalam {km} km membutuhkan {produce}.',
+  'farmMap.market.advice.reachProcessors': '{n} pengolah dalam {km} km membutuhkan {produce}.',
   'farmMap.market.nearby': 'Kota terdekat',
   'farmMap.market.harvestTitle': 'Apa yang akan Anda panen?',
   'farmMap.market.produce': 'Tanaman',
